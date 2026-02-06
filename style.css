@@ -347,6 +347,7 @@ section .text1 button:hover {
     transition: all 0.3s ease;
     margin-bottom: 200px;
     text-decoration: none;
+    outline: none;
 }
 
 .menu button:hover {
