@@ -16,7 +16,7 @@ function sendTelegram() {
   const time = form.elements['time'].value;
   const guests = form.elements['guests'].value;
 
-  const TOKEN = "8129270648:AAHFKCMRO8F1SamS1l9-eXIZ_y2qgwS74-s";
+  const TOKEN = "8129270648:AAGpmaVMMRwp3rHmsgTStqvElYHIYUNtjjA";
   const CHAT_ID = "8584049635";
 
   const message = `Yangi registratsiya:\nIsm: ${name}\nEmail: ${email}\nPhone: ${phone}\nDate: ${date}\nTime: ${time}\nGuests: ${guests}`;
@@ -50,7 +50,7 @@ function sendTelegram() {
   })
   
   .catch(err => {
-    status.innerText = "Xatolik yuz berdi ❌";
+    status.innerText = "Xatolik serverda yuz berdi ❌";
     console.error(err);
     status.style.textAlign = "center";
     status.style.marginTop = "20px";
@@ -58,52 +58,3 @@ function sendTelegram() {
     status.style.fontSize = "20px"
   });
 }
-
-// 8129270648:AAHFKCMRO8F1SamS1l9-eXIZ_y2qgwS74-s
-
-const TelegramBot = require('node-telegram-bot-api');
-
-const TOKEN = "8129270648:AAHFKCMRO8F1SamS1l9-eXIZ_y2qgwS74-s";
-const bot = new TelegramBot(TOKEN, { polling: true });
-
-bot.onText(/\/start/, (msg) => {
-  const chatId = msg.chat.id;
-
-  bot.sendMessage(chatId, "Xush kelibsiz! Kerakli bo'limni tanlang 👇", {
-    reply_markup: {
-      keyboard: [
-        ["🛒 Joy buyurtma qilish"],
-        ["🌐 Saytga o‘tish", "📷 Instagram"],
-        ["📍 Location yuborish"]
-      ],
-      resize_keyboard: true,
-      one_time_keyboard: false
-    }
-  });
-});
-
-bot.on("message", (msg) => {
-  const chatId = msg.chat.id;
-  const text = msg.text;
-
-  if (text === "🛒 Joy buyurtma qilish") {
-    bot.sendMessage(chatId, "📞 Buyurtma berish uchun raqam qoldiring");
-  }
-
-  if (text === "🌐 Saytga o'tish") {
-    bot.sendMessage(chatId, "👉 Saytimiz: https://laziz712.github.io/Savoria-Restuarant/");
-  }
-
-  if (text === "📷 Instagram") {
-    bot.sendMessage(chatId, "👉 Instagram: https://www.instagram.com/savoria_restaurant/");
-  }
-
-  if (text === "📍 Location yuborish") {
-    bot.sendMessage(chatId, "📍 Iltimos location yuboring", {
-      reply_markup: {
-        keyboard: [[{ text: "📍 Location yuborish", request_location: true }]],
-        resize_keyboard: true
-      }
-    });
-  }
-});
