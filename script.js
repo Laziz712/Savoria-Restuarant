@@ -16,7 +16,7 @@ function sendTelegram() {
   const time = form.elements['time'].value;
   const guests = form.elements['guests'].value;
 
-  const TOKEN = "8129270648:AAGpmaVMMRwp3rHmsgTStqvElYHIYUNtjjA";
+  const TOKEN = "8129270648:AAGkSR08g2oZbNUWdoCqMyiUAdnWtLaQD4k";
   const CHAT_ID = "8584049635";
 
   const message = `Yangi registratsiya:\nIsm: ${name}\nEmail: ${email}\nPhone: ${phone}\nDate: ${date}\nTime: ${time}\nGuests: ${guests}`;
