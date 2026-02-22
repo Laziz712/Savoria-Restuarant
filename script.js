@@ -19,7 +19,19 @@ function sendTelegram() {
   const TOKEN = "8129270648:AAGkSR08g2oZbNUWdoCqMyiUAdnWtLaQD4k";
   const CHAT_ID = "8584049635";
 
-  const message = `Yangi registratsiya:\nIsm: ${name}\nEmail: ${email}\nPhone: ${phone}\nDate: ${date}\nTime: ${time}\nGuests: ${guests}`;
+  const message = `
+🔔 <b>YANGI BRON QILISH!</b>
+▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+👤 <b>Mijoz:</b> ${name}
+📧 <b>Email:</b> <code>${email}</code>
+📞 <b>Telefon:</b> ${phone}
+
+📅 <b>Sana:</b> ${date}
+⏰ <b>Vaqt:</b> ${time}
+👥 <b>Mehmonlar soni:</b> ${guests} kishi
+▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+✅ <i>Iltimos, mijoz bilan bog'lanib tasdiqlang.</i>
+`;
 
   fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
     method: 'POST',
