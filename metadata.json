@@ -1,0 +1,7 @@
+{
+  "name": "Savoria Restaurant & POS System",
+  "description": "Savoria Restaurant & Lounge - Premium POS kassa, oshxona KDS, dostavka logistikasi, moliyaviy xisobot va statistika hamda mijozlar onlayn buyurtma tizimi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
