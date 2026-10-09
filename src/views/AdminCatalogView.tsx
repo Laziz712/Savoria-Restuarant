@@ -505,7 +505,7 @@ export const AdminCatalogView: React.FC = () => {
                     <option value="milliy">Milliy tansiq taomlar</option>
                     <option value="salatlar">Salatlar & Gazaklar</option>
                     <option value="shorvalar">Sho'rvalar</option>
-                    <option value="ichimliklar">Mualliflik kokteyllari</option>
+                    <option value="ichimliklar">Ichimliklar, Kokteyllar & Salqin ichimliklar</option>
                     <option value="desertlar">Desertlar</option>
                     <option value="qahva_choy">Qahva & Choy</option>
                   </select>

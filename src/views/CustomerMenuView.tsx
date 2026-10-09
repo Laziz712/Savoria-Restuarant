@@ -4,11 +4,11 @@ import { MenuItem, ItemCategory, OrderType, PaymentMethod } from '../types';
 import { 
   ShoppingBag, Search, Plus, Minus, Trash2, Clock, 
   MapPin, Check, Sparkles, Phone, ArrowRight, ShieldCheck,
-  ChevronRight, Utensils
+  ChevronRight, Utensils, UtensilsCrossed
 } from 'lucide-react';
 
 export const CustomerMenuView: React.FC = () => {
-  const { menuItems, createOrder, formatUZS, settings, openReceiptModal, orders } = useRestaurant();
+  const { menuItems, createOrder, formatUZS, settings, openReceiptModal, orders, t, setRoute } = useRestaurant();
 
   const [selectedCategory, setSelectedCategory] = useState<ItemCategory | 'barchasi'>('barchasi');
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,15 +31,16 @@ export const CustomerMenuView: React.FC = () => {
   const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
 
   const categories: { id: ItemCategory | 'barchasi'; label: string }[] = [
-    { id: 'barchasi', label: 'Barcha menyu' },
-    { id: 'asosiy', label: 'Steyk & Asosiy' },
-    { id: 'milliy', label: 'Milliy tansiq' },
-    { id: 'salatlar', label: 'Salatlar' },
-    { id: 'shorvalar', label: 'Sho\'rvalar' },
-    { id: 'ichimliklar', label: 'Kokteyl & Bar' },
-    { id: 'desertlar', label: 'Desertlar' },
-    { id: 'qahva_choy', label: 'Qahva & Choy' },
+    { id: 'barchasi', label: t('cat_all') },
+    { id: 'ichimliklar', label: t('cat_ichimliklar') },
+    { id: 'asosiy', label: t('cat_asosiy') },
+    { id: 'milliy', label: t('cat_milliy') },
+    { id: 'salatlar', label: t('cat_salatlar') },
+    { id: 'shorvalar', label: t('cat_shorvalar') },
+    { id: 'desertlar', label: t('cat_desertlar') },
+    { id: 'qahva_choy', label: t('cat_qahva_choy') },
   ];
+
 
   const filteredItems = menuItems.filter(item => {
     const matchesCategory = selectedCategory === 'barchasi' || item.category === selectedCategory;
@@ -141,28 +142,38 @@ export const CustomerMenuView: React.FC = () => {
           </p>
 
           {/* Quick Selection Buttons */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
             <button
               onClick={() => {
                 setOrderType('zal');
                 setIsCartOpen(true);
               }}
-              className="px-5 py-2.5 rounded-lg bg-[#d4af37] text-neutral-950 hover:bg-[#e6c14c] font-semibold text-xs tracking-wider uppercase transition-all shadow-[0_0_20px_rgba(212,175,55,0.25)] flex items-center gap-2"
+              className="px-4 sm:px-5 py-2.5 rounded-lg bg-[#d4af37] text-neutral-950 hover:bg-[#e6c14c] font-semibold text-xs tracking-wider uppercase transition-all shadow-[0_0_20px_rgba(212,175,55,0.25)] flex items-center gap-2"
             >
               <Utensils className="w-4 h-4" />
-              <span>Stolga Buyurtma Berish</span>
+              <span>{t('btn_order_table')}</span>
             </button>
+
             <button
               onClick={() => {
                 setOrderType('dostavka');
                 setIsCartOpen(true);
               }}
-              className="px-5 py-2.5 rounded-lg bg-[#181a24] border border-[#33374b] text-neutral-200 hover:text-white hover:border-[#d4af37]/50 font-medium text-xs tracking-wider uppercase transition-all flex items-center gap-2"
+              className="px-4 sm:px-5 py-2.5 rounded-lg bg-[#181a24] border border-[#33374b] text-neutral-200 hover:text-white hover:border-[#d4af37]/50 font-medium text-xs tracking-wider uppercase transition-all flex items-center gap-2"
             >
               <MapPin className="w-4 h-4 text-[#d4af37]" />
-              <span>Yetkazib Berish (Dostavka)</span>
+              <span>{t('btn_order_delivery')}</span>
+            </button>
+
+            <button
+              onClick={() => setRoute('ofitsiant')}
+              className="px-4 sm:px-5 py-2.5 rounded-lg bg-[#181d2c] border border-[#3b4363] text-[#d4af37] hover:text-white hover:border-[#d4af37] font-semibold text-xs tracking-wider uppercase transition-all flex items-center gap-2"
+            >
+              <UtensilsCrossed className="w-4 h-4" />
+              <span>{t('btn_waiter_mode')}</span>
             </button>
           </div>
+
         </div>
       </section>
 

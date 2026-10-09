@@ -8,6 +8,7 @@ import { RestaurantProvider, useRestaurant } from './context/RestaurantContext';
 import { Navbar } from './components/Navbar';
 import { CustomerMenuView } from './views/CustomerMenuView';
 import { AdminHubView } from './views/AdminHubView';
+import { WaiterOrderView } from './views/WaiterOrderView';
 import { ThermalReceiptModal } from './components/ThermalReceiptModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { ShieldCheck, Lock, Sparkles, MapPin, Phone } from 'lucide-react';
@@ -34,8 +35,10 @@ const AppContent: React.FC = () => {
       {/* Main View Router */}
       <div className="flex-1">
         {activeRoute === 'mijoz' && <CustomerMenuView />}
+        {activeRoute === 'ofitsiant' && <WaiterOrderView />}
         {activeRoute === 'admin' && <AdminHubView />}
       </div>
+
 
       {/* Admin Security Password Login Modal (Password: laziz712) */}
       <AdminLoginModal />

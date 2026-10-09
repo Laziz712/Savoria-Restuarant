@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useRestaurant } from '../context/RestaurantContext';
-import { Lock, KeyRound, Eye, EyeOff, ShieldCheck, X } from 'lucide-react';
+import { Lock, KeyRound, Eye, EyeOff, X } from 'lucide-react';
 
 export const AdminLoginModal: React.FC = () => {
-  const { showAdminLoginModal, setShowAdminLoginModal, adminLogin } = useRestaurant();
+  const { showAdminLoginModal, setShowAdminLoginModal, adminLogin, t } = useRestaurant();
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -12,9 +12,10 @@ export const AdminLoginModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!password.trim()) return;
     const success = adminLogin(password);
     if (!success) {
-      setErrorMsg('Noto\'g\'ri parol! Iltimos, qaytadan tekshiring.');
+      setErrorMsg(t('login_error'));
     } else {
       setErrorMsg('');
       setPassword('');
@@ -42,10 +43,10 @@ export const AdminLoginModal: React.FC = () => {
             <Lock className="w-7 h-7" />
           </div>
           <h2 className="font-serif font-bold text-lg text-white tracking-wide">
-            ADMIN BOSHQARUV TIZIMI
+            {t('login_title')}
           </h2>
           <p className="text-xs text-neutral-400 mt-1">
-            Kassa, oshxona, kuryerlar va xisobotlarga kirish uchun parolni kiriting
+            {t('login_desc')}
           </p>
         </div>
 
@@ -53,14 +54,14 @@ export const AdminLoginModal: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-[11px] font-medium text-neutral-300 block mb-1">
-              Admin Paroli
+              {t('login_password_label')}
             </label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
                 autoFocus
-                placeholder="Parolni kiriting..."
+                placeholder={t('login_placeholder')}
                 value={password}
                 onChange={e => {
                   setPassword(e.target.value);
@@ -83,27 +84,12 @@ export const AdminLoginModal: React.FC = () => {
             )}
           </div>
 
-          {/* Quick Demo Helper Hint */}
-          <div className="p-2.5 rounded-lg bg-[#181a26] border border-[#282d3f] text-[11px] text-neutral-400 font-mono flex items-center justify-between">
-            <span>Parol: <strong className="text-[#d4af37]">laziz712</strong></span>
-            <button
-              type="button"
-              onClick={() => {
-                setPassword('laziz712');
-                setErrorMsg('');
-              }}
-              className="text-[#d4af37] hover:underline text-[10px]"
-            >
-              Avto-to'ldirish
-            </button>
-          </div>
-
           <button
             type="submit"
             className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#e6c14c] text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-lg hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all flex items-center justify-center gap-2"
           >
             <KeyRound className="w-4 h-4" />
-            <span>Tizimga Kirish</span>
+            <span>{t('login_submit')}</span>
           </button>
         </form>
       </div>

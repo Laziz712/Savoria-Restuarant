@@ -14,7 +14,7 @@ import {
 export const AdminHubView: React.FC = () => {
   const { 
     adminSubTab, setAdminSubTab, orders, couriers, 
-    waiters, adminLogout, settings 
+    waiters, adminUsers, adminLogout, settings, t 
   } = useRestaurant();
 
   // Badge calculations
@@ -23,13 +23,14 @@ export const AdminHubView: React.FC = () => {
   const activeDeliveryCount = orders.filter(o => o.type === 'dostavka' && (o.status === 'yolda' || o.status === 'oshxonada' || o.status === 'yangi')).length;
 
   const tabs: { id: AdminSubTab; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: 'kassa', label: 'Kassa (POS & Chek)', icon: <Receipt className="w-4 h-4" />, badge: openBillsCount },
-    { id: 'oshxona', label: 'Oshxona (KDS)', icon: <Utensils className="w-4 h-4" />, badge: kitchenOrdersCount },
-    { id: 'dostafka', label: 'Dostavka', icon: <Bike className="w-4 h-4" />, badge: activeDeliveryCount },
-    { id: 'xisobot', label: 'Xisobot & Statistika', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'menyu', label: 'Taomlar & Narxlar', icon: <UtensilsCrossed className="w-4 h-4" /> },
-    { id: 'xodimlar', label: 'Ofitsiantlar & Kuryerlar', icon: <Users className="w-4 h-4" />, badge: waiters.length + couriers.length },
+    { id: 'kassa', label: t('admin_tab_pos'), icon: <Receipt className="w-4 h-4" />, badge: openBillsCount },
+    { id: 'oshxona', label: t('admin_tab_kds'), icon: <Utensils className="w-4 h-4" />, badge: kitchenOrdersCount },
+    { id: 'dostafka', label: t('admin_tab_delivery'), icon: <Bike className="w-4 h-4" />, badge: activeDeliveryCount },
+    { id: 'xisobot', label: t('admin_tab_reports'), icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'menyu', label: t('admin_tab_menu'), icon: <UtensilsCrossed className="w-4 h-4" /> },
+    { id: 'xodimlar', label: t('admin_tab_staff'), icon: <Users className="w-4 h-4" />, badge: waiters.length + couriers.length + adminUsers.length },
   ];
+
 
   return (
     <div className="min-h-screen bg-[#08090d] text-[#eaeaea] flex flex-col">
