@@ -1,4 +1,4 @@
-import { MenuItem, Courier, Waiter, Order, RestaurantSettings } from '../types';
+import { MenuItem, Courier, Waiter, AdminUser, Order, RestaurantSettings } from '../types';
 import wagyuImg from '../assets/images/savoria_wagyu_steak_1791475866836.jpg';
 import plovImg from '../assets/images/savoria_plov_special_1791475881101.jpg';
 import cocktailImg from '../assets/images/savoria_cocktail_drink_1791475891055.jpg';
@@ -156,8 +156,48 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     calories: 120,
     weightGrams: 200,
     isChefSpecial: false
+  },
+  {
+    id: 'm-11',
+    name: 'Savoria Berry Mojito (Alkogolsiz)',
+    category: 'ichimliklar',
+    price: 55000,
+    description: 'Yangi malina, qora smorodina, yalpiz barglari, laym sharbati va muzli gazlangan buloq suvi.',
+    image: cocktailImg,
+    prepTimeMinutes: 5,
+    isAvailable: true,
+    station: 'bar',
+    calories: 110,
+    weightGrams: 450,
+    isChefSpecial: true
+  },
+  {
+    id: 'm-12',
+    name: 'Anor & Sitrus Fresh Sharbat (400ml)',
+    category: 'ichimliklar',
+    price: 48000,
+    description: 'Yangi siqilgan shirin Toshkent anori va quyoshli apelsin sharbati, tabiiy vitaminlar kokteyli.',
+    image: cocktailImg,
+    prepTimeMinutes: 4,
+    isAvailable: true,
+    station: 'bar',
+    calories: 130,
+    weightGrams: 400,
+    isChefSpecial: false
   }
 ];
+
+export const INITIAL_ADMIN_USERS: AdminUser[] = [
+  {
+    id: 'adm-1',
+    name: 'Bosh Menejer Laziz',
+    username: 'laziz712',
+    passwordHash: 'laziz712',
+    role: 'superadmin',
+    createdAt: new Date().toISOString()
+  }
+];
+
 
 export const INITIAL_COURIERS: Courier[] = [
   {
@@ -196,7 +236,8 @@ export const INITIAL_WAITERS: Waiter[] = [
     phone: '+998 90 911 22 33',
     assignedZone: 'Zal 1 (Asosiy)',
     status: 'ishda',
-    ordersHandledCount: 24
+    ordersHandledCount: 24,
+    password: '1111'
   },
   {
     id: 'w-2',
@@ -204,7 +245,8 @@ export const INITIAL_WAITERS: Waiter[] = [
     phone: '+998 93 333 44 55',
     assignedZone: 'VIP Kabinetlar',
     status: 'ishda',
-    ordersHandledCount: 18
+    ordersHandledCount: 18,
+    password: '2222'
   },
   {
     id: 'w-3',
@@ -212,9 +254,11 @@ export const INITIAL_WAITERS: Waiter[] = [
     phone: '+998 97 555 66 77',
     assignedZone: 'Panoramik Terrasa',
     status: 'ishda',
-    ordersHandledCount: 15
+    ordersHandledCount: 15,
+    password: '3333'
   }
 ];
+
 
 
 export const INITIAL_ORDERS: Order[] = [

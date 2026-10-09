@@ -1,11 +1,25 @@
+export type Language = 'uz' | 'ru' | 'en';
+
+export type AdminRole = 'superadmin' | 'menejer' | 'kassir';
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  username: string;
+  passwordHash: string;
+  role: AdminRole;
+  createdAt: string;
+}
+
 export type ItemCategory = 
   | 'asosiy'      // Asosiy taomlar / Steyklar
   | 'milliy'      // Milliy tansiq taomlar
   | 'salatlar'    // Salatlar & Gazaklar
   | 'shorvalar'   // Sho'rvalar
-  | 'ichimliklar' // Mualliflik kokteyllari va ichimliklar
+  | 'ichimliklar' // Mualliflik kokteyllari va salqin ichimliklar
   | 'qahva_choy'  // Qahva va elit choylar
   | 'desertlar';  // Desertlar
+
 
 export interface MenuItem {
   id: string;
@@ -89,7 +103,9 @@ export interface Waiter {
   assignedZone: string;
   status: 'ishda' | 'tanaffus';
   ordersHandledCount: number;
+  password?: string;
 }
+
 
 export interface RestaurantSettings {
   name: string;

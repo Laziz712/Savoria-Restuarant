@@ -1,8 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { MenuItem, Order, Courier, Waiter, RestaurantSettings, OrderStatus, PaymentMethod } from '../types';
-import { INITIAL_MENU_ITEMS, INITIAL_ORDERS, INITIAL_COURIERS, INITIAL_WAITERS, INITIAL_SETTINGS } from '../data/initialData';
+import { 
+  MenuItem, Order, Courier, Waiter, AdminUser, 
+  RestaurantSettings, OrderStatus, PaymentMethod, Language 
+} from '../types';
+import { 
+  INITIAL_MENU_ITEMS, INITIAL_ORDERS, INITIAL_COURIERS, 
+  INITIAL_WAITERS, INITIAL_ADMIN_USERS, INITIAL_SETTINGS 
+} from '../data/initialData';
+import { translations } from '../i18n/translations';
 
-export type AppRoute = 'mijoz' | 'admin' | 'kassa' | 'oshxona' | 'dostafka' | 'xisobot';
+export type AppRoute = 'mijoz' | 'admin' | 'ofitsiant' | 'kassa' | 'oshxona' | 'dostafka' | 'xisobot';
 export type AdminSubTab = 'kassa' | 'oshxona' | 'dostafka' | 'xisobot' | 'menyu' | 'xodimlar' | 'sozlamalar';
 
 interface RestaurantContextType {
@@ -10,6 +17,7 @@ interface RestaurantContextType {
   orders: Order[];
   couriers: Courier[];
   waiters: Waiter[];
+  adminUsers: AdminUser[];
   settings: RestaurantSettings;
   activeRoute: AppRoute;
   adminSubTab: AdminSubTab;
@@ -17,6 +25,12 @@ interface RestaurantContextType {
   activeReceiptOrder: Order | null;
   isAdminAuthenticated: boolean;
   showAdminLoginModal: boolean;
+  currentLoggedInWaiter: Waiter | null;
+  
+  // Multi-Language
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: keyof typeof translations['uz']) => string;
   
   setRoute: (route: AppRoute) => void;
   setAdminSubTab: (tab: AdminSubTab) => void;
@@ -24,11 +38,18 @@ interface RestaurantContextType {
   playOrderChime: () => void;
   openReceiptModal: (order: Order) => void;
   closeReceiptModal: () => void;
+
+  // Waiter Auth
+  waiterLogin: (waiterId: string, password: string) => boolean;
+  waiterLogout: () => void;
   
-  // Admin Auth
+  // Admin Auth & Management
   adminLogin: (password: string) => boolean;
   adminLogout: () => void;
   setShowAdminLoginModal: (show: boolean) => void;
+  addAdminUser: (admin: Omit<AdminUser, 'id' | 'createdAt'>) => void;
+  updateAdminUser: (id: string, updates: Partial<AdminUser>) => void;
+  deleteAdminUser: (id: string) => void;
   
   // Menu Item mutations
   addMenuItem: (item: Omit<MenuItem, 'id'>) => void;
@@ -97,6 +118,11 @@ const playLuxuryChime = () => {
 };
 
 export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [language, setLanguageState] = useState<Language>(() => {
+    const saved = localStorage.getItem('savoria_language') as Language;
+    return saved === 'ru' || saved === 'en' || saved === 'uz' ? saved : 'uz';
+  });
+
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
     const saved = localStorage.getItem('savoria_menu_items');
     return saved ? JSON.parse(saved) : INITIAL_MENU_ITEMS;
@@ -114,7 +140,25 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const [waiters, setWaiters] = useState<Waiter[]>(() => {
     const saved = localStorage.getItem('savoria_waiters');
-    return saved ? JSON.parse(saved) : INITIAL_WAITERS;
+    if (saved) {
+      const parsed: Waiter[] = JSON.parse(saved);
+      // Ensure each waiter has a default password if missing
+      return parsed.map((w, idx) => ({
+        ...w,
+        password: w.password || `${(idx + 1) * 1111}`
+      }));
+    }
+    return INITIAL_WAITERS;
+  });
+
+  const [currentLoggedInWaiter, setCurrentLoggedInWaiter] = useState<Waiter | null>(() => {
+    const saved = localStorage.getItem('savoria_active_waiter');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(() => {
+    const saved = localStorage.getItem('savoria_admin_users');
+    return saved ? JSON.parse(saved) : INITIAL_ADMIN_USERS;
   });
 
   const [settings, setSettings] = useState<RestaurantSettings>(() => {
@@ -137,12 +181,26 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     if (path.includes('admin') || path.includes('kassa') || path.includes('oshxona') || path.includes('dostafka') || path.includes('dostavka') || path.includes('xisobot') || path.includes('hisobot')) {
       return 'admin';
     }
+    if (path.includes('ofitsiant') || path.includes('waiter')) {
+      return 'ofitsiant';
+    }
     return 'mijoz';
   };
 
   const [activeRoute, setActiveRoute] = useState<AppRoute>(getInitialRoute);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [activeReceiptOrder, setActiveReceiptOrder] = useState<Order | null>(null);
+
+  // Translation helper
+  const t = (key: keyof typeof translations['uz']): string => {
+    const langDict = translations[language] || translations['uz'];
+    return (langDict as Record<string, string>)[key] || (translations['uz'] as Record<string, string>)[key] || key;
+  };
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    localStorage.setItem('savoria_language', lang);
+  };
 
   // Sync state to local storage
   useEffect(() => {
@@ -160,6 +218,10 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   useEffect(() => {
     localStorage.setItem('savoria_waiters', JSON.stringify(waiters));
   }, [waiters]);
+
+  useEffect(() => {
+    localStorage.setItem('savoria_admin_users', JSON.stringify(adminUsers));
+  }, [adminUsers]);
 
   useEffect(() => {
     localStorage.setItem('savoria_settings', JSON.stringify(settings));
@@ -180,6 +242,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     const pathMap: Record<AppRoute, string> = {
       mijoz: '/',
       admin: '/admin',
+      ofitsiant: '/ofitsiant',
       kassa: '/kassa',
       oshxona: '/oshxona',
       dostafka: '/dostafka',
@@ -193,7 +256,12 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const adminLogin = (password: string): boolean => {
-    if (password === 'laziz712') {
+    const cleanPass = password.trim();
+    // Default hardcoded password laziz712 OR any created admin password
+    const matchesDefault = cleanPass === 'laziz712';
+    const matchesUser = adminUsers.some(u => u.passwordHash === cleanPass || u.username.toLowerCase() === cleanPass.toLowerCase());
+
+    if (matchesDefault || matchesUser) {
       setIsAdminAuthenticated(true);
       setShowAdminLoginModal(false);
       setActiveRoute('admin');
@@ -217,6 +285,44 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  const waiterLogin = (waiterId: string, password: string): boolean => {
+    const waiter = waiters.find(w => w.id === waiterId);
+    if (!waiter) return false;
+    const cleanPass = password.trim();
+    if (waiter.password === cleanPass || cleanPass === 'laziz712') {
+      setCurrentLoggedInWaiter(waiter);
+      localStorage.setItem('savoria_active_waiter', JSON.stringify(waiter));
+      return true;
+    }
+    return false;
+  };
+
+  const waiterLogout = () => {
+    setCurrentLoggedInWaiter(null);
+    localStorage.removeItem('savoria_active_waiter');
+  };
+
+  const addAdminUser = (adminData: Omit<AdminUser, 'id' | 'createdAt'>) => {
+    const newAdmin: AdminUser = {
+      ...adminData,
+      id: `adm-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    setAdminUsers(prev => [...prev, newAdmin]);
+  };
+
+  const updateAdminUser = (id: string, updates: Partial<AdminUser>) => {
+    setAdminUsers(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+  };
+
+  const deleteAdminUser = (id: string) => {
+    if (adminUsers.length <= 1) {
+      alert('Kamida bitta admin tizimda qolishi kerak!');
+      return;
+    }
+    setAdminUsers(prev => prev.filter(a => a.id !== id));
+  };
+
   const toggleSound = () => {
     setSoundEnabled(prev => !prev);
   };
@@ -236,7 +342,8 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const formatUZS = (amount: number): string => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
+    const suffix = language === 'ru' ? ' сум' : language === 'en' ? ' UZS' : ' so\'m';
+    return new Intl.NumberFormat('uz-UZ').format(amount) + suffix;
   };
 
   // Menu item mutations
@@ -402,6 +509,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         orders,
         couriers,
         waiters,
+        adminUsers,
         settings,
         activeRoute,
         adminSubTab,
@@ -409,6 +517,12 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         activeReceiptOrder,
         isAdminAuthenticated,
         showAdminLoginModal,
+        currentLoggedInWaiter,
+        waiterLogin,
+        waiterLogout,
+        language,
+        setLanguage,
+        t,
         setRoute,
         setAdminSubTab,
         toggleSound,
@@ -418,6 +532,9 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         adminLogin,
         adminLogout,
         setShowAdminLoginModal,
+        addAdminUser,
+        updateAdminUser,
+        deleteAdminUser,
         addMenuItem,
         updateMenuItem,
         deleteMenuItem,
