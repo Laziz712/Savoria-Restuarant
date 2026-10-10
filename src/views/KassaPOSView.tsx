@@ -4,7 +4,7 @@ import { MenuItem, ItemCategory, Order, PaymentMethod, OrderType } from '../type
 import { 
   CreditCard, Banknote, QrCode, Printer, Plus, Minus, Trash2, 
   Search, CheckCircle2, AlertCircle, Sparkles, Send,
-  Users, RefreshCw, ChevronRight, X
+  Users, RefreshCw, ChevronRight, X, UtensilsCrossed, Receipt
 } from 'lucide-react';
 
 export const KassaPOSView: React.FC = () => {
@@ -32,6 +32,9 @@ export const KassaPOSView: React.FC = () => {
   // Existing selected active order if inspecting a table
   const [activeExistingOrderId, setActiveExistingOrderId] = useState<string | null>(null);
 
+  // Mobile View Switcher between Catalog and Check
+  const [mobilePosTab, setMobilePosTab] = useState<'catalog' | 'check'>('catalog');
+
   const tables = [
     { id: 'Stol #1 (Zal 1)', name: 'Stol 1', capacity: '4 kishi', zone: 'Zal 1' },
     { id: 'Stol #2 (Zal 1)', name: 'Stol 2', capacity: '2 kishi', zone: 'Zal 1' },
@@ -55,6 +58,7 @@ export const KassaPOSView: React.FC = () => {
     const existing = getTableStatus(tableId);
     if (existing) {
       setActiveExistingOrderId(existing.id);
+      setMobilePosTab('check');
     } else {
       setActiveExistingOrderId(null);
     }
@@ -232,10 +236,43 @@ export const KassaPOSView: React.FC = () => {
         </div>
       </div>
 
+      {/* Mobile Mode Switcher: Catalog vs Check */}
+      <div className="lg:hidden flex items-center bg-[#11131b] p-1.5 rounded-xl border border-[#212433] gap-1.5 mb-2">
+        <button
+          type="button"
+          onClick={() => setMobilePosTab('catalog')}
+          className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+            mobilePosTab === 'catalog'
+              ? 'bg-[#d4af37] text-neutral-950 font-bold shadow-md'
+              : 'text-neutral-400 hover:text-white'
+          }`}
+        >
+          <UtensilsCrossed className="w-3.5 h-3.5" />
+          <span>Taomlar Katalogi</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobilePosTab('check')}
+          className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+            mobilePosTab === 'check'
+              ? 'bg-[#d4af37] text-neutral-950 font-bold shadow-md'
+              : 'text-neutral-400 hover:text-white'
+          }`}
+        >
+          <Receipt className="w-3.5 h-3.5" />
+          <span>Chek & To'lov</span>
+          {(cartItems.length > 0 || activeExistingOrderId) && (
+            <span className="w-4 h-4 rounded-full bg-[#d4af37] text-neutral-950 text-[10px] font-mono font-bold flex items-center justify-center">
+              {cartItems.length > 0 ? cartItems.length : '!'}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Main Grid: Left Catalog + Right Check Panel */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Left Column: Menu Catalog (7 cols) */}
-        <div className="lg:col-span-7 flex flex-col gap-4">
+        <div className={`lg:col-span-7 flex flex-col gap-4 ${mobilePosTab === 'catalog' ? 'flex' : 'hidden lg:flex'}`}>
           {/* Categories & Search */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#11131b] p-3 rounded-xl border border-[#212433]">
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
@@ -340,7 +377,16 @@ export const KassaPOSView: React.FC = () => {
         </div>
 
         {/* Right Column: Active Bill / Receipt Register (5 cols) */}
-        <div className="lg:col-span-5 bg-[#12141e] border border-[#26293a] rounded-xl p-4 sm:p-5 flex flex-col shadow-xl">
+        <div className={`lg:col-span-5 bg-[#12141e] border border-[#26293a] rounded-xl p-4 sm:p-5 flex flex-col shadow-xl ${mobilePosTab === 'check' ? 'flex' : 'hidden lg:flex'}`}>
+          {/* Mobile Back Button to Catalog */}
+          <button
+            type="button"
+            onClick={() => setMobilePosTab('catalog')}
+            className="lg:hidden flex items-center gap-1.5 text-xs text-[#d4af37] font-semibold mb-3 hover:underline"
+          >
+            ← Taomlar tanlashga qaytish (Katalog)
+          </button>
+
           {/* Header of Active Ticket */}
           <div className="pb-3 border-b border-[#232637] flex items-center justify-between">
             <div>
@@ -631,6 +677,19 @@ export const KassaPOSView: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Mobile Floating Button to View Check */}
+      {mobilePosTab === 'catalog' && (cartItems.length > 0 || activeExistingOrderId) && (
+        <aside aria-label="Chek" className="lg:hidden fixed bottom-18 right-3 sm:right-6 z-40">
+          <button
+            onClick={() => setMobilePosTab('check')}
+            className="flex items-center gap-2 px-4 py-3 rounded-full bg-[#d4af37] text-neutral-950 font-bold text-xs shadow-2xl active:scale-95 transition-all border border-amber-300"
+          >
+            <Receipt className="w-4 h-4" />
+            <span>Chek & To'lov ({cartItems.length > 0 ? `${cartItems.length} taom` : 'Ochiq hisob'})</span>
+          </button>
+        </aside>
+      )}
     </div>
   );
 };
