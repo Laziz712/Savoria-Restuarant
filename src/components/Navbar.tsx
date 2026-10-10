@@ -28,11 +28,11 @@ export const Navbar: React.FC = () => {
             onClick={() => setRoute('mijoz')}
             className="text-left group flex items-center gap-2 focus:outline-none"
           >
-            <div className="w-8 h-8 rounded border border-[#d4af37]/40 bg-gradient-to-br from-[#2a2415] to-[#12131a] flex items-center justify-center text-[#d4af37] font-serif font-bold text-sm shadow-[0_0_12px_rgba(212,175,55,0.2)]">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded border border-[#d4af37]/40 bg-gradient-to-br from-[#2a2415] to-[#12131a] flex items-center justify-center text-[#d4af37] font-serif font-bold text-xs sm:text-sm shadow-[0_0_12px_rgba(212,175,55,0.2)] shrink-0">
               S
             </div>
-            <span className="font-serif tracking-wider font-semibold text-base sm:text-lg text-white group-hover:text-[#d4af37] transition-colors whitespace-nowrap">
-              SAVORIA
+            <span className="font-serif tracking-wider font-bold text-xs sm:text-base text-white group-hover:text-[#d4af37] transition-colors whitespace-nowrap">
+              SAVORIA RESTAURANT
             </span>
           </button>
 

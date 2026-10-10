@@ -134,7 +134,7 @@ export const CustomerMenuView: React.FC = () => {
             <span>Maftunkor Ta'm & Sharqona Lazzat</span>
           </div>
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-white tracking-wide max-w-3xl mx-auto leading-tight">
-            SAVORIA RESTAURANT & LOUNGE
+            SAVORIA RESTAURANT
           </h1>
           <p className="mt-4 text-sm sm:text-base text-neutral-300 max-w-2xl mx-auto leading-relaxed">
             Har bir taomda oliy toifali sifat, nozik estetik bezak va betakror mehmondo'stlik. 
@@ -354,10 +354,10 @@ export const CustomerMenuView: React.FC = () => {
 
       {/* Floating Cart Button for Mobile & Desktop */}
       {cart.length > 0 && !isCartOpen && (
-        <aside aria-label="Savat" className="fixed bottom-6 right-6 z-40">
+        <aside aria-label="Savat" className="fixed bottom-18 md:bottom-6 right-3 sm:right-6 z-40">
           <button
             onClick={() => setIsCartOpen(true)}
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#e7c355] text-neutral-950 font-semibold shadow-2xl flex items-center gap-3 hover:scale-105 transition-transform"
+            className="px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#e7c355] text-neutral-950 font-semibold shadow-2xl flex items-center gap-2.5 sm:gap-3 hover:scale-105 transition-transform"
           >
             <div className="relative">
               <ShoppingBag className="w-5 h-5" />

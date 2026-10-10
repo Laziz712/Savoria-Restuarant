@@ -1,5 +1,12 @@
 export type Language = 'uz' | 'ru' | 'en';
 
+export interface MongoStatus {
+  connected: boolean;
+  cluster: string;
+  database: string;
+  message?: string;
+}
+
 export type AdminRole = 'superadmin' | 'menejer' | 'kassir';
 
 export interface AdminUser {

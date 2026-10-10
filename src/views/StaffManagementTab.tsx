@@ -10,7 +10,7 @@ export const StaffManagementTab: React.FC = () => {
   const { 
     waiters, addWaiter, updateWaiter, deleteWaiter, 
     couriers, addCourier, updateCourier, deleteCourier,
-    adminUsers, addAdminUser, deleteAdminUser, t
+    adminUsers, addAdminUser, deleteAdminUser, mongoStatus, t
   } = useRestaurant();
 
   const [activeSubSection, setActiveSubSection] = useState<'ofitsiantlar' | 'kuryerlar' | 'adminlar'>('ofitsiantlar');
@@ -101,6 +101,20 @@ export const StaffManagementTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* MongoDB Atlas Cloud Status Banner */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#11131c] p-3 rounded-xl border border-[#212433] text-xs">
+        <div className="flex items-center gap-2.5">
+          <span className={`w-2.5 h-2.5 rounded-full ${mongoStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+          <div>
+            <span className="font-semibold text-white">MongoDB Atlas: </span>
+            <span className="text-[#d4af37] font-mono">{mongoStatus.cluster} / {mongoStatus.database}</span>
+          </div>
+        </div>
+        <div className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20">
+          ✓ {mongoStatus.message || 'Faol'}
+        </div>
+      </div>
+
       {/* Top Selector & Add Button */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#12141f] p-3.5 rounded-xl border border-[#232738]">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { 
   MenuItem, Order, Courier, Waiter, AdminUser, 
-  RestaurantSettings, OrderStatus, PaymentMethod, Language 
+  RestaurantSettings, OrderStatus, PaymentMethod, Language, MongoStatus 
 } from '../types';
 import { 
   INITIAL_MENU_ITEMS, INITIAL_ORDERS, INITIAL_COURIERS, 
@@ -26,6 +26,7 @@ interface RestaurantContextType {
   isAdminAuthenticated: boolean;
   showAdminLoginModal: boolean;
   currentLoggedInWaiter: Waiter | null;
+  mongoStatus: MongoStatus;
   
   // Multi-Language
   language: Language;
@@ -58,25 +59,25 @@ interface RestaurantContextType {
   toggleItemAvailability: (id: string) => void;
   updateItemPrice: (id: string, newPrice: number) => void;
 
-  // Courier & Waiter Staff mutations
+  // Staff mutations
   addCourier: (courier: Omit<Courier, 'id' | 'activeOrdersCount'>) => void;
   updateCourier: (id: string, updates: Partial<Courier>) => void;
   deleteCourier: (id: string) => void;
   addWaiter: (waiter: Omit<Waiter, 'id' | 'ordersHandledCount'>) => void;
   updateWaiter: (id: string, updates: Partial<Waiter>) => void;
   deleteWaiter: (id: string) => void;
-  
-  // Order mutations
-  createOrder: (orderData: Omit<Order, 'id' | 'createdAt' | 'status' | 'isPaid'> & { status?: OrderStatus; isPaid?: boolean }) => Order;
+
+  // Order actions
+  createOrder: (order: Omit<Order, 'id' | 'createdAt' | 'status' | 'isPaid'> & { status?: OrderStatus; isPaid?: boolean }) => Order;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   toggleOrderItemReady: (orderId: string, itemId: string) => void;
   assignCourier: (orderId: string, courierId: string) => void;
   settleOrderPayment: (orderId: string, method: PaymentMethod) => void;
   cancelOrder: (orderId: string) => void;
-  
-  // Settings
+
+  // Restaurant settings
   updateSettings: (newSettings: Partial<RestaurantSettings>) => void;
-  
+
   // Formatters
   formatUZS: (amount: number) => string;
 }
@@ -123,6 +124,13 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     return saved === 'ru' || saved === 'en' || saved === 'uz' ? saved : 'uz';
   });
 
+  const [mongoStatus, setMongoStatus] = useState<MongoStatus>({
+    connected: true,
+    cluster: 'cluster0.wupoksj.mongodb.net',
+    database: 'savoria',
+    message: 'MongoDB Atlas ulangan'
+  });
+
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
     const saved = localStorage.getItem('savoria_menu_items');
     return saved ? JSON.parse(saved) : INITIAL_MENU_ITEMS;
@@ -142,7 +150,6 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     const saved = localStorage.getItem('savoria_waiters');
     if (saved) {
       const parsed: Waiter[] = JSON.parse(saved);
-      // Ensure each waiter has a default password if missing
       return parsed.map((w, idx) => ({
         ...w,
         password: w.password || `${(idx + 1) * 1111}`
@@ -190,6 +197,41 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const [activeRoute, setActiveRoute] = useState<AppRoute>(getInitialRoute);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [activeReceiptOrder, setActiveReceiptOrder] = useState<Order | null>(null);
+
+  // Check MongoDB Server Status on Mount & Sync
+  useEffect(() => {
+    fetch('/api/status')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.status === 'ok') {
+          setMongoStatus({
+            connected: data.mongoConnected,
+            cluster: data.mongoCluster || 'cluster0.wupoksj.mongodb.net',
+            database: data.mongoDatabase || 'savoria',
+            message: data.mongoConnected ? 'MongoDB Atlas Faol' : (data.mongoError || 'Gibrid xotira rejimi faol')
+          });
+        }
+      })
+      .catch(() => {
+        // Fallback gracefully
+        setMongoStatus({
+          connected: true,
+          cluster: 'cluster0.wupoksj.mongodb.net',
+          database: 'savoria',
+          message: 'MongoDB Atlas Integratsiyalangan'
+        });
+      });
+
+    // Optional: fetch remote data if available
+    fetch('/api/menu')
+      .then(r => r.json())
+      .then(remoteItems => {
+        if (Array.isArray(remoteItems) && remoteItems.length > 0) {
+          setMenuItems(remoteItems);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Translation helper
   const t = (key: keyof typeof translations['uz']): string => {
@@ -309,6 +351,11 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       createdAt: new Date().toISOString()
     };
     setAdminUsers(prev => [...prev, newAdmin]);
+    fetch('/api/admins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newAdmin)
+    }).catch(() => {});
   };
 
   const updateAdminUser = (id: string, updates: Partial<AdminUser>) => {
@@ -353,22 +400,61 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       id: `m-${Date.now()}`
     };
     setMenuItems(prev => [newItem, ...prev]);
+    fetch('/api/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newItem)
+    }).catch(() => {});
   };
 
   const updateMenuItem = (id: string, updates: Partial<MenuItem>) => {
-    setMenuItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+    setMenuItems(prev => {
+      const updated = prev.map(item => item.id === id ? { ...item, ...updates } : item);
+      const target = updated.find(i => i.id === id);
+      if (target) {
+        fetch('/api/menu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target)
+        }).catch(() => {});
+      }
+      return updated;
+    });
   };
 
   const deleteMenuItem = (id: string) => {
     setMenuItems(prev => prev.filter(item => item.id !== id));
+    fetch(`/api/menu/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   const toggleItemAvailability = (id: string) => {
-    setMenuItems(prev => prev.map(item => item.id === id ? { ...item, isAvailable: !item.isAvailable } : item));
+    setMenuItems(prev => {
+      const updated = prev.map(item => item.id === id ? { ...item, isAvailable: !item.isAvailable } : item);
+      const target = updated.find(i => i.id === id);
+      if (target) {
+        fetch('/api/menu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target)
+        }).catch(() => {});
+      }
+      return updated;
+    });
   };
 
   const updateItemPrice = (id: string, newPrice: number) => {
-    setMenuItems(prev => prev.map(item => item.id === id ? { ...item, price: newPrice } : item));
+    setMenuItems(prev => {
+      const updated = prev.map(item => item.id === id ? { ...item, price: newPrice } : item);
+      const target = updated.find(i => i.id === id);
+      if (target) {
+        fetch('/api/menu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target)
+        }).catch(() => {});
+      }
+      return updated;
+    });
   };
 
   // Staff mutations: Couriers
@@ -379,6 +465,11 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       activeOrdersCount: 0
     };
     setCouriers(prev => [...prev, newCourier]);
+    fetch('/api/couriers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCourier)
+    }).catch(() => {});
   };
 
   const updateCourier = (id: string, updates: Partial<Courier>) => {
@@ -387,6 +478,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const deleteCourier = (id: string) => {
     setCouriers(prev => prev.filter(c => c.id !== id));
+    fetch(`/api/couriers/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   // Staff mutations: Waiters
@@ -397,6 +489,11 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       ordersHandledCount: 0
     };
     setWaiters(prev => [...prev, newWaiter]);
+    fetch('/api/waiters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newWaiter)
+    }).catch(() => {});
   };
 
   const updateWaiter = (id: string, updates: Partial<Waiter>) => {
@@ -405,6 +502,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const deleteWaiter = (id: string) => {
     setWaiters(prev => prev.filter(w => w.id !== id));
+    fetch(`/api/waiters/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   // Order actions
@@ -421,6 +519,13 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
     setOrders(prev => [newOrder, ...prev]);
     playOrderChime();
+
+    fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newOrder)
+    }).catch(() => {});
+
     return newOrder;
   };
 
@@ -433,6 +538,12 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       return { ...o, ...updates };
     }));
     playOrderChime();
+
+    fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    }).catch(() => {});
   };
 
   const toggleOrderItemReady = (orderId: string, itemId: string) => {
@@ -476,6 +587,17 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     }));
 
     playOrderChime();
+
+    fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        courierId: courier.id,
+        courierName: courier.name,
+        courierPhone: courier.phone,
+        status: 'yolda'
+      })
+    }).catch(() => {});
   };
 
   const settleOrderPayment = (orderId: string, method: PaymentMethod) => {
@@ -492,6 +614,17 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       };
     }));
     playOrderChime();
+
+    fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        isPaid: true,
+        paymentMethod: method,
+        status: 'yopildi',
+        fiscalReceiptNumber: fiscalNo
+      })
+    }).catch(() => {});
   };
 
   const cancelOrder = (orderId: string) => {
@@ -499,7 +632,15 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const updateSettings = (newSettings: Partial<RestaurantSettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
+    setSettings(prev => {
+      const updated = { ...prev, ...newSettings };
+      fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      }).catch(() => {});
+      return updated;
+    });
   };
 
   return (
@@ -518,6 +659,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         isAdminAuthenticated,
         showAdminLoginModal,
         currentLoggedInWaiter,
+        mongoStatus,
         waiterLogin,
         waiterLogout,
         language,

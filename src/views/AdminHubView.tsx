@@ -69,7 +69,7 @@ export const AdminHubView: React.FC = () => {
           <div className="hidden lg:flex items-center gap-3">
             <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              Admin: laziz712 (Avtorizatsiyalangan)
+              Admin Boshqaruvi (Avtorizatsiyalangan)
             </span>
           </div>
         </div>

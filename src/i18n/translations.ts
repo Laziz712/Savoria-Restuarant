@@ -2,7 +2,7 @@ import { Language } from '../types';
 
 export const translations = {
   uz: {
-    brand_title: 'SAVORIA RESTAURANT & LOUNGE',
+    brand_title: 'SAVORIA RESTAURANT',
     brand_slogan: 'Premium Gastronomiya va Sharqona Mehmondo\'stlik',
     nav_menu: 'Menyu & Buyurtma',
     nav_waiter: 'Ofitsiant Rejimi',
@@ -28,7 +28,7 @@ export const translations = {
     
     // Customer Menu
     hero_badge: 'Maftunkor Ta\'m & Sharqona Lazzat',
-    hero_title: 'SAVORIA RESTAURANT & LOUNGE',
+    hero_title: 'SAVORIA RESTAURANT',
     hero_subtitle: 'Har bir taomda oliy toifali sifat, nozik estetik bezak va betakror mehmondo\'stlik. Stolga yoki uyingizga qulay buyurtma bering.',
     btn_order_table: 'Stolga Buyurtma',
     btn_order_delivery: 'Yetkazib Berish',
@@ -141,7 +141,7 @@ export const translations = {
     login_error: 'Noto\'g\'ri parol! Qaytadan tekshiring.'
   },
   ru: {
-    brand_title: 'SAVORIA RESTAURANT & LOUNGE',
+    brand_title: 'SAVORIA RESTAURANT',
     brand_slogan: 'Премиальная Гастрономия и Восточное Гостеприимство',
     nav_menu: 'Меню и Заказ',
     nav_waiter: 'Режим Официанта',
@@ -167,7 +167,7 @@ export const translations = {
     
     // Customer Menu
     hero_badge: 'Изысканный Вкус & Атмосфера',
-    hero_title: 'SAVORIA RESTAURANT & LOUNGE',
+    hero_title: 'SAVORIA RESTAURANT',
     hero_subtitle: 'В каждом блюде высочайшее качество, эстетическая подача и восточный уют. Закажите на стол или с доставкой на дом.',
     btn_order_table: 'Заказ на Стол',
     btn_order_delivery: 'Доставка',
@@ -280,7 +280,7 @@ export const translations = {
     login_error: 'Неверный пароль! Пожалуйста, проверьте снова.'
   },
   en: {
-    brand_title: 'SAVORIA RESTAURANT & LOUNGE',
+    brand_title: 'SAVORIA RESTAURANT',
     brand_slogan: 'Fine Dining & Eastern Hospitality',
     nav_menu: 'Menu & Order',
     nav_waiter: 'Waiter Terminal',
@@ -306,7 +306,7 @@ export const translations = {
     
     // Customer Menu
     hero_badge: 'Artisanal Flavors & Luxury Lounge',
-    hero_title: 'SAVORIA RESTAURANT & LOUNGE',
+    hero_title: 'SAVORIA RESTAURANT',
     hero_subtitle: 'Uncompromising culinary excellence, aesthetic plating, and warm hospitality. Order directly to your table or doorstep.',
     btn_order_table: 'Order to Table',
     btn_order_delivery: 'Delivery Order',

@@ -5,13 +5,13 @@ import cocktailImg from '../assets/images/savoria_cocktail_drink_1791475891055.j
 import burrataImg from '../assets/images/savoria_gourmet_salad_1791475898828.jpg';
 
 export const INITIAL_SETTINGS: RestaurantSettings = {
-  name: 'SAVORIA RESTAURANT & LOUNGE',
+  name: 'SAVORIA RESTAURANT',
   slogan: 'Premium Gastronomiya va Sharqona mehmondo\'stlik',
   address: 'Toshkent sh., Mirzo Ulug\'bek tumani, Mustaqillik shoh ko\'chasi 77',
   phone: '+998 71 200 88 99',
   stir: '309 814 552',
   serviceFeePercent: 12,
-  headerMessage: 'Savoria premium restoraniga xush kelibsiz!',
+  headerMessage: 'SAVORIA RESTAURANT ga xush kelibsiz!',
   footerReceiptMessage: 'Tashrifingiz uchun minnatdormiz! Yoqimli ishtaha tilaymiz.',
   wifiPassword: 'savoria_lounge_vip'
 };
