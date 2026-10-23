@@ -20,12 +20,17 @@ export interface AdminUser {
 
 export type ItemCategory = 
   | 'asosiy'      // Asosiy taomlar / Steyklar
-  | 'milliy'      // Milliy tansiq taomlar
-  | 'salatlar'    // Salatlar & Gazaklar
+  | 'milliy'      // Milliy taomlar (Osh, Qozon kabob, Norin...)
+  | 'shashlik'    // Shashlik & Kaboblar
+  | 'steak'       // Steak & Gril
+  | 'salatlar'    // Salatlar
   | 'shorvalar'   // Sho'rvalar
-  | 'ichimliklar' // Mualliflik kokteyllari va salqin ichimliklar
+  | 'shirinliklar'// Shirinliklar & Desertlar
+  | 'desertlar'   // Desertlar
+  | 'ichimliklar' // Ichimliklar & Kokteyllar
   | 'qahva_choy'  // Qahva va elit choylar
-  | 'desertlar';  // Desertlar
+  | 'pasta'       // Pasta & Risotto
+  | 'fastfood';   // Burger & Fast Food
 
 
 export interface MenuItem {
@@ -41,6 +46,11 @@ export interface MenuItem {
   calories?: number;
   weightGrams?: number;
   isChefSpecial?: boolean;
+  isHit?: boolean;
+  isSpicy?: boolean;
+  ingredients?: string[];
+  rating?: number;
+  reviewsCount?: number;
 }
 
 export interface OrderItem {
@@ -114,6 +124,15 @@ export interface Waiter {
 }
 
 
+export interface RestaurantTable {
+  id: string; // e.g. 'Stol #1 (Zal 1)'
+  name: string; // e.g. 'Stol 1'
+  zone: string; // e.g. 'Zal 1', 'Zal 2', 'VIP', 'Terrasa', 'Bar'
+  capacity: number; // e.g. 4
+  isActive: boolean;
+  notes?: string;
+}
+
 export interface RestaurantSettings {
   name: string;
   slogan: string;
@@ -125,3 +144,40 @@ export interface RestaurantSettings {
   footerReceiptMessage: string;
   wifiPassword?: string;
 }
+
+export interface CustomerReview {
+  id: string;
+  authorName: string;
+  authorRole?: string; // e.g. 'Doimiy mehmon', 'Food blogger'
+  rating: number; // 1 to 5
+  comment: string;
+  date: string;
+  recommendedDish?: string;
+  likesCount?: number;
+}
+
+export interface TableReservation {
+  id: string;
+  guestName: string;
+  guestPhone: string;
+  date: string;
+  time: string;
+  guestsCount: number;
+  tableId: string;
+  zone: string;
+  specialRequests?: string;
+  status: 'tasdiqlandi' | 'kutilmoqda' | 'bekor_qilindi';
+  createdAt: string;
+}
+
+export interface ChefProfile {
+  id: string;
+  name: string;
+  role: string;
+  experienceYears: number;
+  experienceBio: string;
+  specialty: string;
+  image: string;
+  achievements: string[];
+}
+

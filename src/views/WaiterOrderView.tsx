@@ -1,27 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { MenuItem, ItemCategory } from '../types';
 import { 
   Users, Utensils, Plus, Minus, Send, CheckCircle2, 
   Search, ArrowLeft, Clock, Sparkles, AlertCircle, 
-  Lock, KeyRound, LogOut, ShieldCheck, Eye, EyeOff
+  Lock, KeyRound, LogOut, ShieldCheck, Delete, RotateCcw, Bell
 } from 'lucide-react';
 
 export const WaiterOrderView: React.FC = () => {
   const { 
     menuItems, waiters, createOrder, formatUZS, 
     settings, t, setRoute, openReceiptModal,
-    currentLoggedInWaiter, waiterLogin, waiterLogout 
+    currentLoggedInWaiter, waiterLoginByPin, waiterLogout,
+    tables, waiterCallAlert, dismissWaiterCallAlert
   } = useRestaurant();
 
-  // Waiter Login State
-  const [loginWaiterId, setLoginWaiterId] = useState<string>(waiters[0]?.id || '');
-  const [loginPassword, setLoginPassword] = useState<string>('');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
+  // Phone Lock Screen Passcode State
+  const [pinCode, setPinCode] = useState<string>('');
+  const [isShaking, setIsShaking] = useState<boolean>(false);
   const [loginError, setLoginError] = useState<string>('');
 
   // Table Order State (Once Logged In)
-  const [selectedTable, setSelectedTable] = useState<string>('Stol #1 (Zal 1)');
+  const [selectedTable, setSelectedTable] = useState<string>(tables[0]?.id || 'Stol #1 (Zal 1)');
   const [guestCount, setGuestCount] = useState<number>(2);
   const [selectedCategory, setSelectedCategory] = useState<ItemCategory | 'barchasi'>('barchasi');
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,17 +31,6 @@ export const WaiterOrderView: React.FC = () => {
   const [cartItems, setCartItems] = useState<{ item: MenuItem; quantity: number; notes?: string }[]>([]);
   const [lastCreatedOrder, setLastCreatedOrder] = useState<any>(null);
   const [successBanner, setSuccessBanner] = useState(false);
-
-  const tables = [
-    { id: 'Stol #1 (Zal 1)', name: 'Stol 1', zone: 'Zal 1' },
-    { id: 'Stol #2 (Zal 1)', name: 'Stol 2', zone: 'Zal 1' },
-    { id: 'Stol #3 (Zal 1)', name: 'Stol 3', zone: 'Zal 1' },
-    { id: 'Stol #4 (Zal 1)', name: 'Stol 4', zone: 'Zal 1' },
-    { id: 'Stol #5 (Zal 1)', name: 'Stol 5', zone: 'Zal 1' },
-    { id: 'VIP Kabinet #1', name: 'VIP 1', zone: 'VIP' },
-    { id: 'VIP Terrasa #2', name: 'VIP Terrasa', zone: 'Terrasa' },
-    { id: 'Bar stoli #3', name: 'Bar 3', zone: 'Bar' },
-  ];
 
   const categories: { id: ItemCategory | 'barchasi'; label: string }[] = [
     { id: 'barchasi', label: t('cat_all') },
@@ -60,21 +49,62 @@ export const WaiterOrderView: React.FC = () => {
     return matchCat && matchSearch;
   });
 
-  const handleWaiterLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const targetId = loginWaiterId || waiters[0]?.id;
-    if (!targetId || !loginPassword.trim()) {
-      setLoginError('Iltimos, parolingizni kiriting');
-      return;
-    }
-    const ok = waiterLogin(targetId, loginPassword);
-    if (!ok) {
-      setLoginError('Noto\'g\'ri parol! Iltimos, qaytadan tekshiring.');
-    } else {
+  // Verify PIN whenever it reaches 4 digits
+  const verifyPin = useCallback((pinToTest: string) => {
+    const success = waiterLoginByPin(pinToTest);
+    if (success) {
       setLoginError('');
-      setLoginPassword('');
+      setPinCode('');
+    } else {
+      setIsShaking(true);
+      setLoginError("Noto'g'ri PIN kod! Qayta urinib ko'ring.");
+      setTimeout(() => {
+        setIsShaking(false);
+        setPinCode('');
+      }, 400);
+    }
+  }, [waiterLoginByPin]);
+
+  const handleKeyPress = (digit: string) => {
+    if (pinCode.length >= 4) return;
+    const nextPin = pinCode + digit;
+    setPinCode(nextPin);
+    setLoginError('');
+
+    if (nextPin.length === 4) {
+      setTimeout(() => {
+        verifyPin(nextPin);
+      }, 100);
     }
   };
+
+  const handleBackspace = () => {
+    setPinCode(prev => prev.slice(0, -1));
+    setLoginError('');
+  };
+
+  const handleClear = () => {
+    setPinCode('');
+    setLoginError('');
+  };
+
+  // Physical Keyboard Input Support
+  useEffect(() => {
+    if (currentLoggedInWaiter) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        handleKeyPress(e.key);
+      } else if (e.key === 'Backspace') {
+        handleBackspace();
+      } else if (e.key === 'Escape') {
+        handleClear();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [pinCode, currentLoggedInWaiter]);
 
   const addItem = (item: MenuItem) => {
     if (!item.isAvailable) return;
@@ -139,92 +169,155 @@ export const WaiterOrderView: React.FC = () => {
     setKitchenNotes('');
   };
 
-  // If NOT logged in as a waiter: Show security Waiter Login Screen
+  // If NOT logged in as a waiter: Show Phone-Style Passcode Lock Screen
   if (!currentLoggedInWaiter) {
+    const dialPadButtons = [
+      { num: '1', letters: '' },
+      { num: '2', letters: 'ABC' },
+      { num: '3', letters: 'DEF' },
+      { num: '4', letters: 'GHI' },
+      { num: '5', letters: 'JKL' },
+      { num: '6', letters: 'MNO' },
+      { num: '7', letters: 'PQRS' },
+      { num: '8', letters: 'TUV' },
+      { num: '9', letters: 'WXYZ' },
+    ];
+
     return (
-      <div className="min-h-screen bg-[#08090e] text-[#eaeaea] p-4 flex items-center justify-center">
-        <div className="w-full max-w-sm bg-[#11131c] border border-[#d4af37]/50 rounded-2xl p-6 shadow-2xl relative">
+      <div className="min-h-screen bg-[#07080c] text-[#eaeaea] p-4 flex items-center justify-center animate-fade-in select-none">
+        {/* Smartphone Form-factor Card Container */}
+        <div className="w-full max-w-[340px] sm:max-w-[380px] bg-[#0d0f17] border border-[#23283c] rounded-[42px] p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col items-center">
+          {/* Top Speaker/Camera Bar (Phone Notch Aesthetic) */}
+          <div className="w-24 h-4 bg-black/60 rounded-full mb-4 border border-white/5 flex items-center justify-center">
+            <div className="w-10 h-1 bg-neutral-700/60 rounded-full" />
+          </div>
+
+          {/* Back button to Home view */}
           <button
             onClick={() => setRoute('mijoz')}
-            className="absolute top-4 left-4 p-1.5 rounded-lg bg-[#181a28] text-neutral-400 hover:text-white border border-[#2b3046]"
-            title="Orqaga"
+            className="absolute top-5 left-5 p-2 rounded-full bg-[#151825] text-neutral-400 hover:text-white border border-[#272b3e] transition-colors"
+            title="Asosiy menyuga qaytish"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
 
-          <div className="text-center pt-2 pb-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#d4af37]/15 border border-[#d4af37] mx-auto flex items-center justify-center text-[#d4af37] shadow-[0_0_20px_rgba(212,175,55,0.2)] mb-3">
-              <Lock className="w-7 h-7" />
+          {/* Terminal Monogram & Header */}
+          <div className="text-center pt-1 pb-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2a1d12] to-[#12141f] border border-orange-500/50 mx-auto flex items-center justify-center text-orange-400 shadow-[0_0_20px_rgba(249,115,22,0.25)] mb-3">
+              <span className="font-serif font-bold text-2xl">S</span>
             </div>
-            <h2 className="font-serif font-bold text-lg text-white tracking-wide">
+            <h2 className="font-serif font-bold text-base sm:text-lg text-white tracking-widest uppercase">
               OFITSIANT TERMINALI
             </h2>
-            <p className="text-xs text-neutral-400 mt-1">
-              Buyurtma olish uchun ofitsiantni tanlang va parolni kiriting
+            <p className="text-[11px] text-neutral-400 mt-1">
+              Kirish uchun 4 xonali PIN kodni tering
             </p>
           </div>
 
-          <form onSubmit={handleWaiterLoginSubmit} className="space-y-4">
-            <div>
-              <label className="text-[11px] font-medium text-neutral-300 block mb-1">
-                Ofitsiantni Tanlang *
-              </label>
-              <select
-                value={loginWaiterId || waiters[0]?.id || ''}
-                onChange={e => {
-                  setLoginWaiterId(e.target.value);
-                  setLoginError('');
-                }}
-                className="w-full bg-[#090a10] border border-[#2c3044] focus:border-[#d4af37] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none"
-              >
-                {waiters.map(w => (
-                  <option key={w.id} value={w.id}>
-                    {w.name} ({w.assignedZone})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-medium text-neutral-300 block mb-1">
-                Ofitsiant Paroli / PIN *
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  autoFocus
-                  placeholder="PIN yoki parol..."
-                  value={loginPassword}
-                  onChange={e => {
-                    setLoginPassword(e.target.value);
-                    if (loginError) setLoginError('');
-                  }}
-                  className="w-full bg-[#090a10] border border-[#2c3044] focus:border-[#d4af37] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-500 font-mono tracking-wider focus:outline-none"
+          {/* 4 Passcode Indicator Dots (Phone Lock Screen Style) */}
+          <div className={`flex items-center justify-center gap-5 my-4 ${isShaking ? 'animate-shake' : ''}`}>
+            {[0, 1, 2, 3].map(i => {
+              const isFilled = pinCode.length > i;
+              return (
+                <div
+                  key={i}
+                  className={`w-3.5 h-3.5 rounded-full transition-all duration-200 ${
+                    isFilled
+                      ? loginError
+                        ? 'bg-rose-500 scale-125 shadow-[0_0_12px_rgba(244,63,94,0.8)]'
+                        : 'bg-gradient-to-r from-orange-500 to-amber-400 scale-125 shadow-[0_0_12px_rgba(249,115,22,0.7)]'
+                      : 'border-2 border-neutral-600 bg-transparent'
+                  }`}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(p => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {loginError && (
-                <p className="text-rose-400 text-[11px] mt-1.5 font-mono">
-                  {loginError}
-                </p>
-              )}
-            </div>
+              );
+            })}
+          </div>
+
+          {/* Error Message if wrong code */}
+          <div className="h-6 flex items-center justify-center mb-2">
+            {loginError ? (
+              <p className="text-rose-400 text-xs font-mono font-medium animate-fade-in flex items-center gap-1">
+                <span>⚠️</span>
+                <span>{loginError}</span>
+              </p>
+            ) : (
+              <span className="text-[10px] text-neutral-500 font-mono">
+                {pinCode.length === 0 ? 'Parol kutilmoqda...' : `${pinCode.length} / 4 kiritildi`}
+              </span>
+            )}
+          </div>
+
+          {/* Phone Numeric Keypad (Circular dial pad buttons) */}
+          <div className="grid grid-cols-3 gap-3.5 sm:gap-4 my-2 w-full max-w-[270px]">
+            {dialPadButtons.map(btn => (
+              <button
+                key={btn.num}
+                type="button"
+                onClick={() => handleKeyPress(btn.num)}
+                className="w-16 h-16 sm:w-18 sm:h-18 mx-auto rounded-full bg-[#151724]/90 hover:bg-[#21263a] active:bg-orange-600/30 active:scale-95 border border-[#262b3e] flex flex-col items-center justify-center transition-all duration-150 cursor-pointer shadow-md group"
+              >
+                <span className="text-xl sm:text-2xl font-semibold text-white group-hover:text-orange-400 transition-colors leading-none">
+                  {btn.num}
+                </span>
+                {btn.letters && (
+                  <span className="text-[8px] font-mono tracking-widest text-neutral-500 group-hover:text-neutral-400 mt-0.5">
+                    {btn.letters}
+                  </span>
+                )}
+              </button>
+            ))}
+
+            {/* Bottom Row: Clear (C), 0, and Backspace */}
+            <button
+              type="button"
+              onClick={handleClear}
+              className="w-16 h-16 sm:w-18 sm:h-18 mx-auto rounded-full bg-[#151724]/40 hover:bg-[#21263a] active:scale-95 border border-transparent hover:border-[#262b3e] flex items-center justify-center text-xs font-semibold text-neutral-400 hover:text-white transition-all cursor-pointer"
+            >
+              Tozalash
+            </button>
 
             <button
-              type="submit"
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#e6c14c] text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-lg hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all flex items-center justify-center gap-2"
+              type="button"
+              onClick={() => handleKeyPress('0')}
+              className="w-16 h-16 sm:w-18 sm:h-18 mx-auto rounded-full bg-[#151724]/90 hover:bg-[#21263a] active:bg-orange-600/30 active:scale-95 border border-[#262b3e] flex flex-col items-center justify-center transition-all duration-150 cursor-pointer shadow-md group"
             >
-              <KeyRound className="w-4 h-4" />
-              <span>Ofitsiant Rejimiga Kirish</span>
+              <span className="text-xl sm:text-2xl font-semibold text-white group-hover:text-orange-400 transition-colors leading-none">
+                0
+              </span>
+              <span className="text-[8px] font-mono text-neutral-500 mt-0.5">+</span>
             </button>
-          </form>
+
+            <button
+              type="button"
+              onClick={handleBackspace}
+              className="w-16 h-16 sm:w-18 sm:h-18 mx-auto rounded-full bg-[#151724]/40 hover:bg-[#21263a] active:scale-95 border border-transparent hover:border-[#262b3e] flex items-center justify-center text-neutral-400 hover:text-rose-400 transition-all cursor-pointer"
+              title="O'chirish"
+            >
+              <Delete className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Quick Demo Waiter PINs at bottom */}
+          <div className="mt-5 pt-3 border-t border-[#1b1f2e] w-full text-center">
+            <div className="text-[10px] uppercase font-mono text-neutral-500 mb-1.5 font-semibold">
+              Tezkor PIN kodlar:
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              {waiters.map(w => (
+                <button
+                  key={w.id}
+                  type="button"
+                  onClick={() => {
+                    setPinCode(w.password || '1111');
+                    verifyPin(w.password || '1111');
+                  }}
+                  className="px-2 py-0.5 rounded-lg bg-[#141624] hover:bg-orange-950/60 hover:text-orange-300 border border-[#23273c] text-[10px] font-mono text-neutral-400 transition-colors"
+                >
+                  <span className="text-orange-400 font-bold">{w.password || '1111'}</span> ({w.name.split(' ')[0]})
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -234,6 +327,31 @@ export const WaiterOrderView: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#08090e] text-[#eaeaea] p-3 sm:p-6 pb-24">
       <div className="max-w-5xl mx-auto flex flex-col gap-4">
+        {/* Table Calling Alert Banner if active */}
+        {waiterCallAlert && (
+          <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-neutral-950 p-3.5 rounded-2xl shadow-xl flex items-center justify-between gap-3 animate-pulse border border-amber-300">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-neutral-950/20 flex items-center justify-center text-neutral-950 shrink-0">
+                <Bell className="w-4 h-4 animate-bounce" />
+              </div>
+              <div>
+                <div className="font-bold text-xs sm:text-sm">
+                  🔔 Stol chaqiruvi: «{waiterCallAlert.table}» ofitsiantni kutmoqda!
+                </div>
+                <div className="text-[10px] font-medium opacity-90">
+                  Mehmon stol ustidagi QR menyu orqali ofitsiant chaqiruvini yubordi.
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={dismissWaiterCallAlert}
+              className="px-3.5 py-1.5 rounded-xl bg-neutral-950 text-white font-bold text-xs hover:bg-neutral-900 transition-colors shrink-0 shadow cursor-pointer"
+            >
+              Qabul qildim ✓
+            </button>
+          </div>
+        )}
+
         {/* Top Header with Logged-in Waiter Info & Logout */}
         <div className="flex items-center justify-between pb-3 border-b border-[#212435] gap-2">
           <div className="flex items-center gap-2.5">

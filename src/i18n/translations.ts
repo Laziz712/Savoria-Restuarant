@@ -13,7 +13,9 @@ export const translations = {
     
     // Categories
     cat_all: 'Barchasi',
-    cat_asosiy: 'Steyk & Asosiy',
+    cat_asosiy: 'Steyk & Go\'shtlar',
+    cat_pasta: 'Pasta & Risotto',
+    cat_fastfood: 'Burger & Fast Food',
     cat_milliy: 'Milliy Tansiq',
     cat_salatlar: 'Salatlar',
     cat_shorvalar: 'Sho\'rvalar',
@@ -110,7 +112,9 @@ export const translations = {
     admin_tab_delivery: 'Dostavka',
     admin_tab_reports: 'Xisobot & Statistika',
     admin_tab_menu: 'Taomlar & Narxlar',
+    admin_tab_tables: 'Stollar & Zallar',
     admin_tab_staff: 'Xodimlar & Adminlar',
+    admin_tab_reservations: 'Bronlar',
     admin_users_title: 'ADMINLAR VA FOYDALANUVCHILAR BOSHQARUVI',
     btn_add_admin: 'Yangi Admin Yaratish',
     admin_name: 'Admin Ismi',
@@ -152,7 +156,9 @@ export const translations = {
     
     // Categories
     cat_all: 'Все',
-    cat_asosiy: 'Стейки и Основное',
+    cat_asosiy: 'Стейки и Мясо',
+    cat_pasta: 'Паста и Ризотто',
+    cat_fastfood: 'Бургеры и Фастфуд',
     cat_milliy: 'Национальные Блюда',
     cat_salatlar: 'Салаты',
     cat_shorvalar: 'Супы',
@@ -249,7 +255,9 @@ export const translations = {
     admin_tab_delivery: 'Доставка',
     admin_tab_reports: 'Отчеты и Аналитика',
     admin_tab_menu: 'Блюда и Цены',
+    admin_tab_tables: 'Столы и Залы',
     admin_tab_staff: 'Персонал и Админы',
+    admin_tab_reservations: 'Бронирования',
     admin_users_title: 'УПРАВЛЕНИЕ АДМИНИСТРАТОРАМИ',
     btn_add_admin: 'Создать Администратора',
     admin_name: 'Имя Администратора',
@@ -291,7 +299,9 @@ export const translations = {
     
     // Categories
     cat_all: 'All',
-    cat_asosiy: 'Steak & Mains',
+    cat_asosiy: 'Steak & Meats',
+    cat_pasta: 'Pasta & Risotto',
+    cat_fastfood: 'Burgers & Fast Food',
     cat_milliy: 'Heritage Specialties',
     cat_salatlar: 'Salads & Starters',
     cat_shorvalar: 'Soups',
@@ -388,7 +398,9 @@ export const translations = {
     admin_tab_delivery: 'Delivery',
     admin_tab_reports: 'Reports',
     admin_tab_menu: 'Menu & Prices',
+    admin_tab_tables: 'Tables & Zones',
     admin_tab_staff: 'Staff & Admins',
+    admin_tab_reservations: 'Reservations',
     admin_users_title: 'ADMIN ACCOUNTS & CREDENTIALS',
     btn_add_admin: 'Create New Admin',
     admin_name: 'Admin Name',

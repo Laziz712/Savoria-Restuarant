@@ -4,7 +4,8 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { 
   Volume2, VolumeX, ShoppingBag, ShieldCheck, Lock, LogOut, 
   UtensilsCrossed, Menu, X, ChevronRight, Receipt, Utensils, 
-  Bike, BarChart3, Users, Globe, ExternalLink
+  Bike, BarChart3, Users, Globe, ExternalLink, LayoutGrid,
+  Bell, Sparkles
 } from 'lucide-react';
 import { Language } from '../types';
 
@@ -13,10 +14,13 @@ export const Navbar: React.FC = () => {
     activeRoute, setRoute, soundEnabled, toggleSound, 
     isAdminAuthenticated, adminLogout, setShowAdminLoginModal, 
     orders, adminSubTab, setAdminSubTab, language, setLanguage,
-    waiters, couriers, adminUsers, t 
+    waiters, couriers, adminUsers, tables, t,
+    currentTableContext, isMenuOnlyMode, callWaiterFromTable,
+    setIsMenuOnlyMode, setCurrentTableContext
   } = useRestaurant();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [waiterCallSent, setWaiterCallSent] = useState(false);
 
   const pendingOrdersCount = orders.filter(o => o.status !== 'yopildi').length;
   const kitchenOrdersCount = orders.filter(o => o.status === 'yangi' || o.status === 'oshxonada').length;
@@ -71,6 +75,92 @@ export const Navbar: React.FC = () => {
       document.body.style.overflow = '';
     };
   }, [isMobileMenuOpen]);
+
+  // If in QR Table Menu Only Mode: Show strictly digital menu header with table info and Call Waiter buzzer
+  if (isMenuOnlyMode) {
+    return (
+      <header className="sticky top-0 z-50 bg-[#0d0e14]/95 backdrop-blur-md border-b border-[#d4af37]/40 shadow-lg">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
+          {/* Left: Brand + Table Badge */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg border border-[#d4af37]/50 bg-gradient-to-br from-[#2a2415] to-[#12131a] flex items-center justify-center text-[#d4af37] font-serif font-bold text-sm shadow-[0_0_12px_rgba(212,175,55,0.25)] shrink-0">
+              S
+            </div>
+            <div className="min-w-0">
+              <span className="font-serif tracking-wider font-bold text-xs sm:text-base text-white block truncate">
+                SAVORIA RESTAURANT
+              </span>
+              <span className="text-[10px] uppercase font-mono text-[#d4af37] tracking-widest hidden sm:block">
+                Raqamli Stol Menyusi
+              </span>
+            </div>
+
+            {/* Table Badge */}
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1b1e2e] border border-[#d4af37]/40 text-amber-300 text-xs font-mono font-bold shadow-sm shrink-0">
+              <span>📍 {currentTableContext || 'Stol'}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+          </div>
+
+          {/* Right: Call Waiter, Language, Sound, Exit */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Call Waiter Buzzer Button */}
+            <button
+              onClick={() => {
+                callWaiterFromTable(currentTableContext || 'Stol');
+                setWaiterCallSent(true);
+                setTimeout(() => setWaiterCallSent(false), 3500);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer ${
+                waiterCallSent
+                  ? 'bg-emerald-500 text-neutral-950 shadow-emerald-500/20'
+                  : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-110 text-neutral-950 shadow-amber-500/20'
+              }`}
+            >
+              <Bell className={`w-3.5 h-3.5 ${waiterCallSent ? '' : 'animate-bounce'}`} />
+              <span className="hidden sm:inline">
+                {waiterCallSent ? 'Ofitsiant chaqirildi!' : 'Ofitsiantni Chaqirish'}
+              </span>
+              <span className="sm:hidden">
+                {waiterCallSent ? 'Chaqirildi' : 'Ofitsiant'}
+              </span>
+            </button>
+
+            <LanguageSwitcher />
+
+            <button
+              onClick={toggleSound}
+              title={soundEnabled ? t('nav_sound_on') : t('nav_sound_off')}
+              className={`p-2 rounded-lg text-xs border transition-colors items-center gap-1 ${
+                soundEnabled
+                  ? 'bg-[#1a1c24] border-[#2e3244] text-[#d4af37]'
+                  : 'bg-[#16171e] border-neutral-800 text-neutral-500'
+              }`}
+            >
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            </button>
+
+            {/* Exit Table Menu mode button for managers */}
+            <button
+              onClick={() => {
+                setIsMenuOnlyMode(false);
+                setCurrentTableContext(null);
+                try {
+                  window.history.pushState({}, '', '/');
+                } catch {
+                  // Ignore
+                }
+              }}
+              title="Barcha rejimlar (Admin / POS)"
+              className="p-2 rounded-lg bg-[#141620] hover:bg-[#1f2334] border border-[#2b3044] text-neutral-400 hover:text-white transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-[#0d0e14]/95 backdrop-blur-md border-b border-[#252836]">
@@ -407,6 +497,23 @@ export const Navbar: React.FC = () => {
                     >
                       <UtensilsCrossed className="w-3.5 h-3.5" />
                       <span className="text-[11px]">Menyu Katalogi</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleAdminSubTabClick('stollar')}
+                      className={`p-2.5 rounded-xl border text-left text-xs transition-colors flex flex-col gap-1.5 ${
+                        activeRoute === 'admin' && adminSubTab === 'stollar'
+                          ? 'bg-[#d4af37] text-neutral-950 font-bold border-[#d4af37]'
+                          : 'bg-[#131622] border-[#222638] text-neutral-300 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <LayoutGrid className="w-3.5 h-3.5" />
+                        <span className="text-[9px] px-1 rounded bg-[#d4af37]/20 text-[#d4af37] font-mono">
+                          {tables.length}
+                        </span>
+                      </div>
+                      <span className="text-[11px]">Stollar & Zallar</span>
                     </button>
 
                     <button

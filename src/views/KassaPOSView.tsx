@@ -11,11 +11,11 @@ export const KassaPOSView: React.FC = () => {
   const { 
     menuItems, orders, createOrder, settleOrderPayment, 
     openReceiptModal, formatUZS, settings, updateOrderStatus,
-    waiters
+    waiters, tables
   } = useRestaurant();
 
   // Selected Table or Ticket
-  const [selectedTable, setSelectedTable] = useState<string>('Stol #4 (Zal 1)');
+  const [selectedTable, setSelectedTable] = useState<string>(tables[0]?.id || 'Stol #1 (Zal 1)');
   const [orderType, setOrderType] = useState<OrderType>('zal');
   const [activeTabCategory, setActiveTabCategory] = useState<ItemCategory | 'barchasi'>('barchasi');
   const [posSearch, setPosSearch] = useState('');
@@ -34,17 +34,6 @@ export const KassaPOSView: React.FC = () => {
 
   // Mobile View Switcher between Catalog and Check
   const [mobilePosTab, setMobilePosTab] = useState<'catalog' | 'check'>('catalog');
-
-  const tables = [
-    { id: 'Stol #1 (Zal 1)', name: 'Stol 1', capacity: '4 kishi', zone: 'Zal 1' },
-    { id: 'Stol #2 (Zal 1)', name: 'Stol 2', capacity: '2 kishi', zone: 'Zal 1' },
-    { id: 'Stol #3 (Zal 1)', name: 'Stol 3', capacity: '6 kishi', zone: 'Zal 1' },
-    { id: 'Stol #4 (Zal 1)', name: 'Stol 4', capacity: '4 kishi', zone: 'Zal 1' },
-    { id: 'Stol #5 (Zal 1)', name: 'Stol 5', capacity: '4 kishi', zone: 'Zal 1' },
-    { id: 'VIP Kabinet #1', name: 'VIP 1', capacity: '10 kishi', zone: 'VIP' },
-    { id: 'VIP Terrasa #2', name: 'VIP Terrasa', capacity: '8 kishi', zone: 'Terrasa' },
-    { id: 'Bar stoli #3', name: 'Bar 3', capacity: '2 kishi', zone: 'Bar' },
-  ];
 
   // Open unpaid table orders
   const openOrders = orders.filter(o => o.status !== 'yopildi');
