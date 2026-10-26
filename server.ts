@@ -13,13 +13,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
-// MongoDB Connection Setup
-// User specified: mongodb+srv://shavkatovv:<laziz712.>@cluster0.wupoksj.mongodb.net/?appName=Cluster0
-const rawMongoUri = process.env.MONGODB_URI || 'mongodb+srv://shavkatovv:laziz712.@cluster0.wupoksj.mongodb.net/savoria?appName=Cluster0';
-// Sanitize URI in case user formatted password with <...>
+// MongoDB Connection Setup (Kept 100% secret in environment variables)
+const rawMongoUri = process.env.MONGODB_URI || '';
 const sanitizedMongoUri = rawMongoUri
-  .replace('<laziz712.>', encodeURIComponent('laziz712.'))
-  .replace('<laziz712>', encodeURIComponent('laziz712'));
+  .replace(/<([^>]+)>/g, (_, p) => encodeURIComponent(p));
 
 let isMongoConnected = false;
 let mongoErrorMessage = '';
@@ -27,18 +24,19 @@ let mongoErrorMessage = '';
 mongoose.set('strictQuery', false);
 
 async function connectToMongo() {
+  if (!sanitizedMongoUri) {
+    isMongoConnected = false;
+    return;
+  }
   try {
-    console.log('Connecting to MongoDB Atlas at cluster0.wupoksj.mongodb.net...');
     await mongoose.connect(sanitizedMongoUri, {
       serverSelectionTimeoutMS: 5000,
     });
     isMongoConnected = true;
     mongoErrorMessage = '';
-    console.log('Successfully connected to MongoDB Atlas (database: savoria)!');
   } catch (err: any) {
     isMongoConnected = false;
-    mongoErrorMessage = err?.message || 'Failed to connect to MongoDB';
-    console.warn('MongoDB connection notice (will run with hybrid in-memory fallback):', mongoErrorMessage);
+    mongoErrorMessage = 'Database connection failed';
   }
 }
 
@@ -150,9 +148,6 @@ app.get('/api/status', (req, res) => {
     status: 'ok',
     restaurant: 'SAVORIA RESTAURANT',
     mongoConnected: isMongoConnected,
-    mongoCluster: 'cluster0.wupoksj.mongodb.net',
-    mongoDatabase: 'savoria',
-    mongoError: mongoErrorMessage || null,
     serverTime: new Date().toISOString()
   });
 });
@@ -387,6 +382,64 @@ app.put('/api/settings', async (req, res) => {
     }
     memoryStore.settings = newSettings;
     res.json(newSettings);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Bulk Database Sync Endpoint (Auto-seeds and synchronizes all collections in MongoDB Atlas)
+app.post('/api/sync-all', async (req, res) => {
+  try {
+    const { menuItems, waiters, couriers, adminUsers, settings, orders } = req.body;
+    let syncedCount = 0;
+
+    if (isMongoConnected) {
+      if (Array.isArray(menuItems) && menuItems.length > 0) {
+        for (const item of menuItems) {
+          await MenuItemModel.findOneAndUpdate({ id: item.id }, item, { upsert: true });
+          syncedCount++;
+        }
+      }
+      if (Array.isArray(waiters) && waiters.length > 0) {
+        for (const w of waiters) {
+          await WaiterModel.findOneAndUpdate({ id: w.id }, w, { upsert: true });
+        }
+      }
+      if (Array.isArray(couriers) && couriers.length > 0) {
+        for (const c of couriers) {
+          await CourierModel.findOneAndUpdate({ id: c.id }, c, { upsert: true });
+        }
+      }
+      if (Array.isArray(adminUsers) && adminUsers.length > 0) {
+        for (const a of adminUsers) {
+          await AdminUserModel.findOneAndUpdate({ id: a.id }, a, { upsert: true });
+        }
+      }
+      if (settings && typeof settings === 'object') {
+        await SettingsModel.findOneAndUpdate({}, settings, { upsert: true });
+      }
+      if (Array.isArray(orders) && orders.length > 0) {
+        for (const o of orders) {
+          await OrderModel.findOneAndUpdate({ id: o.id }, o, { upsert: true });
+        }
+      }
+      return res.json({ 
+        success: true, 
+        mongoConnected: true, 
+        syncedCount, 
+        message: "Barcha ma'lumotlar MongoDB bazasiga to'liq yuklandi" 
+      });
+    }
+
+    // In-memory fallback
+    if (Array.isArray(menuItems)) memoryStore.menu = menuItems;
+    if (Array.isArray(waiters)) memoryStore.waiters = waiters;
+    if (Array.isArray(couriers)) memoryStore.couriers = couriers;
+    if (Array.isArray(adminUsers)) memoryStore.admins = adminUsers;
+    if (settings) memoryStore.settings = settings;
+    if (Array.isArray(orders)) memoryStore.orders = orders;
+
+    res.json({ success: true, mongoConnected: false, message: "Lokal xotiraga saqlandi" });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

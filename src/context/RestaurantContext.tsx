@@ -157,9 +157,9 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const [mongoStatus, setMongoStatus] = useState<MongoStatus>({
     connected: true,
-    cluster: 'cluster0.wupoksj.mongodb.net',
-    database: 'savoria',
-    message: 'MongoDB Atlas ulangan'
+    cluster: 'Maxfiy Bulut Baza',
+    database: 'asosiy_baza',
+    message: 'Baza bilan aloqa faol'
   });
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
@@ -313,10 +313,10 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       .then(data => {
         if (data && data.status === 'ok') {
           setMongoStatus({
-            connected: data.mongoConnected,
-            cluster: data.mongoCluster || 'cluster0.wupoksj.mongodb.net',
-            database: data.mongoDatabase || 'savoria',
-            message: data.mongoConnected ? 'MongoDB Atlas Faol' : (data.mongoError || 'Gibrid xotira rejimi faol')
+            connected: !!data.mongoConnected,
+            cluster: 'Maxfiy Bulut Baza',
+            database: 'asosiy_baza',
+            message: data.mongoConnected ? 'Bulut bazasi faol' : 'Lokal xotira faol'
           });
         }
       })
@@ -324,11 +324,25 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         // Fallback gracefully
         setMongoStatus({
           connected: true,
-          cluster: 'cluster0.wupoksj.mongodb.net',
-          database: 'savoria',
-          message: 'MongoDB Atlas Integratsiyalangan'
+          cluster: 'Maxfiy Bulut Baza',
+          database: 'asosiy_baza',
+          message: 'Bulut bazasi integratsiyalangan'
         });
       });
+
+    // Auto-sync initial data into MongoDB so collections are populated with documents
+    fetch('/api/sync-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        menuItems,
+        waiters,
+        couriers,
+        adminUsers,
+        settings,
+        orders
+      })
+    }).catch(() => {});
 
     // Optional: fetch remote data if available
     fetch('/api/menu')

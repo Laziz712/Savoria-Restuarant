@@ -296,28 +296,6 @@ export const WaiterOrderView: React.FC = () => {
               <Delete className="w-5 h-5" />
             </button>
           </div>
-
-          {/* Quick Demo Waiter PINs at bottom */}
-          <div className="mt-5 pt-3 border-t border-[#1b1f2e] w-full text-center">
-            <div className="text-[10px] uppercase font-mono text-neutral-500 mb-1.5 font-semibold">
-              Tezkor PIN kodlar:
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-1.5">
-              {waiters.map(w => (
-                <button
-                  key={w.id}
-                  type="button"
-                  onClick={() => {
-                    setPinCode(w.password || '1111');
-                    verifyPin(w.password || '1111');
-                  }}
-                  className="px-2 py-0.5 rounded-lg bg-[#141624] hover:bg-orange-950/60 hover:text-orange-300 border border-[#23273c] text-[10px] font-mono text-neutral-400 transition-colors"
-                >
-                  <span className="text-orange-400 font-bold">{w.password || '1111'}</span> ({w.name.split(' ')[0]})
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     );

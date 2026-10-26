@@ -58,7 +58,7 @@ export const AdminLoginModal: React.FC = () => {
     if (activeRole === 'admin') {
       const success = adminLogin(password);
       if (!success) {
-        setErrorMsg('Noto\'g\'ri admin paroli! (Standart: admin123)');
+        setErrorMsg('Noto\'g\'ri admin paroli! Qayta urinib ko\'ring.');
       } else {
         setErrorMsg('');
         setPassword('');
@@ -70,7 +70,7 @@ export const AdminLoginModal: React.FC = () => {
       if (!targetId) return;
       const success = waiterLogin(targetId, password);
       if (!success) {
-        setErrorMsg('Noto\'g\'ri ofitsiant paroli! (Standart: 1111)');
+        setErrorMsg('Noto\'g\'ri ofitsiant paroli! Qayta urinib ko\'ring.');
       } else {
         setErrorMsg('');
         setPassword('');
@@ -81,7 +81,7 @@ export const AdminLoginModal: React.FC = () => {
       // Cashier has access to POS Kassa
       const success = adminLogin(password);
       if (!success) {
-        setErrorMsg('Noto\'g\'ri kassa paroli! (Standart: admin123)');
+        setErrorMsg('Noto\'g\'ri kassa paroli! Qayta urinib ko\'ring.');
       } else {
         setErrorMsg('');
         setPassword('');
@@ -260,7 +260,7 @@ export const AdminLoginModal: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 required
                 autoFocus
-                placeholder={activeRole === 'waiter' ? 'Masalan: 1111' : 'Parolni kiriting (admin123)'}
+                placeholder={activeRole === 'waiter' ? 'PIN-kodni kiriting' : 'Parolni kiriting'}
                 value={password}
                 onChange={e => {
                   setPassword(e.target.value);
@@ -324,7 +324,7 @@ export const AdminLoginModal: React.FC = () => {
             </div>
           )}
 
-          {/* Remember me and Quick hints */}
+          {/* Remember me */}
           <div className="flex items-center justify-between text-xs text-neutral-400 pt-1">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
@@ -335,45 +335,6 @@ export const AdminLoginModal: React.FC = () => {
               />
               <span className="text-[11px]">Eslab qolish</span>
             </label>
-
-            {/* Quick test autofill chips */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-neutral-500 font-mono">Tezkor:</span>
-              {activeRole === 'admin' ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPassword('admin123');
-                    setErrorMsg('');
-                  }}
-                  className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1a1d2e] hover:bg-[#252a42] text-[#d4af37] border border-[#2e334c]"
-                >
-                  admin123
-                </button>
-              ) : activeRole === 'waiter' ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPassword('1111');
-                    setErrorMsg('');
-                  }}
-                  className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1a1d2e] hover:bg-[#252a42] text-[#d4af37] border border-[#2e334c]"
-                >
-                  1111
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPassword('admin123');
-                    setErrorMsg('');
-                  }}
-                  className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1a1d2e] hover:bg-[#252a42] text-[#d4af37] border border-[#2e334c]"
-                >
-                  admin123
-                </button>
-              )}
-            </div>
           </div>
 
           {/* Submit Button */}

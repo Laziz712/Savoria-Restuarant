@@ -232,8 +232,8 @@ export const StaffManagementTab: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-4 text-center">
-                      <span className="px-2 py-0.5 rounded font-mono text-xs bg-[#1a1d2c] text-emerald-400 border border-[#2b3149] font-bold">
-                        {waiter.password || '1111'}
+                      <span className="px-2.5 py-1 rounded font-mono text-xs bg-[#1a1d2c] text-neutral-300 border border-[#2b3149] font-bold tracking-widest" title="Parol maxfiy saqlanadi">
+                        ••••
                       </span>
                     </td>
 
@@ -415,8 +415,10 @@ export const StaffManagementTab: React.FC = () => {
                       {admin.username}
                     </td>
 
-                    <td className="py-3 px-4 font-mono text-neutral-300">
-                      •••••••• ({admin.passwordHash})
+                    <td className="py-3 px-4 font-mono text-neutral-400">
+                      <span className="px-2 py-0.5 rounded bg-[#161826] border border-[#262a3d] text-neutral-300 font-bold tracking-widest text-[11px]" title="Parol maxfiy saqlanadi">
+                        ••••••••
+                      </span>
                     </td>
 
                     <td className="py-3 px-4 text-center">
