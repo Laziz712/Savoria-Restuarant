@@ -56,7 +56,7 @@ const MenuItemSchema = new mongoose.Schema({
   calories: { type: Number },
   weightGrams: { type: Number },
   isChefSpecial: { type: Boolean, default: false }
-}, { timestamps: true });
+}, { strict: false, timestamps: true });
 
 const OrderSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
@@ -81,7 +81,7 @@ const OrderSchema = new mongoose.Schema({
   paymentMethod: { type: String, default: 'uzcard_humo' },
   createdAt: { type: String },
   estimatedDeliveryMinutes: { type: Number }
-}, { timestamps: true });
+}, { strict: false, timestamps: true });
 
 const WaiterSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },

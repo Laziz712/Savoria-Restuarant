@@ -78,10 +78,16 @@ export const QrDigitalMenuView: React.FC = () => {
       // If category selected: ONLY dishes of this category!
       if (selectedCategory) {
         if (selectedCategory === 'qahva_choy') {
-          return item.category === 'ichimliklar' && (item.name.toLowerCase().includes('qahva') || item.name.toLowerCase().includes('choy'));
+          return item.category === 'qahva_choy' || (item.category === 'ichimliklar' && (item.name.toLowerCase().includes('qahva') || item.name.toLowerCase().includes('choy')));
         }
         if (selectedCategory === 'ichimliklar') {
           return item.category === 'ichimliklar' && !item.name.toLowerCase().includes('qahva') && !item.name.toLowerCase().includes('choy');
+        }
+        if (selectedCategory === 'steak') {
+          return item.category === 'steak' || item.category === 'asosiy';
+        }
+        if (selectedCategory === 'shirinliklar') {
+          return item.category === 'shirinliklar' || item.category === 'desertlar';
         }
         return item.category === selectedCategory;
       }

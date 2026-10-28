@@ -132,7 +132,38 @@ export const AdminCatalogView: React.FC = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
-          setFormImage(reader.result);
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 700;
+            const MAX_HEIGHT = 700;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height = Math.round((height * MAX_WIDTH) / width);
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width = Math.round((width * MAX_HEIGHT) / height);
+                height = MAX_HEIGHT;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+              setFormImage(compressedDataUrl);
+            } else {
+              setFormImage(reader.result as string);
+            }
+          };
+          img.src = reader.result;
         }
       };
       reader.readAsDataURL(file);
@@ -214,19 +245,32 @@ export const AdminCatalogView: React.FC = () => {
         <div className="space-y-4">
           {/* Category Filter Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            {(['barchasi', 'asosiy', 'milliy', 'salatlar', 'shorvalar', 'ichimliklar', 'desertlar', 'qahva_choy'] as const).map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors whitespace-nowrap ${
-                  selectedCategory === cat
-                    ? 'bg-[#d4af37] text-neutral-950 font-bold'
-                    : 'bg-[#12141f] text-neutral-400 hover:text-white border border-[#212537]'
-                }`}
-              >
-                {cat === 'barchasi' ? 'Barchasi' : cat}
-              </button>
-            ))}
+            {(['barchasi', 'milliy', 'steak', 'shashlik', 'salatlar', 'shorvalar', 'ichimliklar', 'qahva_choy', 'shirinliklar'] as const).map(cat => {
+              const labelMap: Record<string, string> = {
+                barchasi: 'Barchasi',
+                milliy: 'Milliy Taomlar',
+                steak: 'Steyk & Mangal',
+                shashlik: 'Shashliklar',
+                salatlar: 'Salatlar',
+                shorvalar: 'Sho‘rvalar',
+                ichimliklar: 'Ichimliklar',
+                qahva_choy: 'Qahva & Choy',
+                shirinliklar: 'Desertlar'
+              };
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                    selectedCategory === cat
+                      ? 'bg-[#d4af37] text-neutral-950 font-bold'
+                      : 'bg-[#12141f] text-neutral-400 hover:text-white border border-[#212537]'
+                  }`}
+                >
+                  {labelMap[cat] || cat}
+                </button>
+              );
+            })}
           </div>
 
           {/* Menu Catalog Table */}
@@ -501,13 +545,15 @@ export const AdminCatalogView: React.FC = () => {
                     onChange={e => setFormCategory(e.target.value as ItemCategory)}
                     className="w-full bg-[#0a0b10] border border-[#2a2e41] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#d4af37]"
                   >
-                    <option value="asosiy">Asosiy & Steyklar</option>
-                    <option value="milliy">Milliy tansiq taomlar</option>
-                    <option value="salatlar">Salatlar & Gazaklar</option>
-                    <option value="shorvalar">Sho'rvalar</option>
-                    <option value="ichimliklar">Ichimliklar, Kokteyllar & Salqin ichimliklar</option>
-                    <option value="desertlar">Desertlar</option>
-                    <option value="qahva_choy">Qahva & Choy</option>
+                    <option value="milliy">Milliy taomlar (Osh, Qozon kabob, Norin...)</option>
+                    <option value="steak">Mangal Meat & Steyklar (Ribeye, Go‘sht, Gril)</option>
+                    <option value="shashlik">Shashliklar & Kaboblar</option>
+                    <option value="salatlar">Salatlar & Sovuq gazaklar</option>
+                    <option value="shorvalar">Sho‘rvalar (Ko‘za sho‘rva, Tom Yum...)</option>
+                    <option value="ichimliklar">Salqin ichimliklar & Fresh</option>
+                    <option value="qahva_choy">Qahva & Elit choylar</option>
+                    <option value="shirinliklar">Desertlar & Shirinliklar</option>
+                    <option value="asosiy">Boshqa asosiy taomlar</option>
                   </select>
                 </div>
 

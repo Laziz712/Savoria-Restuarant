@@ -108,6 +108,7 @@ export const translations = {
     
     // Admin Master Hub
     admin_tab_pos: 'Kassa (POS)',
+    admin_tab_cheklar: 'Cheklar Tarixi',
     admin_tab_kds: 'Oshxona (KDS)',
     admin_tab_delivery: 'Dostavka',
     admin_tab_reports: 'Xisobot & Statistika',
@@ -251,6 +252,7 @@ export const translations = {
     
     // Admin Master Hub
     admin_tab_pos: 'Касса (POS)',
+    admin_tab_cheklar: 'История Чеков',
     admin_tab_kds: 'Кухня (KDS)',
     admin_tab_delivery: 'Доставка',
     admin_tab_reports: 'Отчеты и Аналитика',
@@ -394,6 +396,7 @@ export const translations = {
     
     // Admin Master Hub
     admin_tab_pos: 'POS Register',
+    admin_tab_cheklar: 'Receipts History',
     admin_tab_kds: 'Kitchen (KDS)',
     admin_tab_delivery: 'Delivery',
     admin_tab_reports: 'Reports',

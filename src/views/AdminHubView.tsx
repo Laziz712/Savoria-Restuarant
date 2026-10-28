@@ -8,10 +8,11 @@ import { AdminCatalogView } from './AdminCatalogView';
 import { StaffManagementTab } from './StaffManagementTab';
 import { TableManagementTab } from './TableManagementTab';
 import { AdminReservationsTab } from './AdminReservationsTab';
+import { ReceiptsHistoryView } from './ReceiptsHistoryView';
 import { 
   Receipt, Utensils, Bike, BarChart3, 
   UtensilsCrossed, Users, Menu, X, ChevronRight, ChevronLeft, LogOut, ShieldCheck,
-  LayoutGrid, CalendarCheck
+  LayoutGrid, CalendarCheck, ScrollText
 } from 'lucide-react';
 
 export const AdminHubView: React.FC = () => {
@@ -47,6 +48,14 @@ export const AdminHubView: React.FC = () => {
       icon: <Receipt className="w-4 h-4" />, 
       badge: openBillsCount,
       badgeColor: 'bg-amber-500/20 text-amber-300'
+    },
+    { 
+      id: 'cheklar', 
+      label: t('admin_tab_cheklar') || 'Cheklar Tarixi', 
+      subLabel: 'Barcha kassa cheklari, to\'lovlar va fiskal arxiv',
+      icon: <ScrollText className="w-4 h-4" />, 
+      badge: orders.length,
+      badgeColor: 'bg-emerald-500/20 text-emerald-300'
     },
     { 
       id: 'oshxona', 
@@ -414,6 +423,11 @@ export const AdminHubView: React.FC = () => {
       {/* Active Tab View Body */}
       <div className="flex-1">
         {adminSubTab === 'kassa' && <KassaPOSView />}
+        {adminSubTab === 'cheklar' && (
+          <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+            <ReceiptsHistoryView />
+          </div>
+        )}
         {adminSubTab === 'oshxona' && <OshxonaKDSView />}
         {adminSubTab === 'dostafka' && <DostavkaDispatchView />}
         {adminSubTab === 'xisobot' && <XisobotAnalyticsView />}

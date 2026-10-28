@@ -11,7 +11,7 @@ export const KassaPOSView: React.FC = () => {
   const { 
     menuItems, orders, createOrder, settleOrderPayment, 
     openReceiptModal, formatUZS, settings, updateOrderStatus,
-    waiters, tables
+    waiters, tables, setAdminSubTab
   } = useRestaurant();
 
   // Selected Table or Ticket
@@ -183,16 +183,27 @@ export const KassaPOSView: React.FC = () => {
     <div className="min-h-screen bg-[#090a0f] text-[#eaeaea] p-4 sm:p-6 flex flex-col gap-5">
       {/* Top POS Control Bar */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 pb-4 border-b border-[#202332]">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <h1 className="font-serif font-bold text-xl sm:text-2xl text-white tracking-wide">
-              KASSA TERMINALI & CHEK TIZIMI
-            </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-1">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <h1 className="font-serif font-bold text-xl sm:text-2xl text-white tracking-wide">
+                KASSA TERMINALI & CHEK TIZIMI
+              </h1>
+            </div>
+            <p className="text-xs text-neutral-400 mt-0.5 font-mono">
+              Smena: Ochiq · Kassir: {waiterName} · STIR: {settings.stir}
+            </p>
           </div>
-          <p className="text-xs text-neutral-400 mt-0.5 font-mono">
-            Smena: Ochiq · Kassir: {waiterName} · STIR: {settings.stir}
-          </p>
+
+          <button
+            type="button"
+            onClick={() => setAdminSubTab('cheklar')}
+            className="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-[#161824] hover:bg-[#d4af37] hover:text-neutral-950 border border-[#272b3d] text-xs font-semibold flex items-center gap-2 text-neutral-200 transition-all cursor-pointer shadow group"
+          >
+            <Receipt className="w-4 h-4 text-[#d4af37] group-hover:text-neutral-950" />
+            <span>Cheklar Tarixi ({orders.length})</span>
+          </button>
         </div>
 
         {/* Table Selector Pills / Quick zone switch */}

@@ -12,7 +12,7 @@ import {
 import { translations } from '../i18n/translations';
 
 export type AppRoute = 'mijoz' | 'admin' | 'ofitsiant' | 'kassa' | 'oshxona' | 'dostafka' | 'xisobot';
-export type AdminSubTab = 'kassa' | 'oshxona' | 'dostafka' | 'xisobot' | 'menyu' | 'stollar' | 'xodimlar' | 'bronlar' | 'sozlamalar';
+export type AdminSubTab = 'kassa' | 'oshxona' | 'dostafka' | 'xisobot' | 'menyu' | 'stollar' | 'xodimlar' | 'bronlar' | 'cheklar' | 'sozlamalar';
 
 interface RestaurantContextType {
   menuItems: MenuItem[];
@@ -344,12 +344,23 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       })
     }).catch(() => {});
 
-    // Optional: fetch remote data if available
+    // Fetch remote data from MongoDB and merge with local state
     fetch('/api/menu')
       .then(r => r.json())
       .then(remoteItems => {
         if (Array.isArray(remoteItems) && remoteItems.length > 0) {
-          setMenuItems(remoteItems);
+          setMenuItems(prev => {
+            const itemMap = new Map<string, MenuItem>();
+            // Remote items first
+            remoteItems.forEach((item: MenuItem) => itemMap.set(item.id, item));
+            // Keep local items if not yet synced
+            prev.forEach((item: MenuItem) => {
+              if (!itemMap.has(item.id)) {
+                itemMap.set(item.id, item);
+              }
+            });
+            return Array.from(itemMap.values());
+          });
         }
       })
       .catch(() => {});
@@ -363,36 +374,56 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('savoria_language', lang);
+    try {
+      localStorage.setItem('savoria_language', lang);
+    } catch {}
   };
 
-  // Sync state to local storage
+  // Sync state to local storage with safe quota handling
   useEffect(() => {
-    localStorage.setItem('savoria_menu_items', JSON.stringify(menuItems));
+    try {
+      localStorage.setItem('savoria_menu_items', JSON.stringify(menuItems));
+    } catch (e) {
+      console.warn('localStorage menu items save warning:', e);
+    }
   }, [menuItems]);
 
   useEffect(() => {
-    localStorage.setItem('savoria_orders', JSON.stringify(orders));
+    try {
+      localStorage.setItem('savoria_orders', JSON.stringify(orders));
+    } catch (e) {
+      console.warn('localStorage orders save warning:', e);
+    }
   }, [orders]);
 
   useEffect(() => {
-    localStorage.setItem('savoria_couriers', JSON.stringify(couriers));
+    try {
+      localStorage.setItem('savoria_couriers', JSON.stringify(couriers));
+    } catch {}
   }, [couriers]);
 
   useEffect(() => {
-    localStorage.setItem('savoria_waiters', JSON.stringify(waiters));
+    try {
+      localStorage.setItem('savoria_waiters', JSON.stringify(waiters));
+    } catch {}
   }, [waiters]);
 
   useEffect(() => {
-    localStorage.setItem('savoria_admin_users', JSON.stringify(adminUsers));
+    try {
+      localStorage.setItem('savoria_admin_users', JSON.stringify(adminUsers));
+    } catch {}
   }, [adminUsers]);
 
   useEffect(() => {
-    localStorage.setItem('savoria_settings', JSON.stringify(settings));
+    try {
+      localStorage.setItem('savoria_settings', JSON.stringify(settings));
+    } catch {}
   }, [settings]);
 
   useEffect(() => {
-    localStorage.setItem('savoria_tables', JSON.stringify(tables));
+    try {
+      localStorage.setItem('savoria_tables', JSON.stringify(tables));
+    } catch {}
   }, [tables]);
 
   useEffect(() => {
@@ -562,7 +593,16 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newItem)
-    }).catch(() => {});
+    })
+      .then(res => res.json())
+      .then(saved => {
+        if (saved && saved.id) {
+          setMenuItems(prev => prev.map(i => i.id === newItem.id ? { ...i, ...saved } : i));
+        }
+      })
+      .catch(err => {
+        console.warn('POST /api/menu warning:', err);
+      });
   };
 
   const updateMenuItem = (id: string, updates: Partial<MenuItem>) => {
