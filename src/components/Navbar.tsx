@@ -5,7 +5,7 @@ import {
   Volume2, VolumeX, ShoppingBag, ShieldCheck, Lock, LogOut, 
   UtensilsCrossed, Menu, X, ChevronRight, Receipt, Utensils, 
   Bike, BarChart3, Users, Globe, ExternalLink, LayoutGrid,
-  Bell, Sparkles, Radio
+  Bell, Sparkles, Radio, TrendingUp
 } from 'lucide-react';
 import { Language } from '../types';
 
@@ -446,6 +446,23 @@ export const Navbar: React.FC = () => {
                         )}
                       </div>
                       <span className="text-[11px]">Kassa POS</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleAdminSubTabClick('savdo_dashboard')}
+                      className={`p-2.5 rounded-xl border text-left text-xs transition-colors flex flex-col gap-1.5 ${
+                        activeRoute === 'admin' && adminSubTab === 'savdo_dashboard'
+                          ? 'bg-[#d4af37] text-neutral-950 font-bold border-[#d4af37]'
+                          : 'bg-[#131622] border-[#222638] text-neutral-300 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <TrendingUp className="w-3.5 h-3.5 text-[#d4af37]" />
+                        <span className="text-[9px] px-1 rounded bg-[#d4af37]/20 text-[#d4af37] font-mono">
+                          Recharts
+                        </span>
+                      </div>
+                      <span className="text-[11px]">Savdo Paneli</span>
                     </button>
 
                     <button

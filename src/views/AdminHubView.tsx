@@ -9,10 +9,11 @@ import { StaffManagementTab } from './StaffManagementTab';
 import { TableManagementTab } from './TableManagementTab';
 import { AdminReservationsTab } from './AdminReservationsTab';
 import { ReceiptsHistoryView } from './ReceiptsHistoryView';
+import { SalesDashboardView } from './SalesDashboardView';
 import { 
   Receipt, Utensils, Bike, BarChart3, 
   UtensilsCrossed, Users, Menu, X, ChevronRight, ChevronLeft, LogOut, ShieldCheck,
-  LayoutGrid, CalendarCheck, ScrollText
+  LayoutGrid, CalendarCheck, ScrollText, TrendingUp
 } from 'lucide-react';
 
 export const AdminHubView: React.FC = () => {
@@ -56,6 +57,12 @@ export const AdminHubView: React.FC = () => {
       icon: <ScrollText className="w-4 h-4" />, 
       badge: orders.length,
       badgeColor: 'bg-emerald-500/20 text-emerald-300'
+    },
+    { 
+      id: 'savdo_dashboard', 
+      label: 'Savdo Paneli', 
+      subLabel: 'Recharts kunlik va oylik daromad tendensiyalari',
+      icon: <TrendingUp className="w-4 h-4 text-[#d4af37]" /> 
     },
     { 
       id: 'oshxona', 
@@ -426,6 +433,11 @@ export const AdminHubView: React.FC = () => {
         {adminSubTab === 'cheklar' && (
           <div className="p-3 sm:p-6 max-w-7xl mx-auto">
             <ReceiptsHistoryView />
+          </div>
+        )}
+        {adminSubTab === 'savdo_dashboard' && (
+          <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+            <SalesDashboardView />
           </div>
         )}
         {adminSubTab === 'oshxona' && <OshxonaKDSView />}

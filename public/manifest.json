@@ -1,0 +1,47 @@
+{
+  "id": "/",
+  "name": "SAVORIA RESTAURANT",
+  "short_name": "Savoria",
+  "description": "SAVORIA RESTAURANT - Premium Milliy taomlar, POS kassa, oshxona KDS va yetkazib berish tizimi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#08090e",
+  "theme_color": "#d4af37",
+  "categories": ["food", "business", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icon-512.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Menyu & Buyurtma",
+      "short_name": "Menyu",
+      "url": "/?mode=menu",
+      "icons": [{ "src": "/icon-512.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Kassa POS",
+      "short_name": "Kassa",
+      "url": "/kassa",
+      "icons": [{ "src": "/icon-512.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ofitsiant Rejimi",
+      "short_name": "Ofitsiant",
+      "url": "/ofitsiant",
+      "icons": [{ "src": "/icon-512.svg", "sizes": "192x192" }]
+    }
+  ]
+}

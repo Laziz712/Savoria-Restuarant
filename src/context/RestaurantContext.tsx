@@ -12,7 +12,7 @@ import {
 import { translations } from '../i18n/translations';
 
 export type AppRoute = 'mijoz' | 'admin' | 'ofitsiant' | 'kassa' | 'oshxona' | 'dostafka' | 'xisobot';
-export type AdminSubTab = 'kassa' | 'oshxona' | 'dostafka' | 'xisobot' | 'menyu' | 'stollar' | 'xodimlar' | 'bronlar' | 'cheklar' | 'sozlamalar';
+export type AdminSubTab = 'kassa' | 'savdo_dashboard' | 'oshxona' | 'dostafka' | 'xisobot' | 'menyu' | 'stollar' | 'xodimlar' | 'bronlar' | 'cheklar' | 'sozlamalar';
 
 export interface RealtimeToast {
   id: string;
