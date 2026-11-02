@@ -121,6 +121,7 @@ export interface Waiter {
   status: 'ishda' | 'tanaffus';
   ordersHandledCount: number;
   password?: string;
+  pinPassword?: string;
 }
 
 

@@ -11,6 +11,7 @@ import { AdminHubView } from './views/AdminHubView';
 import { WaiterOrderView } from './views/WaiterOrderView';
 import { ThermalReceiptModal } from './components/ThermalReceiptModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
+import { RealtimeToastBanner } from './components/RealtimeToastBanner';
 import { QrDigitalMenuView } from './views/QrDigitalMenuView';
 import { 
   ShoppingBag, UtensilsCrossed, ShieldCheck, Lock, Mail, Instagram, Bell
@@ -144,6 +145,9 @@ const AppContent: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Real-Time Live Notification Toast Banner */}
+      <RealtimeToastBanner />
 
       {/* Admin Security Password Login Modal */}
       <AdminLoginModal />

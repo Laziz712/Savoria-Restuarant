@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { 
   MenuItem, Order, Courier, Waiter, AdminUser, 
   RestaurantSettings, RestaurantTable, OrderStatus, PaymentMethod, Language, MongoStatus,
@@ -13,6 +13,14 @@ import { translations } from '../i18n/translations';
 
 export type AppRoute = 'mijoz' | 'admin' | 'ofitsiant' | 'kassa' | 'oshxona' | 'dostafka' | 'xisobot';
 export type AdminSubTab = 'kassa' | 'oshxona' | 'dostafka' | 'xisobot' | 'menyu' | 'stollar' | 'xodimlar' | 'bronlar' | 'cheklar' | 'sozlamalar';
+
+export interface RealtimeToast {
+  id: string;
+  type: 'order' | 'status' | 'waiter';
+  title: string;
+  message: string;
+  timestamp: number;
+}
 
 interface RestaurantContextType {
   menuItems: MenuItem[];
@@ -29,6 +37,9 @@ interface RestaurantContextType {
   showAdminLoginModal: boolean;
   currentLoggedInWaiter: Waiter | null;
   mongoStatus: MongoStatus;
+  isRealtimeConnected: boolean;
+  realtimeToast: RealtimeToast | null;
+  dismissRealtimeToast: () => void;
 
   // Table QR Code & Digital Menu Context
   currentTableContext: string | null;
@@ -127,124 +138,70 @@ const playLuxuryChime = () => {
     const gainNode = ctx.createGain();
 
     osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(880, ctx.currentTime);
-    osc1.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.1);
+    osc1.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
+    osc1.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.15); // Ramp to A6
 
     osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(1320, ctx.currentTime);
+    osc2.frequency.setValueAtTime(1318.5, ctx.currentTime); // E6 harmonic
 
-    gainNode.gain.setValueAtTime(0.18, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    gainNode.gain.setValueAtTime(0.001, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.05);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.2);
 
     osc1.connect(gainNode);
     osc2.connect(gainNode);
     gainNode.connect(ctx.destination);
 
-    osc1.start();
-    osc2.start();
-    osc1.stop(ctx.currentTime + 0.85);
-    osc2.stop(ctx.currentTime + 0.85);
-  } catch (err) {
-    console.debug('Audio chime not supported or muted by browser policy', err);
+    osc1.start(ctx.currentTime);
+    osc2.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 1.2);
+    osc2.stop(ctx.currentTime + 1.2);
+  } catch {
+    // Ignore audio autoplay restrictions
   }
 };
 
+// Map fallback images for dishes to ensure photos always look high-end
+const getImageForDish = (id: string, defaultImage?: string): string => {
+  if (defaultImage && defaultImage.startsWith('data:') || defaultImage?.startsWith('http') || defaultImage?.startsWith('/')) {
+    return defaultImage;
+  }
+  const match = INITIAL_MENU_ITEMS.find(m => m.id === id);
+  return match?.image || defaultImage || '';
+};
+
 export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Multi-Language
   const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('savoria_language') as Language;
-    return saved === 'ru' || saved === 'en' || saved === 'uz' ? saved : 'uz';
+    return (localStorage.getItem('savoria_language') as Language) || 'uz';
   });
 
-  const [mongoStatus, setMongoStatus] = useState<MongoStatus>({
-    connected: true,
-    cluster: 'Maxfiy Bulut Baza',
-    database: 'asosiy_baza',
-    message: 'Baza bilan aloqa faol'
-  });
+  // State Management with Database Sync
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU_ITEMS);
+  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [couriers, setCouriers] = useState<Courier[]>(INITIAL_COURIERS);
+  const [waiters, setWaiters] = useState<Waiter[]>(INITIAL_WAITERS);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(INITIAL_ADMIN_USERS);
+  const [settings, setSettings] = useState<RestaurantSettings>(INITIAL_SETTINGS);
+  const [tables, setTables] = useState<RestaurantTable[]>(INITIAL_TABLES);
+  const [reviews, setReviews] = useState<CustomerReview[]>(INITIAL_REVIEWS);
+  const [reservations, setReservations] = useState<TableReservation[]>(INITIAL_RESERVATIONS);
+  const [chefs] = useState<ChefProfile[]>(INITIAL_CHEFS);
 
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
-    const saved = localStorage.getItem('savoria_menu_items');
-    if (saved) {
-      try {
-        const parsed: MenuItem[] = JSON.parse(saved);
-        // Sync fresh images and merge new initial items
-        const merged = INITIAL_MENU_ITEMS.map(initItem => {
-          const found = parsed.find(p => p.id === initItem.id);
-          return found ? { ...found, image: initItem.image } : initItem;
-        });
-        // Also keep any user-added custom items from admin
-        const customItems = parsed.filter(p => !INITIAL_MENU_ITEMS.some(init => init.id === p.id));
-        return [...merged, ...customItems];
-      } catch (e) {
-        return INITIAL_MENU_ITEMS;
-      }
-    }
-    return INITIAL_MENU_ITEMS;
+  // Auth & Routing
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('savoria_admin_auth') === 'true';
   });
-
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('savoria_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
-  });
-
-  const [couriers, setCouriers] = useState<Courier[]>(() => {
-    const saved = localStorage.getItem('savoria_couriers');
-    return saved ? JSON.parse(saved) : INITIAL_COURIERS;
-  });
-
-  const [waiters, setWaiters] = useState<Waiter[]>(() => {
-    const saved = localStorage.getItem('savoria_waiters');
-    if (saved) {
-      const parsed: Waiter[] = JSON.parse(saved);
-      return parsed.map((w, idx) => ({
-        ...w,
-        password: w.password || `${(idx + 1) * 1111}`
-      }));
-    }
-    return INITIAL_WAITERS;
-  });
-
   const [currentLoggedInWaiter, setCurrentLoggedInWaiter] = useState<Waiter | null>(() => {
     const saved = localStorage.getItem('savoria_active_waiter');
     return saved ? JSON.parse(saved) : null;
   });
-
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(() => {
-    const saved = localStorage.getItem('savoria_admin_users');
-    return saved ? JSON.parse(saved) : INITIAL_ADMIN_USERS;
-  });
-
-  const [settings, setSettings] = useState<RestaurantSettings>(() => {
-    const saved = localStorage.getItem('savoria_settings');
-    return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
-  });
-
-  const [tables, setTables] = useState<RestaurantTable[]>(() => {
-    const saved = localStorage.getItem('savoria_tables');
-    return saved ? JSON.parse(saved) : INITIAL_TABLES;
-  });
-
-  const [reviews, setReviews] = useState<CustomerReview[]>(() => {
-    const saved = localStorage.getItem('savoria_reviews');
-    return saved ? JSON.parse(saved) : INITIAL_REVIEWS;
-  });
-
-  const [reservations, setReservations] = useState<TableReservation[]>(() => {
-    const saved = localStorage.getItem('savoria_reservations');
-    return saved ? JSON.parse(saved) : INITIAL_RESERVATIONS;
-  });
-
-  const [chefs] = useState<ChefProfile[]>(INITIAL_CHEFS);
-
-
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('savoria_admin_auth') === 'true';
-  });
-
   const [showAdminLoginModal, setShowAdminLoginModal] = useState<boolean>(false);
-
-  // Sub tab inside Admin Panel
   const [adminSubTab, setAdminSubTab] = useState<AdminSubTab>('kassa');
+
+  // Real-time status & Notification Toasts
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState<boolean>(false);
+  const [realtimeToast, setRealtimeToast] = useState<RealtimeToast | null>(null);
 
   // Table QR Menu Context & URL Parsing
   const getInitialTableContext = (): string | null => {
@@ -259,7 +216,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const getInitialMenuOnlyMode = (): boolean => {
     try {
       const params = new URLSearchParams(window.location.search);
-      return params.get('mode') === 'menu_only' || !!params.get('table');
+      return params.get('mode') === 'menu' || !!params.get('table');
     } catch {
       return false;
     }
@@ -269,36 +226,22 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const [isMenuOnlyMode, setIsMenuOnlyMode] = useState<boolean>(getInitialMenuOnlyMode);
   const [waiterCallAlert, setWaiterCallAlert] = useState<{ table: string; timestamp: number } | null>(null);
 
-  const callWaiterFromTable = (tableName: string) => {
-    try {
-      playLuxuryChime();
-    } catch {
-      // Audio fallback
-    }
-    setWaiterCallAlert({ table: tableName, timestamp: Date.now() });
-  };
+  const [mongoStatus, setMongoStatus] = useState<MongoStatus>({
+    connected: false,
+    cluster: 'MongoDB Atlas',
+    database: 'savoria',
+    message: 'Markaziy bazaga ulanmoqda...'
+  });
 
-  const dismissWaiterCallAlert = () => {
-    setWaiterCallAlert(null);
-  };
-
-  // URL hash or path sync
   const getInitialRoute = (): AppRoute => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('table') || params.get('mode') === 'menu_only') {
-        return 'mijoz';
-      }
-    } catch {
-      // Ignore
-    }
-    const path = window.location.pathname.toLowerCase();
-    if (path.includes('admin') || path.includes('kassa') || path.includes('oshxona') || path.includes('dostafka') || path.includes('dostavka') || path.includes('xisobot') || path.includes('hisobot')) {
-      return 'admin';
-    }
-    if (path.includes('ofitsiant') || path.includes('waiter')) {
-      return 'ofitsiant';
-    }
+    if (typeof window === 'undefined') return 'mijoz';
+    const path = window.location.pathname;
+    if (path.includes('admin')) return 'admin';
+    if (path.includes('kassa')) return 'kassa';
+    if (path.includes('oshxona')) return 'oshxona';
+    if (path.includes('dostafka')) return 'dostafka';
+    if (path.includes('xisobot')) return 'xisobot';
+    if (path.includes('ofitsiant')) return 'ofitsiant';
     return 'mijoz';
   };
 
@@ -306,65 +249,272 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [activeReceiptOrder, setActiveReceiptOrder] = useState<Order | null>(null);
 
-  // Check MongoDB Server Status on Mount & Sync
+  const dismissRealtimeToast = () => setRealtimeToast(null);
+  const dismissWaiterCallAlert = () => setWaiterCallAlert(null);
+
+  const playChime = useCallback(() => {
+    if (soundEnabled) {
+      playLuxuryChime();
+    }
+  }, [soundEnabled]);
+
+  const formatUZS = (amount: number): string => {
+    const suffix = language === 'ru' ? ' сум' : language === 'en' ? ' UZS' : ' so\'m';
+    return new Intl.NumberFormat('uz-UZ').format(amount) + suffix;
+  };
+
+  // ========================================================
+  // 1. BOOTSTRAP: Load Authoritative State from MongoDB on Mount
+  // ========================================================
   useEffect(() => {
-    fetch('/api/status')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.status === 'ok') {
+    const loadBootstrapData = async () => {
+      try {
+        const res = await fetch('/api/bootstrap');
+        const data = await res.json();
+
+        if (data && data.success) {
           setMongoStatus({
             connected: !!data.mongoConnected,
-            cluster: 'Maxfiy Bulut Baza',
-            database: 'asosiy_baza',
-            message: data.mongoConnected ? 'Bulut bazasi faol' : 'Lokal xotira faol'
+            cluster: 'MongoDB Atlas',
+            database: 'savoria',
+            message: data.mongoConnected ? 'Markaziy MongoDB bazasi faol' : 'Lokal xotira faol'
           });
-        }
-      })
-      .catch(() => {
-        // Fallback gracefully
-        setMongoStatus({
-          connected: true,
-          cluster: 'Maxfiy Bulut Baza',
-          database: 'asosiy_baza',
-          message: 'Bulut bazasi integratsiyalangan'
-        });
-      });
 
-    // Auto-sync initial data into MongoDB so collections are populated with documents
-    fetch('/api/sync-all', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        menuItems,
-        waiters,
-        couriers,
-        adminUsers,
-        settings,
-        orders
-      })
-    }).catch(() => {});
+          // Hydrate Menu Items
+          if (Array.isArray(data.menu) && data.menu.length > 0) {
+            const mappedMenu = data.menu.map((item: MenuItem) => ({
+              ...item,
+              image: getImageForDish(item.id, item.image)
+            }));
+            setMenuItems(mappedMenu);
+          }
 
-    // Fetch remote data from MongoDB and merge with local state
-    fetch('/api/menu')
-      .then(r => r.json())
-      .then(remoteItems => {
-        if (Array.isArray(remoteItems) && remoteItems.length > 0) {
-          setMenuItems(prev => {
-            const itemMap = new Map<string, MenuItem>();
-            // Remote items first
-            remoteItems.forEach((item: MenuItem) => itemMap.set(item.id, item));
-            // Keep local items if not yet synced
-            prev.forEach((item: MenuItem) => {
-              if (!itemMap.has(item.id)) {
-                itemMap.set(item.id, item);
-              }
-            });
-            return Array.from(itemMap.values());
-          });
+          // Hydrate Orders (Historical and Active)
+          if (Array.isArray(data.orders)) {
+            setOrders(data.orders);
+          }
+
+          // Hydrate Tables, Reservations, Waiters, Couriers, Settings
+          if (Array.isArray(data.tables) && data.tables.length > 0) {
+            setTables(data.tables);
+          }
+          if (Array.isArray(data.reservations)) {
+            setReservations(data.reservations);
+          }
+          if (Array.isArray(data.waiters) && data.waiters.length > 0) {
+            setWaiters(data.waiters);
+          }
+          if (Array.isArray(data.couriers) && data.couriers.length > 0) {
+            setCouriers(data.couriers);
+          }
+          if (data.settings && data.settings.name) {
+            setSettings(data.settings);
+          }
         }
-      })
-      .catch(() => {});
+      } catch (err) {
+        console.warn('Bootstrap fetch warning:', err);
+      }
+    };
+
+    loadBootstrapData();
   }, []);
+
+  // ========================================================
+  // 2. REAL-TIME ENGINE: Server-Sent Events (SSE) Listener
+  // ========================================================
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: any = null;
+
+    const connectRealtime = () => {
+      try {
+        eventSource = new EventSource('/api/realtime/stream');
+
+        eventSource.onopen = () => {
+          setIsRealtimeConnected(true);
+        };
+
+        // A. New Order Created (Customer or POS placed order)
+        eventSource.addEventListener('order:created', (e: MessageEvent) => {
+          try {
+            const newOrder: Order = JSON.parse(e.data);
+            setOrders(prev => {
+              if (prev.some(o => o.id === newOrder.id)) return prev;
+              return [newOrder, ...prev];
+            });
+            playChime();
+            setRealtimeToast({
+              id: newOrder.id,
+              type: 'order',
+              title: 'Yangi Buyurtma Keldi!',
+              message: `#${newOrder.id} · ${newOrder.customerName || 'Mijoz'} (${formatUZS(newOrder.finalTotal)})`,
+              timestamp: Date.now()
+            });
+          } catch {}
+        });
+
+        // B. Order Status Updated (e.g. yangi -> oshxonada -> tayyor -> yolda -> yetkazildi)
+        eventSource.addEventListener('order:updated', (e: MessageEvent) => {
+          try {
+            const updatedOrder: Order = JSON.parse(e.data);
+            setOrders(prev => prev.map(o => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o));
+
+            if (updatedOrder.status === 'tayyor' || updatedOrder.status === 'yolda' || updatedOrder.status === 'yetkazildi') {
+              playChime();
+              setRealtimeToast({
+                id: updatedOrder.id,
+                type: 'status',
+                title: `Buyurtma #${updatedOrder.id} Yangilandi`,
+                message: `Yangi holat: ${updatedOrder.status.toUpperCase()}`,
+                timestamp: Date.now()
+              });
+            }
+          } catch {}
+        });
+
+        // C. Order Deleted
+        eventSource.addEventListener('order:deleted', (e: MessageEvent) => {
+          try {
+            const { id } = JSON.parse(e.data);
+            setOrders(prev => prev.filter(o => o.id !== id));
+          } catch {}
+        });
+
+        // D. Menu Created / Updated / Deleted
+        eventSource.addEventListener('menu:created', (e: MessageEvent) => {
+          try {
+            const item: MenuItem = JSON.parse(e.data);
+            const enriched = { ...item, image: getImageForDish(item.id, item.image) };
+            setMenuItems(prev => {
+              if (prev.some(i => i.id === item.id)) return prev.map(i => i.id === item.id ? enriched : i);
+              return [enriched, ...prev];
+            });
+          } catch {}
+        });
+
+        eventSource.addEventListener('menu:updated', (e: MessageEvent) => {
+          try {
+            const item: MenuItem = JSON.parse(e.data);
+            const enriched = { ...item, image: getImageForDish(item.id, item.image) };
+            setMenuItems(prev => prev.map(i => i.id === item.id ? enriched : i));
+          } catch {}
+        });
+
+        eventSource.addEventListener('menu:deleted', (e: MessageEvent) => {
+          try {
+            const { id } = JSON.parse(e.data);
+            setMenuItems(prev => prev.filter(i => i.id !== id));
+          } catch {}
+        });
+
+        // E. Table Updates
+        eventSource.addEventListener('table:updated', (e: MessageEvent) => {
+          try {
+            const table: RestaurantTable = JSON.parse(e.data);
+            setTables(prev => {
+              const exists = prev.some(t => t.id === table.id);
+              if (exists) return prev.map(t => t.id === table.id ? table : t);
+              return [...prev, table];
+            });
+          } catch {}
+        });
+
+        eventSource.addEventListener('table:deleted', (e: MessageEvent) => {
+          try {
+            const { id } = JSON.parse(e.data);
+            setTables(prev => prev.filter(t => t.id !== id));
+          } catch {}
+        });
+
+        // F. Reservation Updates
+        eventSource.addEventListener('reservation:created', (e: MessageEvent) => {
+          try {
+            const res: TableReservation = JSON.parse(e.data);
+            setReservations(prev => [res, ...prev.filter(r => r.id !== res.id)]);
+            playChime();
+          } catch {}
+        });
+
+        eventSource.addEventListener('reservation:updated', (e: MessageEvent) => {
+          try {
+            const res: TableReservation = JSON.parse(e.data);
+            setReservations(prev => prev.map(r => r.id === res.id ? res : r));
+          } catch {}
+        });
+
+        // G. Waiter Call Buzzer
+        eventSource.addEventListener('waiter_call:created', (e: MessageEvent) => {
+          try {
+            const alertData = JSON.parse(e.data);
+            setWaiterCallAlert(alertData);
+            playChime();
+            setRealtimeToast({
+              id: `call-${Date.now()}`,
+              type: 'waiter',
+              title: 'Ofitsiant Chaqirildi!',
+              message: `${alertData.table || 'Stol'} ofitsiantni kutmoqda`,
+              timestamp: Date.now()
+            });
+          } catch {}
+        });
+
+        // H. Settings Updated
+        eventSource.addEventListener('settings:updated', (e: MessageEvent) => {
+          try {
+            const updatedSettings = JSON.parse(e.data);
+            setSettings(updatedSettings);
+          } catch {}
+        });
+
+        eventSource.onerror = () => {
+          setIsRealtimeConnected(false);
+          if (eventSource) eventSource.close();
+          // Auto-reconnect after 3 seconds
+          reconnectTimeout = setTimeout(connectRealtime, 3000);
+        };
+      } catch (err) {
+        setIsRealtimeConnected(false);
+        reconnectTimeout = setTimeout(connectRealtime, 3000);
+      }
+    };
+
+    connectRealtime();
+
+    // Hybrid Fail-Safe: Polling check every 5 seconds & on window focus to ensure zero missed events
+    const pollInterval = setInterval(() => {
+      fetch('/api/orders')
+        .then(r => r.json())
+        .then(latestOrders => {
+          if (Array.isArray(latestOrders) && latestOrders.length > 0) {
+            setOrders(prev => {
+              // Only update if count or IDs changed
+              if (prev.length !== latestOrders.length || latestOrders[0]?.id !== prev[0]?.id) {
+                return latestOrders;
+              }
+              return prev;
+            });
+          }
+        })
+        .catch(() => {});
+    }, 5000);
+
+    const handleFocus = () => {
+      fetch('/api/orders')
+        .then(r => r.json())
+        .then(latest => {
+          if (Array.isArray(latest)) setOrders(latest);
+        })
+        .catch(() => {});
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [playChime]);
 
   // Translation helper
   const t = (key: keyof typeof translations['uz']): string => {
@@ -379,150 +529,34 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     } catch {}
   };
 
-  // Sync state to local storage with safe quota handling
-  useEffect(() => {
-    try {
-      localStorage.setItem('savoria_menu_items', JSON.stringify(menuItems));
-    } catch (e) {
-      console.warn('localStorage menu items save warning:', e);
-    }
-  }, [menuItems]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('savoria_orders', JSON.stringify(orders));
-    } catch (e) {
-      console.warn('localStorage orders save warning:', e);
-    }
-  }, [orders]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('savoria_couriers', JSON.stringify(couriers));
-    } catch {}
-  }, [couriers]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('savoria_waiters', JSON.stringify(waiters));
-    } catch {}
-  }, [waiters]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('savoria_admin_users', JSON.stringify(adminUsers));
-    } catch {}
-  }, [adminUsers]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('savoria_settings', JSON.stringify(settings));
-    } catch {}
-  }, [settings]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('savoria_tables', JSON.stringify(tables));
-    } catch {}
-  }, [tables]);
-
-  useEffect(() => {
-    localStorage.setItem('savoria_reviews', JSON.stringify(reviews));
-  }, [reviews]);
-
-  useEffect(() => {
-    localStorage.setItem('savoria_reservations', JSON.stringify(reservations));
-  }, [reservations]);
-
-  useEffect(() => {
-    localStorage.setItem('savoria_admin_auth', isAdminAuthenticated ? 'true' : 'false');
-  }, [isAdminAuthenticated]);
-
-  // Sync route changes with browser history state
   const setRoute = (route: AppRoute) => {
-    if (route === 'admin' && !isAdminAuthenticated) {
-      setShowAdminLoginModal(true);
-      return;
-    }
-
     setActiveRoute(route);
-    const pathMap: Record<AppRoute, string> = {
-      mijoz: '/',
-      admin: '/admin',
-      ofitsiant: '/ofitsiant',
-      kassa: '/kassa',
-      oshxona: '/oshxona',
-      dostafka: '/dostafka',
-      xisobot: '/xisobot'
-    };
     try {
-      window.history.pushState({}, '', pathMap[route] || '/');
-    } catch {
-      // In sandbox fallback
-    }
+      const url = route === 'mijoz' ? '/' : `/${route}`;
+      window.history.pushState({}, '', url);
+    } catch {}
   };
 
-  const adminLogin = (password: string): boolean => {
-    const cleanPass = password.trim();
-    // Default hardcoded password laziz712, admin123 OR any created admin password
-    const matchesDefault = cleanPass === 'laziz712' || cleanPass === 'admin123' || cleanPass === 'admin';
-    const matchesUser = adminUsers.some(u => u.passwordHash === cleanPass || u.username.toLowerCase() === cleanPass.toLowerCase());
-
-    if (matchesDefault || matchesUser) {
-      setIsAdminAuthenticated(true);
-      setShowAdminLoginModal(false);
-      setActiveRoute('admin');
-      try {
-        window.history.pushState({}, '', '/admin');
-      } catch {
-        // Fallback
-      }
-      return true;
-    }
-    return false;
-  };
-
-  const adminLogout = () => {
-    setIsAdminAuthenticated(false);
-    setActiveRoute('mijoz');
-    try {
-      window.history.pushState({}, '', '/');
-    } catch {
-      // Fallback
-    }
-  };
-
+  // Waiter Authentication
   const waiterLogin = (waiterId: string, password: string): boolean => {
-    const cleanPass = password.trim();
-    if (!waiterId) {
-      const found = waiters.find(w => w.password === cleanPass) || (cleanPass === '1111' || cleanPass === 'laziz712' ? waiters[0] : null);
-      if (found) {
-        setCurrentLoggedInWaiter(found);
-        localStorage.setItem('savoria_active_waiter', JSON.stringify(found));
-        return true;
-      }
-      return false;
-    }
-    const waiter = waiters.find(w => w.id === waiterId);
-    if (!waiter) return false;
-    if (waiter.password === cleanPass || cleanPass === 'laziz712') {
+    const waiter = waiters.find(w => w.id === waiterId && (w.password === password || w.pinPassword === password));
+    if (waiter) {
       setCurrentLoggedInWaiter(waiter);
-      localStorage.setItem('savoria_active_waiter', JSON.stringify(waiter));
+      try {
+        localStorage.setItem('savoria_active_waiter', JSON.stringify(waiter));
+      } catch {}
       return true;
     }
     return false;
   };
 
   const waiterLoginByPin = (pin: string): boolean => {
-    const cleanPin = pin.trim();
-    const found = waiters.find(w => w.password === cleanPin) || 
-                  (cleanPin === '1111' ? waiters[0] : null) || 
-                  (cleanPin === '2222' ? waiters[1] : null) || 
-                  (cleanPin === '3333' ? waiters[2] : null) || 
-                  (cleanPin === 'laziz712' ? waiters[0] : null);
-    if (found) {
-      setCurrentLoggedInWaiter(found);
-      localStorage.setItem('savoria_active_waiter', JSON.stringify(found));
+    const waiter = waiters.find(w => w.pinPassword === pin || w.password === pin);
+    if (waiter) {
+      setCurrentLoggedInWaiter(waiter);
+      try {
+        localStorage.setItem('savoria_active_waiter', JSON.stringify(waiter));
+      } catch {}
       return true;
     }
     return false;
@@ -530,12 +564,37 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const waiterLogout = () => {
     setCurrentLoggedInWaiter(null);
-    localStorage.removeItem('savoria_active_waiter');
+    try {
+      localStorage.removeItem('savoria_active_waiter');
+    } catch {}
   };
 
-  const addAdminUser = (adminData: Omit<AdminUser, 'id' | 'createdAt'>) => {
+  // Admin Authentication
+  const adminLogin = (password: string): boolean => {
+    const masterAdmin = adminUsers.find(a => a.passwordHash === password);
+    if (password === 'laziz712.' || masterAdmin) {
+      setIsAdminAuthenticated(true);
+      try {
+        localStorage.setItem('savoria_admin_auth', 'true');
+      } catch {}
+      return true;
+    }
+    return false;
+  };
+
+  const adminLogout = () => {
+    setIsAdminAuthenticated(false);
+    try {
+      localStorage.removeItem('savoria_admin_auth');
+    } catch {}
+    if (activeRoute === 'admin') {
+      setRoute('mijoz');
+    }
+  };
+
+  const addAdminUser = (admin: Omit<AdminUser, 'id' | 'createdAt'>) => {
     const newAdmin: AdminUser = {
-      ...adminData,
+      ...admin,
       id: `adm-${Date.now()}`,
       createdAt: new Date().toISOString()
     };
@@ -564,9 +623,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const playOrderChime = () => {
-    if (soundEnabled) {
-      playLuxuryChime();
-    }
+    playChime();
   };
 
   const openReceiptModal = (order: Order) => {
@@ -577,10 +634,9 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     setActiveReceiptOrder(null);
   };
 
-  const formatUZS = (amount: number): string => {
-    const suffix = language === 'ru' ? ' сум' : language === 'en' ? ' UZS' : ' so\'m';
-    return new Intl.NumberFormat('uz-UZ').format(amount) + suffix;
-  };
+  // ========================================================
+  // 3. CENTRALIZED DATABASE MUTATIONS WITH BROADCAST
+  // ========================================================
 
   // Menu item mutations
   const addMenuItem = (item: Omit<MenuItem, 'id'>) => {
@@ -589,20 +645,14 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       id: `m-${Date.now()}`
     };
     setMenuItems(prev => [newItem, ...prev]);
+
     fetch('/api/menu', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newItem)
-    })
-      .then(res => res.json())
-      .then(saved => {
-        if (saved && saved.id) {
-          setMenuItems(prev => prev.map(i => i.id === newItem.id ? { ...i, ...saved } : i));
-        }
-      })
-      .catch(err => {
-        console.warn('POST /api/menu warning:', err);
-      });
+    }).catch(err => {
+      console.warn('POST /api/menu error:', err);
+    });
   };
 
   const updateMenuItem = (id: string, updates: Partial<MenuItem>) => {
@@ -610,10 +660,10 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       const updated = prev.map(item => item.id === id ? { ...item, ...updates } : item);
       const target = updated.find(i => i.id === id);
       if (target) {
-        fetch('/api/menu', {
-          method: 'POST',
+        fetch(`/api/menu/${id}`, {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(target)
+          body: JSON.stringify(updates)
         }).catch(() => {});
       }
       return updated;
@@ -626,33 +676,25 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const toggleItemAvailability = (id: string) => {
-    setMenuItems(prev => {
-      const updated = prev.map(item => item.id === id ? { ...item, isAvailable: !item.isAvailable } : item);
-      const target = updated.find(i => i.id === id);
-      if (target) {
-        fetch('/api/menu', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(target)
-        }).catch(() => {});
-      }
-      return updated;
-    });
+    const target = menuItems.find(i => i.id === id);
+    if (!target) return;
+    const newAvail = !target.isAvailable;
+
+    setMenuItems(prev => prev.map(item => item.id === id ? { ...item, isAvailable: newAvail } : item));
+    fetch(`/api/menu/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isAvailable: newAvail })
+    }).catch(() => {});
   };
 
   const updateItemPrice = (id: string, newPrice: number) => {
-    setMenuItems(prev => {
-      const updated = prev.map(item => item.id === id ? { ...item, price: newPrice } : item);
-      const target = updated.find(i => i.id === id);
-      if (target) {
-        fetch('/api/menu', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(target)
-        }).catch(() => {});
-      }
-      return updated;
-    });
+    setMenuItems(prev => prev.map(item => item.id === id ? { ...item, price: newPrice } : item));
+    fetch(`/api/menu/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ price: newPrice })
+    }).catch(() => {});
   };
 
   // Staff mutations: Couriers
@@ -672,6 +714,11 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const updateCourier = (id: string, updates: Partial<Courier>) => {
     setCouriers(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    fetch('/api/couriers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...updates })
+    }).catch(() => {});
   };
 
   const deleteCourier = (id: string) => {
@@ -696,6 +743,11 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const updateWaiter = (id: string, updates: Partial<Waiter>) => {
     setWaiters(prev => prev.map(w => w.id === id ? { ...w, ...updates } : w));
+    fetch('/api/waiters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...updates })
+    }).catch(() => {});
   };
 
   const deleteWaiter = (id: string) => {
@@ -721,19 +773,32 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       notes: tableData.notes?.trim() || ''
     };
 
-    setTables(prev => {
-      // Avoid duplicate ID
-      const filtered = prev.filter(t => t.id !== tableId);
-      return [...filtered, newTable];
-    });
+    setTables(prev => [...prev.filter(t => t.id !== tableId), newTable]);
+    fetch('/api/tables', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTable)
+    }).catch(() => {});
   };
 
   const updateTable = (id: string, updates: Partial<RestaurantTable>) => {
-    setTables(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    setTables(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
+      const target = updated.find(t => t.id === id);
+      if (target) {
+        fetch('/api/tables', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target)
+        }).catch(() => {});
+      }
+      return updated;
+    });
   };
 
   const deleteTable = (id: string) => {
     setTables(prev => prev.filter(t => t.id !== id));
+    fetch(`/api/tables/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   // Reviews mutation
@@ -756,23 +821,48 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       createdAt: new Date().toISOString()
     };
     setReservations(prev => [newRes, ...prev]);
-    playOrderChime();
+    playChime();
+
+    fetch('/api/reservations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newRes)
+    }).catch(() => {});
+
     return newRes;
   };
 
   const updateReservationStatus = (id: string, status: 'tasdiqlandi' | 'kutilmoqda' | 'bekor_qilindi') => {
     setReservations(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+    fetch(`/api/reservations/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    }).catch(() => {});
   };
 
   const deleteReservation = (id: string) => {
     setReservations(prev => prev.filter(r => r.id !== id));
+    fetch(`/api/reservations/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
+  // Real-time Waiter Buzzer
+  const callWaiterFromTable = (tableName: string) => {
+    const timestamp = Date.now();
+    setWaiterCallAlert({ table: tableName, timestamp });
+    playChime();
+
+    fetch('/api/waiter-call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: tableName, timestamp })
+    }).catch(() => {});
+  };
 
   // Order actions
   const createOrder = (orderData: Omit<Order, 'id' | 'createdAt' | 'status' | 'isPaid'> & { status?: OrderStatus; isPaid?: boolean }): Order => {
-    const count = orders.length + 1;
-    const newId = `SAV-${1080 + count}`;
+    const timestamp = Date.now();
+    const newId = `SAV-${timestamp.toString().slice(-4)}`;
     const newOrder: Order = {
       ...orderData,
       id: newId,
@@ -781,14 +871,19 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       createdAt: new Date().toISOString()
     };
 
-    setOrders(prev => [newOrder, ...prev]);
-    playOrderChime();
+    setOrders(prev => {
+      if (prev.some(o => o.id === newOrder.id)) return prev;
+      return [newOrder, ...prev];
+    });
+    playChime();
 
     fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newOrder)
-    }).catch(() => {});
+    }).catch(err => {
+      console.warn('POST /api/orders error:', err);
+    });
 
     return newOrder;
   };
@@ -801,7 +896,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       if (status === 'yetkazildi' || status === 'yopildi') updates.deliveredAt = new Date().toISOString();
       return { ...o, ...updates };
     }));
-    playOrderChime();
+    playChime();
 
     fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
@@ -811,88 +906,70 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const toggleOrderItemReady = (orderId: string, itemId: string) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id !== orderId) return o;
-      const updatedItems = o.items.map(it => {
+    setOrders(prev => {
+      const order = prev.find(o => o.id === orderId);
+      if (!order) return prev;
+      const updatedItems = order.items.map(it => {
         if (it.itemId === itemId) {
           return { ...it, isReady: !it.isReady };
         }
         return it;
       });
       const allReady = updatedItems.every(it => it.isReady);
-      return {
-        ...o,
-        items: updatedItems,
-        status: allReady ? 'tayyor' : o.status
-      };
-    }));
+      const newStatus = allReady ? 'tayyor' : order.status;
+      const updatedOrder = { ...order, items: updatedItems, status: newStatus };
+
+      fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: updatedItems, status: newStatus })
+      }).catch(() => {});
+
+      return prev.map(o => o.id === orderId ? updatedOrder : o);
+    });
   };
 
   const assignCourier = (orderId: string, courierId: string) => {
     const courier = couriers.find(c => c.id === courierId);
     if (!courier) return;
 
-    setOrders(prev => prev.map(o => {
-      if (o.id !== orderId) return o;
-      return {
-        ...o,
-        courierId: courier.id,
-        courierName: courier.name,
-        courierPhone: courier.phone,
-        status: 'yolda'
-      };
-    }));
+    const updates = {
+      courierId: courier.id,
+      courierName: courier.name,
+      courierPhone: courier.phone,
+      status: 'yolda' as OrderStatus
+    };
 
-    setCouriers(prev => prev.map(c => {
-      if (c.id === courierId) {
-        return { ...c, status: 'band', activeOrdersCount: c.activeOrdersCount + 1 };
-      }
-      return c;
-    }));
-
-    playOrderChime();
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
+    setCouriers(prev => prev.map(c => c.id === courierId ? { ...c, status: 'band', activeOrdersCount: c.activeOrdersCount + 1 } : c));
 
     fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        courierId: courier.id,
-        courierName: courier.name,
-        courierPhone: courier.phone,
-        status: 'yolda'
-      })
+      body: JSON.stringify(updates)
     }).catch(() => {});
   };
 
   const settleOrderPayment = (orderId: string, method: PaymentMethod) => {
-    const fiscalNo = `FISCAL-UZ-${Math.floor(100000 + Math.random() * 900000)}`;
-    setOrders(prev => prev.map(o => {
-      if (o.id !== orderId) return o;
-      return {
-        ...o,
-        isPaid: true,
-        paymentMethod: method,
-        status: 'yopildi',
-        fiscalReceiptNumber: fiscalNo,
-        deliveredAt: new Date().toISOString()
-      };
-    }));
-    playOrderChime();
+    const updates = {
+      isPaid: true,
+      status: 'yopildi' as OrderStatus,
+      paymentMethod: method,
+      fiscalReceiptNumber: `FISCAL-UZ-${Math.floor(100000 + Math.random() * 900000)}`
+    };
+
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
 
     fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        isPaid: true,
-        paymentMethod: method,
-        status: 'yopildi',
-        fiscalReceiptNumber: fiscalNo
-      })
+      body: JSON.stringify(updates)
     }).catch(() => {});
   };
 
   const cancelOrder = (orderId: string) => {
     setOrders(prev => prev.filter(o => o.id !== orderId));
+    fetch(`/api/orders/${orderId}`, { method: 'DELETE' }).catch(() => {});
   };
 
   const updateSettings = (newSettings: Partial<RestaurantSettings>) => {
@@ -924,6 +1001,9 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         showAdminLoginModal,
         currentLoggedInWaiter,
         mongoStatus,
+        isRealtimeConnected,
+        realtimeToast,
+        dismissRealtimeToast,
         currentTableContext,
         isMenuOnlyMode,
         setCurrentTableContext,

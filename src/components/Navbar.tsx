@@ -5,7 +5,7 @@ import {
   Volume2, VolumeX, ShoppingBag, ShieldCheck, Lock, LogOut, 
   UtensilsCrossed, Menu, X, ChevronRight, Receipt, Utensils, 
   Bike, BarChart3, Users, Globe, ExternalLink, LayoutGrid,
-  Bell, Sparkles
+  Bell, Sparkles, Radio
 } from 'lucide-react';
 import { Language } from '../types';
 
@@ -16,7 +16,7 @@ export const Navbar: React.FC = () => {
     orders, adminSubTab, setAdminSubTab, language, setLanguage,
     waiters, couriers, adminUsers, tables, t,
     currentTableContext, isMenuOnlyMode, callWaiterFromTable,
-    setIsMenuOnlyMode, setCurrentTableContext
+    setIsMenuOnlyMode, setCurrentTableContext, isRealtimeConnected, mongoStatus
   } = useRestaurant();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -209,6 +209,17 @@ export const Navbar: React.FC = () => {
 
         {/* Right Side: Desktop Controls & Mobile Burger Button */}
         <div className="flex items-center gap-2">
+          {/* Live Real-Time MongoDB Status Indicator */}
+          <div 
+            title={mongoStatus.connected ? 'MongoDB Atlas va Real-Time SSE jonli ulanishi faol' : 'Lokal xotira faol'}
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#11131c] border border-[#23273a] text-[11px] font-mono shadow-sm"
+          >
+            <span className={`w-2 h-2 rounded-full ${isRealtimeConnected || mongoStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            <span className={isRealtimeConnected || mongoStatus.connected ? 'text-emerald-400 font-semibold' : 'text-amber-400'}>
+              {isRealtimeConnected ? 'Jonli Baza (SSE)' : mongoStatus.connected ? 'MongoDB Faol' : 'Sinxron'}
+            </span>
+          </div>
+
           {/* Quick Language Switcher on all devices */}
           <LanguageSwitcher />
 

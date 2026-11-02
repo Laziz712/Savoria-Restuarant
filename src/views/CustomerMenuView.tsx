@@ -1704,16 +1704,54 @@ export const CustomerMenuView: React.FC = () => {
               Buyurtmangiz Qabul Qilindi!
             </h3>
 
-            <p className="text-xs sm:text-sm text-neutral-300 mb-6 leading-relaxed">
-              Buyurtmangiz to'g'ridan-to'g'ri oshxona va kassa tizimiga yuborildi. Oshpazlarimiz taomingizni tayyorlashni boshladilar.
+            <p className="text-xs sm:text-sm text-neutral-300 mb-4 leading-relaxed">
+              Buyurtmangiz markaziy ma'lumotlar bazasiga yozildi va real vaqtda oshxona/kassaga uzatildi.
             </p>
 
-            {lastPlacedOrderId && (
-              <div className="p-3 bg-[#141624] rounded-xl border border-[#24293f] text-xs font-mono mb-6">
-                <span className="text-neutral-400">Buyurtma ID: </span>
-                <span className="text-orange-400 font-bold">{lastPlacedOrderId}</span>
-              </div>
-            )}
+            {/* Real-Time Live Status Tracker */}
+            {(() => {
+              const liveOrder = orders.find(o => o.id === lastPlacedOrderId);
+              if (!liveOrder) return null;
+
+              return (
+                <div className="my-4 p-4 rounded-2xl bg-[#141624] border border-[#272c44] text-left space-y-3">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-neutral-400">Buyurtma #{liveOrder.id}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-orange-500/20 text-orange-400 border border-orange-500/40">
+                      {liveOrder.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[11px] font-medium text-neutral-300">
+                      <span>Jonli holat:</span>
+                      <span className="text-emerald-400 font-bold">
+                        {liveOrder.status === 'yangi' && '🟡 Qabul qilindi'}
+                        {liveOrder.status === 'oshxonada' && '👨‍🍳 Oshxonada tayyorlanmoqda'}
+                        {liveOrder.status === 'tayyor' && '🟢 Taom tayyor bo‘ldi'}
+                        {liveOrder.status === 'yolda' && '🚴 Kuryer yo‘lda'}
+                        {(liveOrder.status === 'yetkazildi' || liveOrder.status === 'yopildi') && '🎉 Yetkazildi!'}
+                      </span>
+                    </div>
+
+                    <div className="w-full h-2 bg-[#212538] rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400 transition-all duration-700"
+                        style={{
+                          width: liveOrder.status === 'yangi' ? '25%'
+                               : liveOrder.status === 'oshxonada' ? '50%'
+                               : liveOrder.status === 'tayyor' ? '75%'
+                               : '100%'
+                        }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-neutral-400 text-center pt-1 font-mono">
+                      ● Real-vaqtda sinxronlanmoqda (sahifani yangilash shart emas)
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="flex flex-col gap-2.5">
               {lastPlacedOrderId && (
@@ -1732,12 +1770,49 @@ export const CustomerMenuView: React.FC = () => {
                 onClick={() => setShowOrderSuccessModal(false)}
                 className="w-full py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-semibold text-xs transition-colors"
               >
-                Menyuga qaytish
+                Menyuga qaytish (Status fonda yangilanadi)
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Floating Live Real-Time Order Status Tracker (Visible while customer browses menu) */}
+      {(() => {
+        if (!lastPlacedOrderId || showOrderSuccessModal) return null;
+        const liveOrder = orders.find(o => o.id === lastPlacedOrderId);
+        if (!liveOrder || liveOrder.status === 'yopildi') return null;
+
+        return (
+          <div className="fixed bottom-20 md:bottom-6 right-4 left-4 sm:left-auto sm:max-w-sm z-40 animate-bounce-short">
+            <div className="p-3.5 rounded-2xl bg-[#0f121d]/95 backdrop-blur-xl border-2 border-orange-500/70 shadow-[0_10px_30px_rgba(234,88,12,0.3)] flex items-center justify-between gap-3 text-white">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-xs font-bold truncate">
+                    Buyurtma #{liveOrder.id}: <span className="text-orange-400 font-semibold">
+                      {liveOrder.status === 'yangi' && '🟡 Qabul qilindi'}
+                      {liveOrder.status === 'oshxonada' && '👨‍🍳 Oshxonada'}
+                      {liveOrder.status === 'tayyor' && '🟢 Tayyor bo‘ldi!'}
+                      {liveOrder.status === 'yolda' && '🚴 Kuryer yo‘lda'}
+                      {liveOrder.status === 'yetkazildi' && '🎉 Yetkazildi!'}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-neutral-400 font-mono">
+                    ● Jonli sinxronizatsiya faol
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowOrderSuccessModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:brightness-110 text-white text-[11px] font-bold shrink-0 transition-all cursor-pointer shadow"
+              >
+                Kuzatish
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
