@@ -40,6 +40,8 @@ interface RestaurantContextType {
   isRealtimeConnected: boolean;
   realtimeToast: RealtimeToast | null;
   dismissRealtimeToast: () => void;
+  syncCloudData: () => Promise<boolean>;
+  isSyncingCloud: boolean;
 
   // Real-Time Push Notification System
   notifications: PushNotification[];
@@ -335,6 +337,8 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     message: 'Markaziy bazaga ulanmoqda...'
   });
 
+  const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
+
   const getInitialRoute = (): AppRoute => {
     if (typeof window === 'undefined') return 'mijoz';
     const path = window.location.pathname;
@@ -360,6 +364,78 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       playLuxuryChime();
     }
   }, [soundEnabled]);
+
+  const syncCloudData = useCallback(async (): Promise<boolean> => {
+    setIsSyncingCloud(true);
+    try {
+      let currentLocalOrders: Order[] = orders;
+      try {
+        const raw = localStorage.getItem('savoria_orders');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) currentLocalOrders = parsed;
+        }
+      } catch {}
+
+      let currentLocalMenu: MenuItem[] = menuItems;
+      try {
+        const rawM = localStorage.getItem('savoria_menu_items');
+        if (rawM) {
+          const parsedM = JSON.parse(rawM);
+          if (Array.isArray(parsedM) && parsedM.length > 0) currentLocalMenu = parsedM;
+        }
+      } catch {}
+
+      const res = await fetch('/api/sync/full', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          localOrders: currentLocalOrders,
+          localMenuItems: currentLocalMenu
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          if (Array.isArray(data.orders)) {
+            setOrders(data.orders);
+            try { localStorage.setItem('savoria_orders', JSON.stringify(data.orders)); } catch {}
+          }
+          if (Array.isArray(data.menu) && data.menu.length > 0) {
+            const enriched = data.menu.map((item: MenuItem) => ({
+              ...item,
+              image: getImageForDish(item.id, item.image)
+            }));
+            setMenuItems(enriched);
+            try { localStorage.setItem('savoria_menu_items', JSON.stringify(enriched)); } catch {}
+          }
+          if (data.mongoConnected !== undefined) {
+            setMongoStatus({
+              connected: !!data.mongoConnected,
+              cluster: 'MongoDB Atlas',
+              database: 'savoria',
+              message: data.mongoConnected ? 'Markaziy MongoDB bazasi faol' : 'Lokal xotira faol'
+            });
+          }
+          setRealtimeToast({
+            id: `sync-${Date.now()}`,
+            type: 'push',
+            title: 'Bulutli Baza Sinxronlandi!',
+            message: `Jami ${data.orders?.length || 0} ta chek va barcha taomlar bazada muvaffaqiyatli sinxronlandi.`,
+            timestamp: Date.now()
+          });
+          return true;
+        }
+      }
+      return false;
+    } catch (err) {
+      console.error('syncCloudData error:', err);
+      return false;
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  }, [orders, menuItems]);
 
   const formatUZS = (amount: number): string => {
     const suffix = language === 'ru' ? ' сум' : language === 'en' ? ' UZS' : ' so\'m';
@@ -423,8 +499,45 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   useEffect(() => {
     const loadBootstrapData = async () => {
       try {
-        const res = await fetch('/api/bootstrap');
-        const data = await res.json();
+        let localOrdersToSend: Order[] = [];
+        try {
+          const raw = localStorage.getItem('savoria_orders');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) localOrdersToSend = parsed;
+          }
+        } catch {}
+
+        let localMenuToSend: MenuItem[] = [];
+        try {
+          const rawM = localStorage.getItem('savoria_menu_items');
+          if (rawM) {
+            const parsedM = JSON.parse(rawM);
+            if (Array.isArray(parsedM) && parsedM.length > 0) localMenuToSend = parsedM;
+          }
+        } catch {}
+
+        let data: any = null;
+        try {
+          const syncRes = await fetch('/api/sync/full', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              localOrders: localOrdersToSend,
+              localMenuItems: localMenuToSend
+            })
+          });
+          if (syncRes.ok) {
+            data = await syncRes.json();
+          }
+        } catch {
+          // Sync endpoint failed, fallback to bootstrap
+        }
+
+        if (!data || !data.success) {
+          const res = await fetch('/api/bootstrap');
+          data = await res.json();
+        }
 
         if (data && data.success) {
           setMongoStatus({
@@ -434,35 +547,20 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
             message: data.mongoConnected ? 'Markaziy MongoDB bazasi faol' : 'Lokal xotira faol'
           });
 
-          // Hydrate Menu Items (merge with local)
+          // Hydrate Menu Items (authoritative)
           if (Array.isArray(data.menu) && data.menu.length > 0) {
-            setMenuItems(prev => {
-              const map = new Map<string, MenuItem>();
-              prev.forEach(i => map.set(i.id, i));
-              data.menu.forEach((item: MenuItem) => {
-                map.set(item.id, {
-                  ...item,
-                  image: getImageForDish(item.id, item.image)
-                });
-              });
-              return Array.from(map.values());
-            });
+            const enrichedMenu = data.menu.map((item: MenuItem) => ({
+              ...item,
+              image: getImageForDish(item.id, item.image)
+            }));
+            setMenuItems(enrichedMenu);
+            try { localStorage.setItem('savoria_menu_items', JSON.stringify(enrichedMenu)); } catch {}
           }
 
-          // Hydrate Orders without wiping locally newly created orders
-          if (Array.isArray(data.orders)) {
-            setOrders(prev => {
-              const map = new Map<string, Order>();
-              // Keep local orders first
-              prev.forEach(o => map.set(o.id, o));
-              // Merge remote orders
-              data.orders.forEach((o: Order) => {
-                map.set(o.id, o);
-              });
-              const merged = Array.from(map.values());
-              try { localStorage.setItem('savoria_orders', JSON.stringify(merged)); } catch {}
-              return merged;
-            });
+          // Hydrate Orders (authoritative from MongoDB)
+          if (Array.isArray(data.orders) && data.orders.length > 0) {
+            setOrders(data.orders);
+            try { localStorage.setItem('savoria_orders', JSON.stringify(data.orders)); } catch {}
           }
 
           // Hydrate Tables, Reservations, Waiters, Couriers, Settings
@@ -691,6 +789,25 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
           try {
             const updatedSettings = JSON.parse(e.data);
             setSettings(updatedSettings);
+          } catch {}
+        });
+
+        // J. Orders & Menu Full Synced Broadcast
+        eventSource.addEventListener('orders:synced', (e: MessageEvent) => {
+          try {
+            const { orders: syncedOrders, menu: syncedMenu } = JSON.parse(e.data);
+            if (Array.isArray(syncedOrders) && syncedOrders.length > 0) {
+              setOrders(syncedOrders);
+              try { localStorage.setItem('savoria_orders', JSON.stringify(syncedOrders)); } catch {}
+            }
+            if (Array.isArray(syncedMenu) && syncedMenu.length > 0) {
+              const enriched = syncedMenu.map((m: MenuItem) => ({
+                ...m,
+                image: getImageForDish(m.id, m.image)
+              }));
+              setMenuItems(enriched);
+              try { localStorage.setItem('savoria_menu_items', JSON.stringify(enriched)); } catch {}
+            }
           } catch {}
         });
 
@@ -1368,6 +1485,8 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         isRealtimeConnected,
         realtimeToast,
         dismissRealtimeToast,
+        syncCloudData,
+        isSyncingCloud,
         notifications,
         activePushAlert,
         dismissPushAlert,

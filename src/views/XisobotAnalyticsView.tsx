@@ -3,14 +3,23 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { 
   BarChart3, TrendingUp, DollarSign, Receipt, CreditCard, 
   Printer, Download, Calendar, ArrowUpRight, Flame, PieChart,
-  CheckCircle, FileText
+  CheckCircle, FileText, RefreshCw, Database
 } from 'lucide-react';
 
 export const XisobotAnalyticsView: React.FC = () => {
-  const { orders, menuItems, formatUZS, settings } = useRestaurant();
+  const { orders, menuItems, formatUZS, settings, syncCloudData, isSyncingCloud, mongoStatus } = useRestaurant();
 
   const [timeRange, setTimeRange] = useState<'bugun' | '7kun' | 'oy'>('bugun');
   const [showZReportModal, setShowZReportModal] = useState(false);
+  const [syncSuccessMsg, setSyncSuccessMsg] = useState(false);
+
+  const handleSyncClick = async () => {
+    const ok = await syncCloudData();
+    if (ok) {
+      setSyncSuccessMsg(true);
+      setTimeout(() => setSyncSuccessMsg(false), 3000);
+    }
+  };
 
   // Financial calculations
   const totalRevenue = orders.reduce((sum, o) => sum + (o.isPaid ? o.finalTotal : 0), 0);
@@ -128,6 +137,20 @@ export const XisobotAnalyticsView: React.FC = () => {
               </button>
             ))}
           </div>
+
+          <button
+            onClick={handleSyncClick}
+            disabled={isSyncingCloud}
+            title="Telefon va kompyuterdagi barcha cheklar va taomlarni MongoDB Atlas bilan birlashtirish"
+            className={`px-3.5 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${
+              syncSuccessMsg
+                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                : 'bg-[#191c28] hover:bg-[#232738] text-white border-[#2e334a]'
+            }`}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-[#d4af37] ${isSyncingCloud ? 'animate-spin text-emerald-400' : ''}`} />
+            <span>{isSyncingCloud ? 'Sinxronlanmoqda...' : syncSuccessMsg ? 'Sinxronlandi ✓' : 'Baza Sinxron'}</span>
+          </button>
 
           <button
             onClick={() => setShowZReportModal(true)}

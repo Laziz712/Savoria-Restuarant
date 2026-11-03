@@ -13,6 +13,17 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json({ limit: '15mb' }));
 
+// Permissive CORS middleware for cross-origin access between devices (mobile, custom domain, local)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // MongoDB Connection Setup (Kept 100% secret on server-side)
 const rawMongoUri = process.env.MONGODB_URI || 'mongodb+srv://shavkatovv:laziz712.@cluster0.wupoksj.mongodb.net/savoria?retryWrites=true&w=majority';
 const sanitizedMongoUri = rawMongoUri
@@ -208,9 +219,324 @@ const AdminUserModel = mongoose.model('AdminUser', AdminUserSchema);
 const SettingsModel = mongoose.model('Settings', SettingsSchema);
 const NotificationModel = mongoose.model('Notification', NotificationSchema);
 
+const DEFAULT_MENU_ITEMS = [
+  {
+    id: 'm-1',
+    name: 'To‘y Oshi (Savoria Maxsus Osh)',
+    category: 'milliy',
+    price: 68000,
+    description: 'Barra qo‘zichoq go‘shti, lazer guruch, shirin sariq sabzi, no‘xat, mayiz, qazi va bedana tuxumlari bilan shohona damlangan milliy osh.',
+    prepTimeMinutes: 18,
+    isAvailable: true,
+    station: 'oshxona',
+    calories: 890,
+    weightGrams: 450,
+    isChefSpecial: true,
+    isHit: true,
+    rating: 4.9,
+    reviewsCount: 142,
+    ingredients: ["Qo'zichoq go'shti", "Lazer guruch", "Sariq sabzi", "Zirk", "Qazi"]
+  },
+  {
+    id: 'm-2',
+    name: 'Tandir Qozon Kabob',
+    category: 'milliy',
+    price: 95000,
+    description: 'Qozonda tillarang bo‘lib qovurilgan va tandir taftida dimlangan barra qo‘y qovurg‘asi, karsildoq yosh kartoshka va archilgan piyoz sumax bilan.',
+    prepTimeMinutes: 22,
+    isAvailable: true,
+    station: 'oshxona',
+    calories: 920,
+    weightGrams: 450,
+    isChefSpecial: true,
+    isHit: true,
+    rating: 4.9,
+    reviewsCount: 118,
+    ingredients: ["Qo'y qovurg'asi", "Yosh kartoshka", "Yupqa piyoz", "Sumax"]
+  },
+  {
+    id: 'm-3',
+    name: 'G‘ijduvoncha Qiyma Shashlik',
+    category: 'shashlik',
+    price: 32000,
+    description: 'Qadimiy G‘ijduvon retsepti bo‘yicha yumshoq va sersuv qilib tayyorlangan, ko‘mir cho‘g‘ida qizartirilgan mashhur qiyma kabob.',
+    prepTimeMinutes: 14,
+    isAvailable: true,
+    station: 'mangal',
+    calories: 380,
+    weightGrams: 180,
+    isChefSpecial: true,
+    isHit: true,
+    rating: 4.8,
+    reviewsCount: 95,
+    ingredients: ["Barra go'sht", "Dumba yog'i", "Kashnich", "Zira", "Piyoz"]
+  },
+  {
+    id: 'm-4',
+    name: 'Kuskovoy Qo‘zichoq Shashlik',
+    category: 'shashlik',
+    price: 38000,
+    description: 'Saralangan barra qo‘zichoq go‘shti, nozik dumba bo‘laklari va maxsus sharq ziravorlari bilan cho‘g‘da pishirilgan xushxo‘r kabob.',
+    prepTimeMinutes: 16,
+    isAvailable: true,
+    station: 'mangal',
+    calories: 420,
+    weightGrams: 200,
+    isChefSpecial: false,
+    isHit: true,
+    rating: 4.9,
+    reviewsCount: 88,
+    ingredients: ["Qo'zichoq go'shti", "Dumba", "Maxsus marinad", "Piyoz"]
+  },
+  {
+    id: 'm-5',
+    name: 'Ribeye Steak Premium (Black Angus)',
+    category: 'steak',
+    price: 185000,
+    description: 'Marmar sifatli Black Angus bifshteksi, yangi rozmarin shoxi, sarimsoqli sariyog‘ va grilda pishirilgan sabzavotlar bilan.',
+    prepTimeMinutes: 20,
+    isAvailable: true,
+    station: 'mangal',
+    calories: 780,
+    weightGrams: 350,
+    isChefSpecial: true,
+    isHit: true,
+    rating: 5.0,
+    reviewsCount: 76,
+    ingredients: ["Black Angus go'shti", "Rozmarin", "Sarimsoq yog'i", "Dengiz tuzi"]
+  },
+  {
+    id: 'm-6',
+    name: 'Ko‘za Sho‘rva (Tandirda)',
+    category: 'shorvalar',
+    price: 52000,
+    description: 'Maxsus sopol ko‘zada past olovda uzoq vaqt qaynatilgan barra qo‘zichoq go‘shti, no‘xat, mayin sabzavotlar va shifobaxsh tillarang bulyon.',
+    prepTimeMinutes: 18,
+    isAvailable: true,
+    station: 'oshxona',
+    calories: 460,
+    weightGrams: 400,
+    isChefSpecial: false,
+    rating: 4.9,
+    reviewsCount: 64,
+    ingredients: ["Barra go'sht", "No'xat", "Kartoshka", "Sabzi", "Shivit"]
+  },
+  {
+    id: 'm-7',
+    name: 'Achchiq-Chuchuk (Anorli)',
+    category: 'salatlar',
+    price: 26000,
+    description: 'Yupqa qilib to‘g‘ralgan xushbo‘y pomidor, archilgan piyoz, rayhon va shirin anor donalari bilan bezatilgan milliy tansiq salat.',
+    prepTimeMinutes: 6,
+    isAvailable: true,
+    station: 'salat',
+    calories: 120,
+    weightGrams: 250,
+    isChefSpecial: false,
+    rating: 4.8,
+    reviewsCount: 82,
+    ingredients: ["Yupqa pomidor", "Qizil piyoz", "Qalampir", "Anor donalari", "Rayhon"]
+  },
+  {
+    id: 'm-8',
+    name: 'Turkcha Pista Paxlava (Gaziantep)',
+    category: 'shirinliklar',
+    price: 48000,
+    description: '40 qavat yupqa yoyilgan qatlama xamir, Gaziantepning saralangan zumrad pistasi va toza sariyog‘ sharbati bilan tayyorlangan asl turk paxlavasi.',
+    prepTimeMinutes: 5,
+    isAvailable: true,
+    station: 'salat',
+    calories: 490,
+    weightGrams: 160,
+    isChefSpecial: true,
+    isHit: true,
+    rating: 5.0,
+    reviewsCount: 110,
+    ingredients: ["Qatlama xamir", "Gaziantep pistasi", "Toza sariyog'", "Tabiiy sirop"]
+  },
+  {
+    id: 'm-9',
+    name: 'Norin & Qazi Assorti',
+    category: 'milliy',
+    price: 58000,
+    description: 'Pichoqda yupqa kesilgan an’anaviy xamir, barra ot go‘shti qazisi, xushbo‘y zira va qaynoq piyola sho‘rvasi bilan taqdim etiladi.',
+    prepTimeMinutes: 10,
+    isAvailable: true,
+    station: 'oshxona',
+    calories: 580,
+    weightGrams: 350,
+    isChefSpecial: false,
+    rating: 4.9,
+    reviewsCount: 73,
+    ingredients: ["Yupqa xamir", "Ot go'shti qazi", "Qora murch", "Zira"]
+  },
+  {
+    id: 'm-10',
+    name: 'T-Bone Steak (Dry-Aged)',
+    category: 'steak',
+    price: 210000,
+    description: '28 kun davomida yetiltirilgan suyakli T-Bone steyki, file va striploin uyg‘unligi, mangalda pishgan pomidor va qalampir bilan.',
+    prepTimeMinutes: 24,
+    isAvailable: true,
+    station: 'mangal',
+    calories: 860,
+    weightGrams: 500,
+    isChefSpecial: true,
+    rating: 4.9,
+    reviewsCount: 42,
+    ingredients: ["Dry-Aged T-bone", "Dengiz tuzi", "Gril sabzavotlar", "Rozmarin"]
+  },
+  {
+    id: 'm-11',
+    name: 'San Sebastian Cheesecake',
+    category: 'shirinliklar',
+    price: 42000,
+    description: 'Ustki qavati mayin karamellangan nozik pishloqli desert, issiq Belgiya qora shokolad sousi va yangi rezavor mevalar bilan.',
+    prepTimeMinutes: 5,
+    isAvailable: true,
+    station: 'salat',
+    calories: 460,
+    weightGrams: 200,
+    isChefSpecial: false,
+    rating: 4.9,
+    reviewsCount: 98,
+    ingredients: ["Krem pishloq", "Qaymoq", "Issiq Belgiya shokoladi"]
+  },
+  {
+    id: 'm-12',
+    name: 'Yangi Siqilgan Anor Sharbat (Fresh 300ml)',
+    category: 'ichimliklar',
+    price: 35000,
+    description: 'Kuyoshli Surxondaryo anorlaridan yangi siqib tayyorlangan 100% tabiiy, shifobaxsh va tetiklashtiruvchi sharbat.',
+    prepTimeMinutes: 5,
+    isAvailable: true,
+    station: 'bar',
+    calories: 140,
+    weightGrams: 300,
+    isChefSpecial: false,
+    rating: 5.0,
+    reviewsCount: 89,
+    ingredients: ["100% tabiiy anor", "Muz bo'laklari"]
+  },
+  {
+    id: 'm-13',
+    name: 'Mualliflik Sitrus & Marakuya Limonadi (1L)',
+    category: 'ichimliklar',
+    price: 42000,
+    description: 'Yangi apelsin, laym sharbati, tropik marakuya pyuresi va bog‘ yalpizi bilan tayyorlangan shohona tetiklashtiruvchi mualliflik limonadi.',
+    prepTimeMinutes: 5,
+    isAvailable: true,
+    station: 'bar',
+    calories: 180,
+    weightGrams: 1000,
+    isChefSpecial: true,
+    isHit: true,
+    rating: 4.9,
+    reviewsCount: 104,
+    ingredients: ["Yangi apelsin", "Laym", "Marakuya pyuresi", "Yalpiz", "Muz"]
+  },
+  {
+    id: 'm-14',
+    name: 'Turkcha Qahva (Qumda Damlangan)',
+    category: 'ichimliklar',
+    price: 24000,
+    description: 'Qizigan mayin qumda jezva ichida an’anaviy uslubda sekin damlangan xushbo‘y toza arabika qahvasi. Maxsus pista lokumi va muzli suv bilan beriladi.',
+    prepTimeMinutes: 6,
+    isAvailable: true,
+    station: 'bar',
+    calories: 45,
+    weightGrams: 80,
+    isChefSpecial: false,
+    rating: 4.9,
+    reviewsCount: 67,
+    ingredients: ["100% Arabika qahvasi", "Lokum shirinligi", "Muzli suv"]
+  },
+  {
+    id: 'm-15',
+    name: 'Tog‘ Giyohlari & Zafaronli Choy (Choynak)',
+    category: 'ichimliklar',
+    price: 28000,
+    description: 'Chust ko‘k choyi, tog‘ kiyiko‘ti, yovvoyi yalpiz, zafaron gullari va yangi limon bo‘laklari bilan damlangan xushbo‘y shifobaxsh choy.',
+    prepTimeMinutes: 7,
+    isAvailable: true,
+    station: 'bar',
+    calories: 20,
+    weightGrams: 900,
+    isChefSpecial: true,
+    rating: 5.0,
+    reviewsCount: 92,
+    ingredients: ["Chust ko'k choyi", "Tog' kiyiko'ti", "Zafaron", "Limon", "Yalpiz"]
+  },
+  {
+    id: 'm-16',
+    name: 'Klassik Mojito (Laym & Yalpiz 400ml)',
+    category: 'ichimliklar',
+    price: 32000,
+    description: 'Barra yalpiz barglari, yangi siqilgan laym sharbati, shakar qamishi siropi va sovuq gazlangan soda suvi bilan muzdek kokteyl.',
+    prepTimeMinutes: 4,
+    isAvailable: true,
+    station: 'bar',
+    calories: 110,
+    weightGrams: 400,
+    isChefSpecial: false,
+    rating: 4.8,
+    reviewsCount: 78,
+    ingredients: ["Yangi laym", "Bog' yalpizi", "Shakar qamishi siropi", "Muz bo'laklari"]
+  },
+  {
+    id: 'm-17',
+    name: 'Mualliflik Sezar Salati (Krevetka Bilan)',
+    category: 'salatlar',
+    price: 68000,
+    description: 'Grilda pishirilgan yo‘lbars krevetkalari, karsildoq aysberg va romen barglari, 24 oylik Parmesan pishlog‘i va mualliflik anjous sousi.',
+    prepTimeMinutes: 8,
+    isAvailable: true,
+    station: 'salat',
+    calories: 320,
+    weightGrams: 280,
+    isChefSpecial: true,
+    isHit: true,
+    rating: 4.9,
+    reviewsCount: 115,
+    ingredients: ["Yo'lbars krevetkalari", "Aysberg", "Parmesan pishlog'i", "Karsildoq suxarik", "Maxsus sezar sous"]
+  },
+  {
+    id: 'm-18',
+    name: 'Tom Yum Dengiz Mahsulotlari Sho‘rvasi',
+    category: 'shorvalar',
+    price: 78000,
+    description: 'Yo‘lbars krevetkalari, kalmar, shitake qo‘ziqorinlari, limon o‘ti, galangal va kokos suti bilan tayyorlangan mashhur sharqona nordon-achchiq sho‘rva.',
+    prepTimeMinutes: 15,
+    isAvailable: true,
+    station: 'oshxona',
+    calories: 380,
+    weightGrams: 380,
+    isChefSpecial: true,
+    rating: 4.9,
+    reviewsCount: 84,
+    ingredients: ["Krevetka", "Kalmar", "Shitake", "Kokos suti", "Lemongrass", "Chili"]
+  },
+  {
+    id: 'm-19',
+    name: 'Atlantika Losos Steyki (Grilda)',
+    category: 'steak',
+    price: 165000,
+    description: 'Gril panjarasida mayin qilib qovurilgan barra losos filesi, limonli kremsous, qovurilgan yosh sparja va dengiz tuzi bilan.',
+    prepTimeMinutes: 18,
+    isAvailable: true,
+    station: 'mangal',
+    calories: 680,
+    weightGrams: 340,
+    isChefSpecial: true,
+    rating: 4.9,
+    reviewsCount: 65,
+    ingredients: ["Atlantika lososi", "Limon", "Sparja", "Oq vino sousi"]
+  }
+];
+
 // In-Memory Fallback store if Mongo is temporarily offline
 const memoryStore = {
-  menu: [] as any[],
+  menu: [...DEFAULT_MENU_ITEMS] as any[],
   orders: [] as any[],
   tables: [] as any[],
   reservations: [] as any[],
@@ -223,6 +549,15 @@ const memoryStore = {
 
 async function seedDefaultsIfEmpty() {
   try {
+    // 1. Ensure all 19 authentic dishes are seeded and up-to-date in MongoDB
+    for (const item of DEFAULT_MENU_ITEMS) {
+      await MenuItemModel.findOneAndUpdate(
+        { id: item.id },
+        { $setOnInsert: item },
+        { upsert: true, new: true }
+      );
+    }
+
     const tableCount = await TableModel.countDocuments();
     if (tableCount === 0) {
       const defaultTables = [
@@ -1052,10 +1387,17 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
 // 12. Safe Bulk Sync Endpoint (Never destructively overwrites, only upserts)
 app.post('/api/sync-all', async (req, res) => {
   try {
-    const { menuItems, waiters, couriers, adminUsers, settings, tables, reservations } = req.body;
+    const { orders, menuItems, waiters, couriers, adminUsers, settings, tables, reservations } = req.body;
     let syncedCount = 0;
 
     if (isMongoConnected) {
+      if (Array.isArray(orders) && orders.length > 0) {
+        for (const o of orders) {
+          if (!o || !o.id) continue;
+          await OrderModel.findOneAndUpdate({ id: o.id }, o, { upsert: true });
+          syncedCount++;
+        }
+      }
       if (Array.isArray(menuItems) && menuItems.length > 0) {
         for (const item of menuItems) {
           await MenuItemModel.findOneAndUpdate({ id: item.id }, item, { upsert: true });
@@ -1105,6 +1447,60 @@ app.post('/api/sync-all', async (req, res) => {
   }
 });
 
+// 13. Two-Way Instant Full Sync (Ensures Phone and PC have identical stats and full menu)
+app.post('/api/sync/full', async (req, res) => {
+  try {
+    const { localOrders = [], localMenuItems = [] } = req.body;
+    let syncedOrders = localOrders;
+    let syncedMenu = localMenuItems;
+
+    if (isMongoConnected) {
+      // Ingest any local orders into MongoDB
+      if (Array.isArray(localOrders) && localOrders.length > 0) {
+        for (const o of localOrders) {
+          if (!o || !o.id) continue;
+          await OrderModel.findOneAndUpdate({ id: o.id }, o, { upsert: true, new: true });
+        }
+      }
+
+      // Ingest local menu items if provided
+      if (Array.isArray(localMenuItems) && localMenuItems.length > 0) {
+        for (const it of localMenuItems) {
+          if (!it || !it.id) continue;
+          await MenuItemModel.findOneAndUpdate({ id: it.id }, it, { upsert: true, new: true });
+        }
+      }
+
+      // Fetch unified authoritative orders and menu from MongoDB
+      syncedOrders = await OrderModel.find().sort({ createdAt: -1 }).lean();
+      syncedMenu = await MenuItemModel.find().lean();
+    } else {
+      if (Array.isArray(localOrders)) {
+        localOrders.forEach(lo => {
+          if (!lo || !lo.id) return;
+          const idx = memoryStore.orders.findIndex(o => o.id === lo.id);
+          if (idx >= 0) memoryStore.orders[idx] = lo;
+          else memoryStore.orders.unshift(lo);
+        });
+      }
+      syncedOrders = memoryStore.orders;
+      syncedMenu = memoryStore.menu;
+    }
+
+    // Broadcast unified orders to all connected devices via SSE
+    broadcastRealtimeEvent('orders:synced', syncedOrders);
+
+    res.json({
+      success: true,
+      mongoConnected: isMongoConnected,
+      orders: syncedOrders,
+      menu: syncedMenu
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 async function start() {
   const PORT = Number(process.env.PORT) || 3000;
 
@@ -1126,4 +1522,8 @@ async function start() {
   });
 }
 
-start();
+if (!process.env.VERCEL) {
+  start();
+}
+
+export default app;
