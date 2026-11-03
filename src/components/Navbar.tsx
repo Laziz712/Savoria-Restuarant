@@ -16,8 +16,7 @@ export const Navbar: React.FC = () => {
     orders, adminSubTab, setAdminSubTab, language, setLanguage,
     waiters, couriers, adminUsers, tables, t,
     currentTableContext, isMenuOnlyMode, callWaiterFromTable,
-    setIsMenuOnlyMode, setCurrentTableContext, isRealtimeConnected, mongoStatus,
-    setShowPushModal
+    setIsMenuOnlyMode, setCurrentTableContext, isRealtimeConnected, mongoStatus
   } = useRestaurant();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -245,18 +244,6 @@ export const Navbar: React.FC = () => {
               className="hidden md:flex p-2 rounded-lg bg-[#201517] border border-rose-900/40 text-rose-400 hover:bg-rose-950/60 hover:text-rose-200 text-xs items-center gap-1 font-mono transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" />
-            </button>
-          )}
-
-          {/* Desktop Only: Push Notification Button if Admin */}
-          {isAdminAuthenticated && (
-            <button
-              onClick={() => setShowPushModal(true)}
-              title="Real-Time Push Xabarnoma yuborish"
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#181a28] hover:bg-[#222538] border border-[#d4af37]/40 text-[#d4af37] text-xs font-semibold transition-all shadow-sm active:scale-95"
-            >
-              <Bell className="w-3.5 h-3.5 animate-bounce" />
-              <span>Push Xabar</span>
             </button>
           )}
 
