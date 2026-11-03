@@ -187,6 +187,17 @@ const SettingsSchema = new mongoose.Schema({
   wifiPassword: { type: String, default: 'savoria_vip_guest' }
 }, { timestamps: true });
 
+const NotificationSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  target: { type: String, default: 'all' },
+  targetTable: { type: String, default: '' },
+  priority: { type: String, default: 'normal' },
+  sender: { type: String, default: 'Administrator' },
+  timestamp: { type: Number, default: Date.now }
+}, { timestamps: true });
+
 const MenuItemModel = mongoose.model('MenuItem', MenuItemSchema);
 const OrderModel = mongoose.model('Order', OrderSchema);
 const TableModel = mongoose.model('RestaurantTable', TableSchema);
@@ -195,6 +206,7 @@ const WaiterModel = mongoose.model('Waiter', WaiterSchema);
 const CourierModel = mongoose.model('Courier', CourierSchema);
 const AdminUserModel = mongoose.model('AdminUser', AdminUserSchema);
 const SettingsModel = mongoose.model('Settings', SettingsSchema);
+const NotificationModel = mongoose.model('Notification', NotificationSchema);
 
 // In-Memory Fallback store if Mongo is temporarily offline
 const memoryStore = {
@@ -205,6 +217,7 @@ const memoryStore = {
   waiters: [] as any[],
   couriers: [] as any[],
   admins: [] as any[],
+  notifications: [] as any[],
   settings: null as any
 };
 
@@ -315,16 +328,18 @@ app.get('/api/bootstrap', async (req, res) => {
     let waiters = memoryStore.waiters;
     let couriers = memoryStore.couriers;
     let settings = memoryStore.settings;
+    let notifications = memoryStore.notifications;
 
     if (isMongoConnected) {
-      const [m, o, t, r, w, c, s] = await Promise.all([
+      const [m, o, t, r, w, c, s, n] = await Promise.all([
         MenuItemModel.find().lean(),
         OrderModel.find().sort({ createdAt: -1 }).lean(),
         TableModel.find().lean(),
         ReservationModel.find().sort({ createdAt: -1 }).lean(),
         WaiterModel.find().lean(),
         CourierModel.find().lean(),
-        SettingsModel.findOne().lean()
+        SettingsModel.findOne().lean(),
+        NotificationModel.find().sort({ timestamp: -1 }).limit(25).lean()
       ]);
       menu = m;
       orders = o;
@@ -333,6 +348,7 @@ app.get('/api/bootstrap', async (req, res) => {
       waiters = w;
       couriers = c;
       settings = s || memoryStore.settings;
+      notifications = n || memoryStore.notifications;
     }
 
     res.json({
@@ -345,6 +361,7 @@ app.get('/api/bootstrap', async (req, res) => {
       waiters,
       couriers,
       settings,
+      notifications,
       serverTime: new Date().toISOString()
     });
   } catch (err: any) {
@@ -616,6 +633,47 @@ app.post('/api/waiter-call', (req, res) => {
   };
   broadcastRealtimeEvent('waiter_call:created', alertData);
   res.json({ success: true, alert: alertData });
+});
+
+// 8b. Admin Real-Time Push Notification Dispatcher (To Customers, Waiters, or Specific Table)
+app.post('/api/realtime/broadcast-notification', async (req, res) => {
+  try {
+    const { title, message, target, targetTable, priority, sender } = req.body;
+    const notif = {
+      id: `push-${Date.now()}`,
+      title: title || 'Admin Bildirishnomasi',
+      message: message || '',
+      target: target || 'all', // 'all' | 'waiters' | 'customers' | 'table'
+      targetTable: targetTable || '',
+      priority: priority || 'normal', // 'normal' | 'alert' | 'urgent'
+      sender: sender || 'Administrator',
+      timestamp: Date.now()
+    };
+
+    if (isMongoConnected) {
+      await NotificationModel.create(notif);
+    } else {
+      memoryStore.notifications.unshift(notif);
+      if (memoryStore.notifications.length > 50) memoryStore.notifications.pop();
+    }
+
+    broadcastRealtimeEvent('admin:push_notification', notif);
+    res.json({ success: true, notification: notif });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/notifications', async (req, res) => {
+  try {
+    if (isMongoConnected) {
+      const list = await NotificationModel.find().sort({ timestamp: -1 }).limit(30).lean();
+      return res.json(list);
+    }
+    res.json(memoryStore.notifications);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 9. Staff & Couriers

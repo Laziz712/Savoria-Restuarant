@@ -12,6 +12,8 @@ import { WaiterOrderView } from './views/WaiterOrderView';
 import { ThermalReceiptModal } from './components/ThermalReceiptModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { RealtimeToastBanner } from './components/RealtimeToastBanner';
+import { AdminPushNotificationModal } from './components/AdminPushNotificationModal';
+import { PushNotificationToast } from './components/PushNotificationToast';
 import { QrDigitalMenuView } from './views/QrDigitalMenuView';
 import { 
   ShoppingBag, UtensilsCrossed, ShieldCheck, Lock, Mail, Instagram, Bell
@@ -40,6 +42,7 @@ const AppContent: React.FC = () => {
   if (isMenuOnlyMode) {
     return (
       <div className="min-h-screen bg-[#08090f] text-[#eaeaea] font-sans selection:bg-[#d4af37]/30 selection:text-white">
+        <PushNotificationToast />
         <QrDigitalMenuView />
       </div>
     );
@@ -148,6 +151,12 @@ const AppContent: React.FC = () => {
 
       {/* Real-Time Live Notification Toast Banner */}
       <RealtimeToastBanner />
+
+      {/* Real-Time Push Notification Alert Toast (Waiter, Customer, Table alerts) */}
+      <PushNotificationToast />
+
+      {/* Admin Real-Time Push Notification Composer Modal */}
+      <AdminPushNotificationModal />
 
       {/* Admin Security Password Login Modal */}
       <AdminLoginModal />

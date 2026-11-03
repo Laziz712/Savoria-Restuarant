@@ -13,13 +13,14 @@ import { SalesDashboardView } from './SalesDashboardView';
 import { 
   Receipt, Utensils, Bike, BarChart3, 
   UtensilsCrossed, Users, Menu, X, ChevronRight, ChevronLeft, LogOut, ShieldCheck,
-  LayoutGrid, CalendarCheck, ScrollText, TrendingUp
+  LayoutGrid, CalendarCheck, ScrollText, TrendingUp, Bell
 } from 'lucide-react';
 
 export const AdminHubView: React.FC = () => {
   const { 
     adminSubTab, setAdminSubTab, orders, couriers, 
-    waiters, adminUsers, adminLogout, tables, reservations, t 
+    waiters, adminUsers, adminLogout, tables, reservations, t,
+    setShowPushModal
   } = useRestaurant();
 
   const [isModuleDrawerOpen, setIsModuleDrawerOpen] = useState(false);
@@ -207,20 +208,31 @@ export const AdminHubView: React.FC = () => {
               </div>
             </div>
 
-            {/* 3-Lines Burger Button for Admin Modules */}
-            <button
-              onClick={() => setIsModuleDrawerOpen(true)}
-              aria-label="Admin Modullari Menyu"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#141624] hover:bg-[#1f2336] border border-[#d4af37]/50 text-[#d4af37] text-xs font-semibold shadow-[0_0_12px_rgba(212,175,55,0.15)] active:scale-95 transition-all shrink-0"
-            >
-              <Menu className="w-4 h-4" />
-              <span>Modullar</span>
-              {totalAlerts > 0 && (
-                <span className="w-4 h-4 bg-[#d4af37] text-neutral-950 font-mono font-bold text-[9px] rounded-full flex items-center justify-center">
-                  {totalAlerts}
-                </span>
-              )}
-            </button>
+            {/* Mobile Push Notification & 3-Lines Burger Button */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setShowPushModal(true)}
+                title="Push Xabarnoma yuborish"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#141624] hover:bg-[#1f2336] border border-[#d4af37]/50 text-[#d4af37] text-xs font-semibold shadow-[0_0_12px_rgba(212,175,55,0.15)] active:scale-95 transition-all shrink-0"
+              >
+                <Bell className="w-3.5 h-3.5 animate-bounce" />
+                <span>Push</span>
+              </button>
+
+              <button
+                onClick={() => setIsModuleDrawerOpen(true)}
+                aria-label="Admin Modullari Menyu"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#141624] hover:bg-[#1f2336] border border-[#d4af37]/50 text-[#d4af37] text-xs font-semibold shadow-[0_0_12px_rgba(212,175,55,0.15)] active:scale-95 transition-all shrink-0"
+              >
+                <Menu className="w-4 h-4" />
+                <span>Modullar</span>
+                {totalAlerts > 0 && (
+                  <span className="w-4 h-4 bg-[#d4af37] text-neutral-950 font-mono font-bold text-[9px] rounded-full flex items-center justify-center">
+                    {totalAlerts}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Sub Navigation Horizontal Tabs + Interactive Scrubber Slider Track (O'tkazgich) */}
@@ -317,8 +329,17 @@ export const AdminHubView: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick info & Logout (Desktop Only) */}
+          {/* Quick info & Actions (Desktop Only) */}
           <div className="hidden xl:flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => setShowPushModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#d4af37]/20 via-amber-500/20 to-[#d4af37]/10 hover:from-[#d4af37]/35 hover:to-amber-500/35 border border-[#d4af37]/60 text-[#d4af37] hover:text-white text-xs font-bold transition-all shadow-[0_0_12px_rgba(212,175,55,0.2)] active:scale-95 cursor-pointer"
+              title="Barcha xodimlar va mijozlarga real-vaqtda ogohlantirish yuborish"
+            >
+              <Bell className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
+              <span>Push Xabarnoma</span>
+            </button>
+
             <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1.5 bg-[#141824] px-2.5 py-1 rounded-lg border border-emerald-900/40">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               Admin Boshqaruvi
@@ -358,7 +379,27 @@ export const AdminHubView: React.FC = () => {
 
             {/* Modules List */}
             <div className="p-4 space-y-2.5 flex-1">
-              <div className="text-[10px] uppercase font-mono tracking-widest text-neutral-400 px-1 font-bold">
+              {/* Push Notification Action in Mobile Drawer */}
+              <button
+                onClick={() => {
+                  setIsModuleDrawerOpen(false);
+                  setShowPushModal(true);
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-[#d4af37]/20 to-amber-700/20 border border-[#d4af37]/60 text-white hover:brightness-110 transition-all shadow-md active:scale-98"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-[#d4af37] text-neutral-950 flex items-center justify-center font-bold">
+                    <Bell className="w-4 h-4 animate-bounce" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-bold text-amber-300">Push Xabarnoma Yuborish</div>
+                    <div className="text-[10px] text-neutral-300">Ofitsiant, mijoz va stollarga ogohlantirish</div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#d4af37]" />
+              </button>
+
+              <div className="text-[10px] uppercase font-mono tracking-widest text-neutral-400 px-1 font-bold pt-2">
                 Kerakli Bo'limni Tanlang
               </div>
 

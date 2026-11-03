@@ -182,3 +182,15 @@ export interface ChefProfile {
   achievements: string[];
 }
 
+export interface PushNotification {
+  id: string;
+  title: string;
+  message: string;
+  target: 'all' | 'waiters' | 'customers' | 'table';
+  targetTable?: string;
+  priority: 'normal' | 'alert' | 'urgent';
+  sender: string;
+  timestamp: number;
+  read?: boolean;
+}
+
