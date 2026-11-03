@@ -3,9 +3,17 @@ import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import dns from 'dns';
 import { createServer as createViteServer } from 'vite';
 
 dotenv.config();
+
+// Fix querySrv ETIMEOUT on ISP networks (Uztelecom, Beeline, etc.) by using Google & Cloudflare DNS
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']);
+} catch {
+  // Ignore if custom DNS assignment is restricted
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,17 +39,19 @@ const sanitizedMongoUri = rawMongoUri
 
 let isMongoConnected = false;
 let mongoErrorMessage = '';
+let isConnecting = false;
 
 mongoose.set('strictQuery', false);
 
 async function connectToMongo() {
-  if (!sanitizedMongoUri) {
-    isMongoConnected = false;
+  if (!sanitizedMongoUri || isConnecting || isMongoConnected) {
     return;
   }
+  isConnecting = true;
   try {
     await mongoose.connect(sanitizedMongoUri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 8000,
+      connectTimeoutMS: 10000,
     });
     isMongoConnected = true;
     mongoErrorMessage = '';
@@ -51,6 +61,13 @@ async function connectToMongo() {
     isMongoConnected = false;
     mongoErrorMessage = err?.message || 'Database connection failed';
     console.warn('MongoDB ulanishda ogohlantirish:', mongoErrorMessage);
+    // Auto-retry connection after 5 seconds if connection fails
+    setTimeout(() => {
+      isConnecting = false;
+      connectToMongo();
+    }, 5000);
+  } finally {
+    isConnecting = false;
   }
 }
 
