@@ -1,9 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { Bell, CheckCircle2, Clock, X, Radio, ArrowRight } from 'lucide-react';
 
 export const RealtimeToastBanner: React.FC = () => {
   const { realtimeToast, dismissRealtimeToast, isRealtimeConnected, setRoute, setAdminSubTab, isAdminAuthenticated } = useRestaurant();
+
+  useEffect(() => {
+    if (!realtimeToast) return;
+    const timer = setTimeout(() => {
+      dismissRealtimeToast();
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [realtimeToast, dismissRealtimeToast]);
 
   if (!realtimeToast) return null;
 

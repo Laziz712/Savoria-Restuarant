@@ -1,3 +1,10 @@
-import app from '../server';
+import app, { connectToMongo } from '../server';
 
-export default app;
+export default async function handler(req: any, res: any) {
+  try {
+    await connectToMongo();
+  } catch (err) {
+    // Continue even if database connection has temporary latency
+  }
+  return app(req, res);
+}

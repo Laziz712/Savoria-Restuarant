@@ -4,15 +4,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import dns from 'dns';
-import { createServer as createViteServer } from 'vite';
 
 dotenv.config();
 
-// Fix querySrv ETIMEOUT on ISP networks (Uztelecom, Beeline, etc.) by using Google & Cloudflare DNS
-try {
-  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']);
-} catch {
-  // Ignore if custom DNS assignment is restricted
+// Fix querySrv ETIMEOUT on ISP networks (Uztelecom, Beeline, etc.) by using Google & Cloudflare DNS (only in non-Vercel env)
+if (!process.env.VERCEL) {
+  try {
+    dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']);
+  } catch {
+    // Ignore if custom DNS assignment is restricted
+  }
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,36 +40,38 @@ const sanitizedMongoUri = rawMongoUri
 
 let isMongoConnected = false;
 let mongoErrorMessage = '';
-let isConnecting = false;
+let mongoConnectionPromise: Promise<boolean> | null = null;
 
 mongoose.set('strictQuery', false);
 
-async function connectToMongo() {
-  if (!sanitizedMongoUri || isConnecting || isMongoConnected) {
-    return;
+export async function connectToMongo(): Promise<boolean> {
+  if (isMongoConnected && mongoose.connection.readyState === 1) return true;
+  if (!sanitizedMongoUri) return false;
+  if (mongoConnectionPromise) {
+    return mongoConnectionPromise;
   }
-  isConnecting = true;
-  try {
-    await mongoose.connect(sanitizedMongoUri, {
-      serverSelectionTimeoutMS: 8000,
-      connectTimeoutMS: 10000,
-    });
-    isMongoConnected = true;
-    mongoErrorMessage = '';
-    console.log('MongoDB Atlas ulandi: SAVORIA RESTAURANT');
-    await seedDefaultsIfEmpty();
-  } catch (err: any) {
-    isMongoConnected = false;
-    mongoErrorMessage = err?.message || 'Database connection failed';
-    console.warn('MongoDB ulanishda ogohlantirish:', mongoErrorMessage);
-    // Auto-retry connection after 5 seconds if connection fails
-    setTimeout(() => {
-      isConnecting = false;
-      connectToMongo();
-    }, 5000);
-  } finally {
-    isConnecting = false;
-  }
+
+  mongoConnectionPromise = (async () => {
+    try {
+      await mongoose.connect(sanitizedMongoUri, {
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 7000,
+      });
+      isMongoConnected = true;
+      mongoErrorMessage = '';
+      console.log('MongoDB Atlas ulandi: SAVORIA RESTAURANT');
+      await seedDefaultsIfEmpty();
+      return true;
+    } catch (err: any) {
+      isMongoConnected = false;
+      mongoConnectionPromise = null;
+      mongoErrorMessage = err?.message || 'Database connection failed';
+      console.warn('MongoDB ulanishda ogohlantirish:', mongoErrorMessage);
+      return false;
+    }
+  })();
+
+  return mongoConnectionPromise;
 }
 
 connectToMongo();
@@ -90,7 +93,7 @@ export function broadcastRealtimeEvent(eventType: string, data: any) {
 }
 
 // Keep-alive heartbeat every 15s to keep connections alive through Cloud Run / proxies
-setInterval(() => {
+const heartbeatTimer = setInterval(() => {
   for (const client of sseClients) {
     try {
       client.write(': heartbeat\n\n');
@@ -99,6 +102,10 @@ setInterval(() => {
     }
   }
 }, 15000);
+
+if (heartbeatTimer.unref) {
+  heartbeatTimer.unref();
+}
 
 // ==========================================
 // MONGOOSE SCHEMAS & MODELS
@@ -644,6 +651,10 @@ async function seedDefaultsIfEmpty() {
 
 // 1. Real-Time Server-Sent Events Stream
 app.get('/api/realtime/stream', (req, res) => {
+  if (process.env.VERCEL) {
+    // Vercel serverless functions do not support persistent streaming connections
+    return res.status(204).end();
+  }
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
@@ -1521,7 +1532,8 @@ app.post('/api/sync/full', async (req, res) => {
 async function start() {
   const PORT = Number(process.env.PORT) || 3000;
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

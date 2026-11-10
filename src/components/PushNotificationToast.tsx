@@ -1,9 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { Bell, X, Check, Volume2, AlertCircle, AlertTriangle, Sparkles } from 'lucide-react';
 
 export const PushNotificationToast: React.FC = () => {
   const { activePushAlert, dismissPushAlert, playOrderChime } = useRestaurant();
+
+  useEffect(() => {
+    if (!activePushAlert) return;
+    const timer = setTimeout(() => {
+      dismissPushAlert();
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [activePushAlert, dismissPushAlert]);
 
   if (!activePushAlert) return null;
 

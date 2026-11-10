@@ -359,6 +359,14 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const dismissWaiterCallAlert = () => setWaiterCallAlert(null);
   const dismissPushAlert = () => setActivePushAlert(null);
 
+  useEffect(() => {
+    if (!waiterCallAlert) return;
+    const timer = setTimeout(() => {
+      setWaiterCallAlert(null);
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, [waiterCallAlert]);
+
   const playChime = useCallback(() => {
     if (soundEnabled) {
       playLuxuryChime();
@@ -813,25 +821,30 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
         eventSource.onerror = () => {
           setIsRealtimeConnected(false);
-          if (eventSource) eventSource.close();
-          reconnectTimeout = setTimeout(connectRealtime, 3000);
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+          reconnectTimeout = setTimeout(connectRealtime, 10000);
         };
       } catch (err) {
         setIsRealtimeConnected(false);
-        reconnectTimeout = setTimeout(connectRealtime, 3000);
+        reconnectTimeout = setTimeout(connectRealtime, 10000);
       }
     };
 
     connectRealtime();
 
-    // Hybrid Fail-Safe: Polling check every 5 seconds & on window focus to ensure zero missed events
+    // Hybrid Fail-Safe: Polling check every 4 seconds & on window focus to ensure zero missed events
     const pollInterval = setInterval(() => {
       fetch('/api/orders')
         .then(r => r.json())
         .then(latestOrders => {
           if (Array.isArray(latestOrders) && latestOrders.length > 0) {
             setOrders(prev => {
-              if (prev.length !== latestOrders.length || latestOrders[0]?.id !== prev[0]?.id) {
+              const isDifferent = prev.length !== latestOrders.length ||
+                prev.some((o, i) => !latestOrders[i] || o.id !== latestOrders[i].id || o.status !== latestOrders[i].status || o.isPaid !== latestOrders[i].isPaid);
+              if (isDifferent) {
                 try { localStorage.setItem('savoria_orders', JSON.stringify(latestOrders)); } catch {}
                 return latestOrders;
               }
@@ -840,15 +853,22 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
           }
         })
         .catch(() => {});
-    }, 5000);
+    }, 4000);
 
     const handleFocus = () => {
       fetch('/api/orders')
         .then(r => r.json())
         .then(latest => {
           if (Array.isArray(latest) && latest.length > 0) {
-            setOrders(latest);
-            try { localStorage.setItem('savoria_orders', JSON.stringify(latest)); } catch {}
+            setOrders(prev => {
+              const isDifferent = prev.length !== latest.length ||
+                prev.some((o, i) => !latest[i] || o.id !== latest[i].id || o.status !== latest[i].status || o.isPaid !== latest[i].isPaid);
+              if (isDifferent) {
+                try { localStorage.setItem('savoria_orders', JSON.stringify(latest)); } catch {}
+                return latest;
+              }
+              return prev;
+            });
           }
         })
         .catch(() => {});
