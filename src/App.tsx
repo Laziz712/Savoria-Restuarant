@@ -15,6 +15,9 @@ import { RealtimeToastBanner } from './components/RealtimeToastBanner';
 import { AdminPushNotificationModal } from './components/AdminPushNotificationModal';
 import { PushNotificationToast } from './components/PushNotificationToast';
 import { QrDigitalMenuView } from './views/QrDigitalMenuView';
+import { LandingPageView } from './views/LandingPageView';
+import { SuperadminDashboardView } from './views/SuperadminDashboardView';
+import { TenantBanner } from './components/TenantBanner';
 import { 
   ShoppingBag, UtensilsCrossed, ShieldCheck, Lock, Mail, Instagram, Bell
 } from 'lucide-react';
@@ -23,7 +26,8 @@ const AppContent: React.FC = () => {
   const { 
     activeRoute, setRoute, isAdminAuthenticated, 
     setShowAdminLoginModal, orders, t,
-    isMenuOnlyMode, currentTableContext, callWaiterFromTable
+    isMenuOnlyMode, currentTableContext, callWaiterFromTable,
+    currentPath, navigateTo
   } = useRestaurant();
 
   const [waiterCalledMob, setWaiterCalledMob] = React.useState(false);
@@ -38,6 +42,34 @@ const AppContent: React.FC = () => {
 
   const pendingOrdersCount = orders.filter(o => o.status !== 'yopildi').length;
 
+  // 1. Landing Page (Root URL /)
+  if (currentPath === '/') {
+    return (
+      <LandingPageView 
+        onOpenDemo={(sub) => navigateTo(sub ? `/demo/${sub}` : '/demo')} 
+      />
+    );
+  }
+
+  // 2. Buy Modal opened on Landing Page (/buy)
+  if (currentPath === '/buy') {
+    return (
+      <LandingPageView 
+        onOpenDemo={(sub) => navigateTo(sub ? `/demo/${sub}` : '/demo')} 
+        initialBuyModalOpen={true} 
+      />
+    );
+  }
+
+  // 3. Superadmin Control Center (/superadmin)
+  if (currentPath === '/superadmin' || currentPath.startsWith('/superadmin')) {
+    return (
+      <SuperadminDashboardView 
+        onBackToHome={() => navigateTo('/')} 
+      />
+    );
+  }
+
   // When QR code is scanned or table mode is active: Render strictly the pure OsonMenu-style Digital QR Menu!
   if (isMenuOnlyMode) {
     return (
@@ -50,6 +82,9 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#090a0f] text-[#eaeaea] flex flex-col font-sans selection:bg-[#d4af37]/30 selection:text-white">
+      {/* Multi-Tenant SaaS Banner (Demo Mode, Subscription Expired/Warning) */}
+      <TenantBanner />
+
       {/* Top Navbar strictly containing Menyu, Ofitsiant and Admin Panel */}
       <Navbar />
 
@@ -281,17 +316,25 @@ const AppContent: React.FC = () => {
           {/* Bottom Copyright and URL Bar */}
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-neutral-500 text-[11px]">
             <div>
-              © 2026 SAVORIA RESTAURANT. Barcha huquqlar himoyalangan.
+              © 2026 SAVORIA SaaS Platform. Barcha huquqlar himoyalangan.
             </div>
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setRoute('mijoz')}
-                className="hover:text-orange-400 transition-colors font-mono"
+                onClick={() => navigateTo('/')}
+                className="hover:text-amber-400 transition-colors font-mono cursor-pointer"
+                title="SaaS Bosh Sahifasiga o'tish"
               >
                 https://savoria-restaurant.uz/
               </button>
               <span>·</span>
-              <span>100% Halol Kafolati</span>
+              <button
+                onClick={() => navigateTo('/superadmin')}
+                className="hover:text-amber-400 text-neutral-500 transition-colors cursor-pointer"
+              >
+                Superadmin
+              </button>
+              <span>·</span>
+              <span>100% Bulutli Kafolat</span>
             </div>
           </div>
         </div>

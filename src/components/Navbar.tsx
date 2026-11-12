@@ -14,9 +14,10 @@ export const Navbar: React.FC = () => {
     activeRoute, setRoute, soundEnabled, toggleSound, 
     isAdminAuthenticated, adminLogout, setShowAdminLoginModal, 
     orders, adminSubTab, setAdminSubTab, language, setLanguage,
-    waiters, couriers, adminUsers, tables, t,
+    waiters, couriers, adminUsers, tables, t, settings,
     currentTableContext, isMenuOnlyMode, callWaiterFromTable,
-    setIsMenuOnlyMode, setCurrentTableContext, isRealtimeConnected, mongoStatus
+    setIsMenuOnlyMode, setCurrentTableContext, isRealtimeConnected, mongoStatus,
+    currentTenant, navigateTo, tenantSlug, isDemoMode
   } = useRestaurant();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -172,11 +173,18 @@ export const Navbar: React.FC = () => {
             className="text-left group flex items-center gap-2 focus:outline-none shrink-0"
           >
             <div className="w-8 h-8 rounded-lg border border-[#d4af37]/50 bg-gradient-to-br from-[#2a2415] to-[#12131a] flex items-center justify-center text-[#d4af37] font-serif font-bold text-sm shadow-[0_0_12px_rgba(212,175,55,0.25)]">
-              S
+              {(currentTenant?.name || settings?.name || 'Savoria')[0].toUpperCase()}
             </div>
-            <span className="font-serif tracking-wider font-bold text-xs sm:text-base text-white group-hover:text-[#d4af37] transition-colors whitespace-nowrap">
-              SAVORIA RESTAURANT
-            </span>
+            <div className="flex flex-col">
+              <span className="font-serif tracking-wider font-bold text-xs sm:text-base text-white group-hover:text-[#d4af37] transition-colors whitespace-nowrap">
+                {currentTenant?.name || settings?.name || 'SAVORIA RESTAURANT'}
+              </span>
+              {isDemoMode && (
+                <span className="text-[9px] text-[#d4af37] font-mono tracking-wider">
+                  DEMO TIZIM
+                </span>
+              )}
+            </div>
           </button>
 
           {/* Desktop Navigation Links (Hidden on mobile) */}
@@ -203,6 +211,15 @@ export const Navbar: React.FC = () => {
             >
               <UtensilsCrossed className="w-3.5 h-3.5" />
               <span>{t('nav_waiter')}</span>
+            </button>
+
+            <button
+              onClick={() => navigateTo('/')}
+              title="Savoria SaaS platformasiga o'tish"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-neutral-400 hover:text-amber-300 hover:bg-white/5 transition-all whitespace-nowrap"
+            >
+              <Globe className="w-3 h-3" />
+              <span className="hidden lg:inline">SaaS Bosh Sahifa</span>
             </button>
           </nav>
         </div>

@@ -194,3 +194,63 @@ export interface PushNotification {
   read?: boolean;
 }
 
+// ==========================================
+// MULTI-TENANT SAAS TYPES
+// ==========================================
+export type TenantStatus = 'pending' | 'active' | 'expired' | 'blocked';
+
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  ownerName: string;
+  phone: string;
+  telegram?: string;
+  email?: string;
+  logo?: string;
+  planMonths: number; // 3, 6, 12
+  startDate: string; // ISO
+  endDate: string; // ISO
+  status: TenantStatus;
+  adminUsername: string;
+  adminPasswordHash?: string;
+  settings?: RestaurantSettings;
+  createdAt: string;
+  daysRemaining?: number;
+  isExpired?: boolean;
+}
+
+export type SubscriptionOrderStatus = 'pending' | 'approved' | 'rejected';
+
+export interface SubscriptionOrder {
+  id: string;
+  tenantName: string;
+  slug: string;
+  ownerName: string;
+  phone: string;
+  telegram: string;
+  email?: string;
+  adminUsername: string;
+  adminPassword?: string;
+  planMonths: number;
+  amount: number;
+  receiptImage?: string; // base64
+  cardNumber: string;
+  cardHolder: string;
+  status: SubscriptionOrderStatus;
+  rejectionReason?: string;
+  createdAt: string;
+  reviewedAt?: string;
+}
+
+export interface PlatformPricingConfig {
+  monthlyBasePrice: number;
+  discount3MonthsPercent: number;
+  discount6MonthsPercent: number;
+  discount12MonthsPercent: number;
+  cardNumber: string;
+  cardHolder: string;
+  telegramSupport: string;
+}
+
+

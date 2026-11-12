@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useRe
 import { 
   MenuItem, Order, Courier, Waiter, AdminUser, 
   RestaurantSettings, RestaurantTable, OrderStatus, PaymentMethod, Language, MongoStatus,
-  CustomerReview, TableReservation, ChefProfile, PushNotification 
+  CustomerReview, TableReservation, ChefProfile, PushNotification, Tenant 
 } from '../types';
 import { 
   INITIAL_MENU_ITEMS, INITIAL_ORDERS, INITIAL_COURIERS, 
@@ -23,6 +23,15 @@ export interface RealtimeToast {
 }
 
 interface RestaurantContextType {
+  // Multi-Tenant SaaS
+  currentTenant: Tenant | null;
+  tenantSlug: string;
+  isDemoMode: boolean;
+  isReadOnlyMode: boolean;
+  navigateTo: (path: string) => void;
+  resetDemoData: () => Promise<void>;
+  currentPath: string;
+
   menuItems: MenuItem[];
   orders: Order[];
   couriers: Courier[];
@@ -339,6 +348,26 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
 
+  // Multi-Tenant Path & Slug Extraction
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    return typeof window !== 'undefined' ? window.location.pathname : '/';
+  });
+
+  const extractSlug = (path: string): string => {
+    const cleaned = path.split('?')[0].replace(/\/+$/, '');
+    const segments = cleaned.split('/').filter(Boolean);
+    if (segments.length === 0) return '';
+    const first = segments[0].toLowerCase();
+    if (['superadmin', 'buy', 'pricing', 'api', 'login'].includes(first)) return '';
+    return first;
+  };
+
+  const [tenantSlug, setTenantSlug] = useState<string>(() => extractSlug(currentPath));
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
+
+  const isDemoMode = tenantSlug === 'demo';
+  const isReadOnlyMode = !!(currentTenant && (currentTenant.isExpired || currentTenant.status === 'expired' || currentTenant.status === 'blocked'));
+
   const getInitialRoute = (): AppRoute => {
     if (typeof window === 'undefined') return 'mijoz';
     const path = window.location.pathname;
@@ -354,6 +383,39 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const [activeRoute, setActiveRoute] = useState<AppRoute>(getInitialRoute);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [activeReceiptOrder, setActiveReceiptOrder] = useState<Order | null>(null);
+
+  const navigateTo = useCallback((newPath: string) => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', newPath);
+      setCurrentPath(newPath);
+      const newSlug = extractSlug(newPath);
+      setTenantSlug(newSlug);
+      if (newPath.includes('/admin')) {
+        setActiveRoute('admin');
+      } else if (newPath.includes('/ofitsiant')) {
+        setActiveRoute('ofitsiant');
+      } else {
+        setActiveRoute('mijoz');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const p = window.location.pathname;
+      setCurrentPath(p);
+      setTenantSlug(extractSlug(p));
+      if (p.includes('/admin')) {
+        setActiveRoute('admin');
+      } else if (p.includes('/ofitsiant')) {
+        setActiveRoute('ofitsiant');
+      } else {
+        setActiveRoute('mijoz');
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const dismissRealtimeToast = () => setRealtimeToast(null);
   const dismissWaiterCallAlert = () => setWaiterCallAlert(null);
@@ -501,46 +563,43 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     } catch {}
   }, [notifications]);
 
+  const resetDemoData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/demo/reset', { method: 'POST' });
+      if (res.ok) {
+        setRealtimeToast({
+          id: `reset-${Date.now()}`,
+          type: 'push',
+          title: 'Demo Tiklandi!',
+          message: 'Barcha demo buyurtmalari tozalandi va asl holatiga qaytarildi.',
+          timestamp: Date.now()
+        });
+        try {
+          localStorage.removeItem('savoria_orders');
+        } catch {}
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Demo reset error:', err);
+    }
+  }, []);
+
   // ========================================================
   // 1. BOOTSTRAP: Load Authoritative State from MongoDB on Mount & Merge
   // ========================================================
   useEffect(() => {
     const loadBootstrapData = async () => {
       try {
-        let localOrdersToSend: Order[] = [];
-        try {
-          const raw = localStorage.getItem('savoria_orders');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) localOrdersToSend = parsed;
-          }
-        } catch {}
-
-        let localMenuToSend: MenuItem[] = [];
-        try {
-          const rawM = localStorage.getItem('savoria_menu_items');
-          if (rawM) {
-            const parsedM = JSON.parse(rawM);
-            if (Array.isArray(parsedM) && parsedM.length > 0) localMenuToSend = parsedM;
-          }
-        } catch {}
-
+        const effectiveSlug = tenantSlug || 'demo';
         let data: any = null;
+
+        // Try tenant-specific bootstrap first for full isolation
         try {
-          const syncRes = await fetch('/api/sync/full', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              localOrders: localOrdersToSend,
-              localMenuItems: localMenuToSend
-            })
-          });
-          if (syncRes.ok) {
-            data = await syncRes.json();
+          const tenantRes = await fetch(`/api/tenant-bootstrap/${effectiveSlug}`);
+          if (tenantRes.ok) {
+            data = await tenantRes.json();
           }
-        } catch {
-          // Sync endpoint failed, fallback to bootstrap
-        }
+        } catch {}
 
         if (!data || !data.success) {
           const res = await fetch('/api/bootstrap');
@@ -548,6 +607,10 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         }
 
         if (data && data.success) {
+          if (data.tenant) {
+            setCurrentTenant(data.tenant);
+          }
+
           setMongoStatus({
             connected: !!data.mongoConnected,
             cluster: 'MongoDB Atlas',
@@ -1488,6 +1551,15 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   return (
     <RestaurantContext.Provider
       value={{
+        // Multi-Tenant SaaS
+        currentTenant,
+        tenantSlug,
+        isDemoMode,
+        isReadOnlyMode,
+        navigateTo,
+        resetDemoData,
+        currentPath,
+
         menuItems,
         orders,
         couriers,

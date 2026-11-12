@@ -112,6 +112,7 @@ if (heartbeatTimer.unref) {
 // ==========================================
 const MenuItemSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  tenantId: { type: String, default: 'demo', index: true },
   name: { type: String, required: true },
   category: { type: String, required: true },
   price: { type: Number, required: true },
@@ -131,6 +132,7 @@ const MenuItemSchema = new mongoose.Schema({
 
 const OrderSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  tenantId: { type: String, default: 'demo', index: true },
   type: { type: String, required: true },
   status: { type: String, default: 'yangi' },
   tableNumber: { type: String },
@@ -160,6 +162,7 @@ const OrderSchema = new mongoose.Schema({
 
 const TableSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  tenantId: { type: String, default: 'demo', index: true },
   name: { type: String, required: true },
   zone: { type: String, default: 'Zal 1' },
   capacity: { type: Number, default: 4 },
@@ -169,6 +172,7 @@ const TableSchema = new mongoose.Schema({
 
 const ReservationSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  tenantId: { type: String, default: 'demo', index: true },
   guestName: { type: String, required: true },
   guestPhone: { type: String, required: true },
   date: { type: String, default: 'Bugun' },
@@ -183,6 +187,7 @@ const ReservationSchema = new mongoose.Schema({
 
 const WaiterSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  tenantId: { type: String, default: 'demo', index: true },
   name: { type: String, required: true },
   phone: { type: String, required: true },
   assignedZone: { type: String, default: 'Zal 1' },
@@ -194,6 +199,7 @@ const WaiterSchema = new mongoose.Schema({
 
 const CourierSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  tenantId: { type: String, default: 'demo', index: true },
   name: { type: String, required: true },
   phone: { type: String, required: true },
   vehicle: { type: String, default: 'skuter' },
@@ -204,6 +210,7 @@ const CourierSchema = new mongoose.Schema({
 
 const AdminUserSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  tenantId: { type: String, default: 'demo', index: true },
   name: { type: String, required: true },
   username: { type: String, required: true },
   passwordHash: { type: String, required: true },
@@ -211,6 +218,7 @@ const AdminUserSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const SettingsSchema = new mongoose.Schema({
+  tenantId: { type: String, default: 'demo', index: true },
   name: { type: String, default: 'SAVORIA RESTAURANT' },
   slogan: { type: String, default: 'Sharqona Mehmondo‘stlik & Yuksak Gastronomik San’at' },
   address: { type: String, default: 'Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko\'chasi 45-uy' },
@@ -224,6 +232,7 @@ const SettingsSchema = new mongoose.Schema({
 
 const NotificationSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  tenantId: { type: String, default: 'demo', index: true },
   title: { type: String, required: true },
   message: { type: String, required: true },
   target: { type: String, default: 'all' },
@@ -231,6 +240,57 @@ const NotificationSchema = new mongoose.Schema({
   priority: { type: String, default: 'normal' },
   sender: { type: String, default: 'Administrator' },
   timestamp: { type: Number, default: Date.now }
+}, { timestamps: true });
+
+const TenantSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  slug: { type: String, required: true, unique: true, index: true },
+  ownerName: { type: String, required: true },
+  phone: { type: String, required: true },
+  telegram: { type: String, default: '' },
+  email: { type: String, default: '' },
+  logo: { type: String, default: '' },
+  planMonths: { type: Number, default: 3 },
+  startDate: { type: String, default: () => new Date().toISOString() },
+  endDate: { type: String, required: true },
+  status: { type: String, enum: ['pending', 'active', 'expired', 'blocked'], default: 'active' },
+  adminUsername: { type: String, default: 'admin' },
+  adminPasswordHash: { type: String, default: '1111' },
+  settings: { type: Object, default: {} },
+  createdAt: { type: String, default: () => new Date().toISOString() }
+}, { timestamps: true });
+
+const SubscriptionOrderSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  tenantName: { type: String, required: true },
+  slug: { type: String, required: true },
+  ownerName: { type: String, required: true },
+  phone: { type: String, required: true },
+  telegram: { type: String, required: true },
+  email: { type: String, default: '' },
+  adminUsername: { type: String, required: true },
+  adminPassword: { type: String, default: '' },
+  planMonths: { type: Number, required: true },
+  amount: { type: Number, required: true },
+  receiptImage: { type: String, default: '' },
+  cardNumber: { type: String, default: '4916 9903 6294 0907' },
+  cardHolder: { type: String, default: 'SOHIBA SHOMURATOVA' },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  rejectionReason: { type: String, default: '' },
+  createdAt: { type: String, default: () => new Date().toISOString() },
+  reviewedAt: { type: String }
+}, { timestamps: true });
+
+const PlatformConfigSchema = new mongoose.Schema({
+  id: { type: String, default: 'main_config', unique: true },
+  monthlyBasePrice: { type: Number, default: 399000 },
+  discount3MonthsPercent: { type: Number, default: 5 },
+  discount6MonthsPercent: { type: Number, default: 10 },
+  discount12MonthsPercent: { type: Number, default: 20 },
+  cardNumber: { type: String, default: '4916 9903 6294 0907' },
+  cardHolder: { type: String, default: 'SOHIBA SHOMURATOVA' },
+  telegramSupport: { type: String, default: '@lazizshavkatov712' }
 }, { timestamps: true });
 
 const MenuItemModel = mongoose.model('MenuItem', MenuItemSchema);
@@ -242,6 +302,9 @@ const CourierModel = mongoose.model('Courier', CourierSchema);
 const AdminUserModel = mongoose.model('AdminUser', AdminUserSchema);
 const SettingsModel = mongoose.model('Settings', SettingsSchema);
 const NotificationModel = mongoose.model('Notification', NotificationSchema);
+const TenantModel = mongoose.model('Tenant', TenantSchema);
+const SubscriptionOrderModel = mongoose.model('SubscriptionOrder', SubscriptionOrderSchema);
+const PlatformConfigModel = mongoose.model('PlatformConfig', PlatformConfigSchema);
 
 const DEFAULT_MENU_ITEMS = [
   {
@@ -568,7 +631,19 @@ const memoryStore = {
   couriers: [] as any[],
   admins: [] as any[],
   notifications: [] as any[],
-  settings: null as any
+  settings: null as any,
+  tenants: [] as any[],
+  subscriptionOrders: [] as any[],
+  platformConfig: {
+    id: 'main_config',
+    monthlyBasePrice: 399000,
+    discount3MonthsPercent: 5,
+    discount6MonthsPercent: 10,
+    discount12MonthsPercent: 20,
+    cardNumber: '4916 9903 6294 0907',
+    cardHolder: 'SOHIBA SHOMURATOVA',
+    telegramSupport: '@lazizshavkatov712'
+  } as any
 };
 
 async function seedDefaultsIfEmpty() {
@@ -577,7 +652,7 @@ async function seedDefaultsIfEmpty() {
     for (const item of DEFAULT_MENU_ITEMS) {
       await MenuItemModel.findOneAndUpdate(
         { id: item.id },
-        { $setOnInsert: item },
+        { $setOnInsert: { ...item, tenantId: 'demo' } },
         { upsert: true, new: true }
       );
     }
@@ -585,14 +660,14 @@ async function seedDefaultsIfEmpty() {
     const tableCount = await TableModel.countDocuments();
     if (tableCount === 0) {
       const defaultTables = [
-        { id: 'Stol #1 (Zal 1)', name: 'Stol 1', zone: 'Zal 1', capacity: 4, isActive: true, notes: 'Deraza oldi' },
-        { id: 'Stol #2 (Zal 1)', name: 'Stol 2', zone: 'Zal 1', capacity: 2, isActive: true, notes: 'Kichik shinam stol' },
-        { id: 'Stol #3 (Zal 1)', name: 'Stol 3', zone: 'Zal 1', capacity: 6, isActive: true, notes: 'Katta oilaviy stol' },
-        { id: 'Stol #4 (Zal 1)', name: 'Stol 4', zone: 'Zal 1', capacity: 4, isActive: true, notes: 'Markaziy zal' },
-        { id: 'Stol #5 (Zal 1)', name: 'Stol 5', zone: 'Zal 1', capacity: 4, isActive: true, notes: 'Markaziy zal' },
-        { id: 'VIP Kabinet #1', name: 'VIP 1', zone: 'VIP', capacity: 10, isActive: true, notes: 'Alohida VIP xona va televizor' },
-        { id: 'VIP Terrasa #2', name: 'VIP Terrasa', zone: 'Terrasa', capacity: 8, isActive: true, notes: 'Ochiq osmon ostidagi veranda' },
-        { id: 'Bar stoli #3', name: 'Bar 3', zone: 'Bar', capacity: 2, isActive: true, notes: 'Barmen qarshisida' },
+        { id: 'Stol #1 (Zal 1)', tenantId: 'demo', name: 'Stol 1', zone: 'Zal 1', capacity: 4, isActive: true, notes: 'Deraza oldi' },
+        { id: 'Stol #2 (Zal 1)', tenantId: 'demo', name: 'Stol 2', zone: 'Zal 1', capacity: 2, isActive: true, notes: 'Kichik shinam stol' },
+        { id: 'Stol #3 (Zal 1)', tenantId: 'demo', name: 'Stol 3', zone: 'Zal 1', capacity: 6, isActive: true, notes: 'Katta oilaviy stol' },
+        { id: 'Stol #4 (Zal 1)', tenantId: 'demo', name: 'Stol 4', zone: 'Zal 1', capacity: 4, isActive: true, notes: 'Markaziy zal' },
+        { id: 'Stol #5 (Zal 1)', tenantId: 'demo', name: 'Stol 5', zone: 'Zal 1', capacity: 4, isActive: true, notes: 'Markaziy zal' },
+        { id: 'VIP Kabinet #1', tenantId: 'demo', name: 'VIP 1', zone: 'VIP', capacity: 10, isActive: true, notes: 'Alohida VIP xona va televizor' },
+        { id: 'VIP Terrasa #2', tenantId: 'demo', name: 'VIP Terrasa', zone: 'Terrasa', capacity: 8, isActive: true, notes: 'Ochiq osmon ostidagi veranda' },
+        { id: 'Bar stoli #3', tenantId: 'demo', name: 'Bar 3', zone: 'Bar', capacity: 2, isActive: true, notes: 'Barmen qarshisida' },
       ];
       await TableModel.insertMany(defaultTables);
     }
@@ -600,6 +675,7 @@ async function seedDefaultsIfEmpty() {
     const settingsCount = await SettingsModel.countDocuments();
     if (settingsCount === 0) {
       await SettingsModel.create({
+        tenantId: 'demo',
         name: 'SAVORIA RESTAURANT',
         slogan: 'Sharqona Mehmondo‘stlik & Yuksak Gastronomik San’at',
         address: 'Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko\'chasi 45-uy',
@@ -615,18 +691,18 @@ async function seedDefaultsIfEmpty() {
     const waiterCount = await WaiterModel.countDocuments();
     if (waiterCount === 0) {
       await WaiterModel.insertMany([
-        { id: 'w-1', name: 'Sardor Rahimiy', phone: '+998 90 123 45 67', assignedZone: 'Zal 1 (Asosiy)', status: 'ishda', ordersHandledCount: 18, password: '1111', pinPassword: '1111' },
-        { id: 'w-2', name: 'Madina Alimova', phone: '+998 93 234 56 78', assignedZone: 'VIP Terrasa', status: 'ishda', ordersHandledCount: 14, password: '2222', pinPassword: '2222' },
-        { id: 'w-3', name: 'Javohir Toshmatov', phone: '+998 99 345 67 89', assignedZone: 'Sharqona Zal', status: 'ishda', ordersHandledCount: 9, password: '3333', pinPassword: '3333' }
+        { id: 'w-1', tenantId: 'demo', name: 'Sardor Rahimiy', phone: '+998 90 123 45 67', assignedZone: 'Zal 1 (Asosiy)', status: 'ishda', ordersHandledCount: 18, password: '1111', pinPassword: '1111' },
+        { id: 'w-2', tenantId: 'demo', name: 'Madina Alimova', phone: '+998 93 234 56 78', assignedZone: 'VIP Terrasa', status: 'ishda', ordersHandledCount: 14, password: '2222', pinPassword: '2222' },
+        { id: 'w-3', tenantId: 'demo', name: 'Javohir Toshmatov', phone: '+998 99 345 67 89', assignedZone: 'Sharqona Zal', status: 'ishda', ordersHandledCount: 9, password: '3333', pinPassword: '3333' }
       ]);
     }
 
     const courierCount = await CourierModel.countDocuments();
     if (courierCount === 0) {
       await CourierModel.insertMany([
-        { id: 'c-1', name: 'Rustam Qodirov', phone: '+998 90 987 65 43', vehicle: 'skuter', status: 'bosh', activeOrdersCount: 0, rating: 4.9 },
-        { id: 'c-2', name: 'Bobur Saidov', phone: '+998 97 876 54 32', vehicle: 'avto', status: 'bosh', activeOrdersCount: 0, rating: 5.0 },
-        { id: 'c-3', name: 'Otabek Mirzayev', phone: '+998 94 765 43 21', vehicle: 'skuter', status: 'bosh', activeOrdersCount: 0, rating: 4.8 }
+        { id: 'c-1', tenantId: 'demo', name: 'Rustam Qodirov', phone: '+998 90 987 65 43', vehicle: 'skuter', status: 'bosh', activeOrdersCount: 0, rating: 4.9 },
+        { id: 'c-2', tenantId: 'demo', name: 'Bobur Saidov', phone: '+998 97 876 54 32', vehicle: 'avto', status: 'bosh', activeOrdersCount: 0, rating: 5.0 },
+        { id: 'c-3', tenantId: 'demo', name: 'Otabek Mirzayev', phone: '+998 94 765 43 21', vehicle: 'skuter', status: 'bosh', activeOrdersCount: 0, rating: 4.8 }
       ]);
     }
 
@@ -634,10 +710,107 @@ async function seedDefaultsIfEmpty() {
     if (adminCount === 0) {
       await AdminUserModel.create({
         id: 'adm-1',
+        tenantId: 'demo',
         name: 'Laziz Shavkatov (Bosh Admin)',
         username: 'laziz712',
         passwordHash: 'laziz712.',
         role: 'superadmin'
+      });
+    }
+
+    // Seed Multi-Tenant Tenants if none exist
+    const tenantCount = await TenantModel.countDocuments();
+    if (tenantCount === 0) {
+      const demoTenant = {
+        id: 't-demo',
+        name: 'SAVORIA RESTAURANT (Demo)',
+        slug: 'demo',
+        ownerName: 'Laziz Shavkatov',
+        phone: '+998 71 200-71-12',
+        telegram: '@lazizshavkatov712',
+        email: 'info@savoria-restaurant.uz',
+        logo: '',
+        planMonths: 12,
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
+        status: 'active',
+        adminUsername: 'demo',
+        adminPasswordHash: '1111',
+        settings: {
+          name: 'SAVORIA RESTAURANT',
+          slogan: 'Sharqona Mehmondo‘stlik & Yuksak Gastronomik San’at',
+          address: 'Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko\'chasi 45-uy',
+          phone: '+998 71 200-71-12',
+          stir: '309 814 552',
+          serviceFeePercent: 12,
+          headerMessage: 'Savoria Restoraniga xush kelibsiz!',
+          footerReceiptMessage: 'Tashrifingiz uchun minnatdormiz! Yoqimli ishtaha tilaymiz.',
+          wifiPassword: 'savoria_vip_guest'
+        },
+        createdAt: new Date().toISOString()
+      };
+
+      const floraTenant = {
+        id: 't-flora',
+        name: 'Flora Lounge & Cafe',
+        slug: 'flora',
+        ownerName: 'Alisher Usmonov',
+        phone: '+998 90 999 88 77',
+        telegram: '@flora_cafe',
+        email: 'flora.cafe.tashkent@gmail.com',
+        logo: '',
+        planMonths: 6,
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString(),
+        status: 'active',
+        adminUsername: 'flora_admin',
+        adminPasswordHash: 'flora2026',
+        settings: {
+          name: 'Flora Lounge & Cafe',
+          slogan: 'Shinam muhit va zamonaviy Yevropa qahvaxonasi',
+          address: 'Toshkent sh., Mirzo Ulug‘bek tumani, Mustaqillik shoh ko‘chasi 12',
+          phone: '+998 90 999 88 77',
+          stir: '412 873 991',
+          serviceFeePercent: 10,
+          headerMessage: 'Flora Cafe - huzurbaxsh daqiqalar!',
+          footerReceiptMessage: 'Flora Cafeni tanlaganingiz uchun tashakkur!',
+          wifiPassword: 'flora_freewifi'
+        },
+        createdAt: new Date().toISOString()
+      };
+
+      await TenantModel.insertMany([demoTenant, floraTenant]);
+      memoryStore.tenants = [demoTenant, floraTenant];
+
+      // Clone menu items for flora tenant
+      for (const item of DEFAULT_MENU_ITEMS.slice(0, 8)) {
+        await MenuItemModel.create({
+          ...item,
+          id: `flora-${item.id}`,
+          tenantId: 'flora'
+        });
+      }
+
+      // Clone tables for flora tenant
+      await TableModel.insertMany([
+        { id: 'flora-table-1', tenantId: 'flora', name: 'Flora 1 (Zal)', zone: 'Zal', capacity: 4, isActive: true },
+        { id: 'flora-table-2', tenantId: 'flora', name: 'Flora 2 (Terrasa)', zone: 'Terrasa', capacity: 2, isActive: true },
+        { id: 'flora-table-3', tenantId: 'flora', name: 'Flora VIP', zone: 'VIP', capacity: 8, isActive: true }
+      ]);
+    }
+
+    // Seed platform config if not exists
+    const configCount = await PlatformConfigModel.countDocuments();
+    if (configCount === 0) {
+      await PlatformConfigModel.create({
+        id: 'main_config',
+        monthlyBasePrice: 399000,
+        discount3MonthsPercent: 5,
+        discount6MonthsPercent: 10,
+        discount12MonthsPercent: 20,
+        cardNumber: '4916 9903 6294 0907',
+        cardHolder: 'SOHIBA SHOMURATOVA',
+        telegramSupport: '@lazizshavkatov712'
       });
     }
   } catch (err) {
@@ -674,11 +847,560 @@ app.get('/api/realtime/stream', (req, res) => {
 app.get('/api/status', (req, res) => {
   res.json({
     status: 'ok',
-    restaurant: 'SAVORIA RESTAURANT',
+    restaurant: 'SAVORIA RESTAURANT (Multi-Tenant SaaS)',
     mongoConnected: isMongoConnected,
     connectedClients: sseClients.size,
     serverTime: new Date().toISOString()
   });
+});
+
+// ==========================================
+// MULTI-TENANT SAAS MANAGEMENT API
+// ==========================================
+const RESERVED_SLUGS = new Set(['admin', 'demo', 'superadmin', 'api', 'login', 'buy', 'pricing', 'settings', 'order', 'static', 'assets', 'favicon', 'manifest']);
+
+function computeTenantStatus(tenant: any) {
+  if (!tenant) return null;
+  const now = Date.now();
+  const end = new Date(tenant.endDate).getTime();
+  const diffDays = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+  const isExpired = diffDays <= 0;
+  let status = tenant.status || 'active';
+  if (status !== 'blocked') {
+    status = isExpired ? 'expired' : 'active';
+  }
+  return {
+    ...tenant,
+    daysRemaining: Math.max(0, diffDays),
+    isExpired,
+    status
+  };
+}
+
+// A. Check Slug Availability
+app.get('/api/check-slug/:slug', async (req, res) => {
+  try {
+    const rawSlug = (req.params.slug || '').toLowerCase().trim();
+    if (!rawSlug) {
+      return res.status(400).json({ available: false, reason: 'Slug bo‘sh bo‘lishi mumkin emas' });
+    }
+    if (!/^[a-z0-9-]+$/.test(rawSlug)) {
+      return res.status(400).json({ available: false, reason: 'Slug faqat kichik lotin harflari, raqam va tire (-) dan iborat bo‘lishi kerak' });
+    }
+    if (RESERVED_SLUGS.has(rawSlug)) {
+      return res.status(200).json({ available: false, reason: 'Bu nom tizim xizmatlari uchun band qilingan' });
+    }
+
+    if (isMongoConnected) {
+      const existingTenant = await TenantModel.findOne({ slug: rawSlug });
+      if (existingTenant) {
+        return res.json({ available: false, reason: 'Bu restoran domeni allaqachon band qilingan' });
+      }
+      const pendingOrder = await SubscriptionOrderModel.findOne({ slug: rawSlug, status: 'pending' });
+      if (pendingOrder) {
+        return res.json({ available: false, reason: 'Ushbu manzil bo‘yicha arizani ko‘rib chiqish kutilmoqda' });
+      }
+    } else {
+      const match = memoryStore.tenants.find((t: any) => t.slug === rawSlug);
+      if (match) return res.json({ available: false, reason: 'Bu domen band' });
+    }
+
+    res.json({ available: true, slug: rawSlug });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// B. Platform Pricing & Card Config
+app.get('/api/platform-config', async (req, res) => {
+  try {
+    if (isMongoConnected) {
+      let cfg = await PlatformConfigModel.findOne({ id: 'main_config' }).lean();
+      if (!cfg) {
+        cfg = await PlatformConfigModel.create({
+          id: 'main_config',
+          monthlyBasePrice: 399000,
+          discount3MonthsPercent: 5,
+          discount6MonthsPercent: 10,
+          discount12MonthsPercent: 20,
+          cardNumber: '4916 9903 6294 0907',
+          cardHolder: 'SOHIBA SHOMURATOVA',
+          telegramSupport: '@lazizshavkatov712'
+        });
+      }
+      return res.json(cfg);
+    }
+    res.json(memoryStore.platformConfig);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/platform-config', async (req, res) => {
+  try {
+    const updates = req.body;
+    if (isMongoConnected) {
+      const updated = await PlatformConfigModel.findOneAndUpdate(
+        { id: 'main_config' },
+        { $set: updates },
+        { upsert: true, new: true }
+      );
+      return res.json(updated);
+    }
+    memoryStore.platformConfig = { ...memoryStore.platformConfig, ...updates };
+    res.json(memoryStore.platformConfig);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// C. Tenants List & Management
+app.get('/api/tenants', async (req, res) => {
+  try {
+    let tenantsList = memoryStore.tenants;
+    if (isMongoConnected) {
+      tenantsList = await TenantModel.find().lean();
+    }
+    const computed = tenantsList.map(t => computeTenantStatus(t));
+    res.json(computed);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/tenants/:slug', async (req, res) => {
+  try {
+    const slug = req.params.slug.toLowerCase().trim();
+    let tenant: any = null;
+    if (isMongoConnected) {
+      tenant = await TenantModel.findOne({ slug }).lean();
+    } else {
+      tenant = memoryStore.tenants.find((t: any) => t.slug === slug);
+    }
+    if (!tenant) {
+      return res.status(404).json({ error: 'Restoran topilmadi' });
+    }
+    res.json(computeTenantStatus(tenant));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/tenants', async (req, res) => {
+  try {
+    const data = req.body;
+    const slug = (data.slug || '').toLowerCase().trim();
+    if (RESERVED_SLUGS.has(slug)) {
+      return res.status(400).json({ error: 'Ushbu slug band' });
+    }
+    const tenantDoc = {
+      ...data,
+      id: data.id || `t-${Date.now()}`,
+      slug,
+      startDate: data.startDate || new Date().toISOString(),
+      endDate: data.endDate || new Date(Date.now() + (data.planMonths || 3) * 30 * 86400000).toISOString(),
+      status: 'active',
+      createdAt: new Date().toISOString()
+    };
+
+    if (isMongoConnected) {
+      await TenantModel.create(tenantDoc);
+      // Seed initial dishes and tables for this new tenant
+      for (const item of DEFAULT_MENU_ITEMS.slice(0, 10)) {
+        await MenuItemModel.create({
+          ...item,
+          id: `${slug}-${item.id}`,
+          tenantId: slug
+        });
+      }
+      await TableModel.create([
+        { id: `${slug}-t1`, tenantId: slug, name: 'Stol 1', zone: 'Asosiy Zal', capacity: 4, isActive: true },
+        { id: `${slug}-t2`, tenantId: slug, name: 'Stol 2', zone: 'Asosiy Zal', capacity: 2, isActive: true },
+        { id: `${slug}-t3`, tenantId: slug, name: 'Stol 3', zone: 'Terrasa', capacity: 6, isActive: true }
+      ]);
+    } else {
+      memoryStore.tenants.push(tenantDoc);
+    }
+
+    broadcastRealtimeEvent('tenant:created', tenantDoc);
+    res.status(201).json(computeTenantStatus(tenantDoc));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/tenants/:slug', async (req, res) => {
+  try {
+    const slug = req.params.slug.toLowerCase().trim();
+    const updates = req.body;
+    if (isMongoConnected) {
+      const updated = await TenantModel.findOneAndUpdate(
+        { slug },
+        { $set: updates },
+        { new: true }
+      ).lean();
+      if (!updated) return res.status(404).json({ error: 'Restoran topilmadi' });
+      broadcastRealtimeEvent('tenant:updated', updated);
+      return res.json(computeTenantStatus(updated));
+    } else {
+      const idx = memoryStore.tenants.findIndex((t: any) => t.slug === slug);
+      if (idx === -1) return res.status(404).json({ error: 'Topilmadi' });
+      memoryStore.tenants[idx] = { ...memoryStore.tenants[idx], ...updates };
+      return res.json(computeTenantStatus(memoryStore.tenants[idx]));
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/tenants/:slug/extend', async (req, res) => {
+  try {
+    const slug = req.params.slug.toLowerCase().trim();
+    const months = Number(req.body.months) || 1;
+    let tenant: any = null;
+    if (isMongoConnected) {
+      tenant = await TenantModel.findOne({ slug });
+    } else {
+      tenant = memoryStore.tenants.find((t: any) => t.slug === slug);
+    }
+    if (!tenant) return res.status(404).json({ error: 'Restoran topilmadi' });
+
+    const currentEnd = new Date(tenant.endDate).getTime();
+    const baseTime = currentEnd > Date.now() ? currentEnd : Date.now();
+    const newEnd = new Date(baseTime + months * 30 * 24 * 3600 * 1000).toISOString();
+
+    if (isMongoConnected) {
+      tenant.endDate = newEnd;
+      tenant.status = 'active';
+      await tenant.save();
+    } else {
+      tenant.endDate = newEnd;
+      tenant.status = 'active';
+    }
+
+    broadcastRealtimeEvent('tenant:extended', { slug, newEnd });
+    res.json(computeTenantStatus(tenant.toObject ? tenant.toObject() : tenant));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/tenants/:slug', async (req, res) => {
+  try {
+    const slug = req.params.slug.toLowerCase().trim();
+    if (slug === 'demo') {
+      return res.status(400).json({ error: 'Demo tenantini o‘chirib bo‘lmaydi' });
+    }
+    if (isMongoConnected) {
+      await TenantModel.deleteOne({ slug });
+      await MenuItemModel.deleteMany({ tenantId: slug });
+      await OrderModel.deleteMany({ tenantId: slug });
+      await TableModel.deleteMany({ tenantId: slug });
+    } else {
+      memoryStore.tenants = memoryStore.tenants.filter((t: any) => t.slug !== slug);
+    }
+    broadcastRealtimeEvent('tenant:deleted', { slug });
+    res.json({ success: true, message: 'Restoran va uning barcha ma’lumotlari o‘chirildi' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// D. Subscription Orders (Purchase Flow)
+app.get('/api/subscription-orders', async (req, res) => {
+  try {
+    if (isMongoConnected) {
+      const orders = await SubscriptionOrderModel.find().sort({ createdAt: -1 }).lean();
+      return res.json(orders);
+    }
+    res.json(memoryStore.subscriptionOrders);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/subscription-orders', async (req, res) => {
+  try {
+    const data = req.body;
+    const orderDoc = {
+      ...data,
+      id: `SUB-${Date.now().toString().slice(-6)}`,
+      slug: (data.slug || '').toLowerCase().trim(),
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+
+    if (isMongoConnected) {
+      await SubscriptionOrderModel.create(orderDoc);
+    } else {
+      memoryStore.subscriptionOrders.unshift(orderDoc);
+    }
+
+    broadcastRealtimeEvent('subscription:new', orderDoc);
+    res.status(201).json(orderDoc);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/subscription-orders/:id/approve', async (req, res) => {
+  try {
+    const id = req.params.id;
+    let order: any = null;
+    if (isMongoConnected) {
+      order = await SubscriptionOrderModel.findOne({ id });
+    } else {
+      order = memoryStore.subscriptionOrders.find((o: any) => o.id === id);
+    }
+
+    if (!order) return res.status(404).json({ error: 'Buyurtma topilmadi' });
+
+    order.status = 'approved';
+    order.reviewedAt = new Date().toISOString();
+
+    const months = order.planMonths || 3;
+    const tenantPayload = {
+      id: `t-${order.slug}`,
+      name: order.tenantName,
+      slug: order.slug,
+      ownerName: order.ownerName,
+      phone: order.phone,
+      telegram: order.telegram,
+      email: order.email || '',
+      planMonths: months,
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + months * 30 * 24 * 3600 * 1000).toISOString(),
+      status: 'active',
+      adminUsername: order.adminUsername || 'admin',
+      adminPasswordHash: order.adminPassword || '1111',
+      settings: {
+        name: order.tenantName,
+        phone: order.phone,
+        address: 'Toshkent shahri',
+        serviceFeePercent: 10,
+        headerMessage: `${order.tenantName} ga xush kelibsiz!`,
+        footerReceiptMessage: 'Tashrifingiz uchun minnatdormiz!'
+      },
+      createdAt: new Date().toISOString()
+    };
+
+    if (isMongoConnected) {
+      await order.save();
+      await TenantModel.findOneAndUpdate(
+        { slug: order.slug },
+        { $set: tenantPayload },
+        { upsert: true, new: true }
+      );
+
+      // Clone starter dishes if none exist
+      const existingMenuCount = await MenuItemModel.countDocuments({ tenantId: order.slug });
+      if (existingMenuCount === 0) {
+        for (const item of DEFAULT_MENU_ITEMS.slice(0, 10)) {
+          await MenuItemModel.create({
+            ...item,
+            id: `${order.slug}-${item.id}`,
+            tenantId: order.slug
+          });
+        }
+      }
+
+      // Clone starter tables
+      const existingTableCount = await TableModel.countDocuments({ tenantId: order.slug });
+      if (existingTableCount === 0) {
+        await TableModel.create([
+          { id: `${order.slug}-t1`, tenantId: order.slug, name: 'Stol 1', zone: 'Zal', capacity: 4, isActive: true },
+          { id: `${order.slug}-t2`, tenantId: order.slug, name: 'Stol 2', zone: 'Zal', capacity: 2, isActive: true },
+          { id: `${order.slug}-t3`, tenantId: order.slug, name: 'VIP Stol', zone: 'VIP', capacity: 8, isActive: true }
+        ]);
+      }
+    } else {
+      const idx = memoryStore.tenants.findIndex((t: any) => t.slug === order.slug);
+      if (idx >= 0) memoryStore.tenants[idx] = tenantPayload;
+      else memoryStore.tenants.push(tenantPayload);
+    }
+
+    broadcastRealtimeEvent('subscription:approved', { id, slug: order.slug });
+    res.json({ success: true, order, tenant: tenantPayload });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/subscription-orders/:id/reject', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const reason = req.body.reason || 'To‘lov cheki tasdiqlanmadi';
+    if (isMongoConnected) {
+      const updated = await SubscriptionOrderModel.findOneAndUpdate(
+        { id },
+        { $set: { status: 'rejected', rejectionReason: reason, reviewedAt: new Date().toISOString() } },
+        { new: true }
+      );
+      return res.json(updated);
+    }
+    const order = memoryStore.subscriptionOrders.find((o: any) => o.id === id);
+    if (order) {
+      order.status = 'rejected';
+      order.rejectionReason = reason;
+    }
+    res.json(order);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// E. Demo Reset Endpoint (Daily or manually by visitor/superadmin)
+app.post('/api/demo/reset', async (req, res) => {
+  try {
+    if (isMongoConnected) {
+      // Clear demo orders
+      await OrderModel.deleteMany({ $or: [{ tenantId: 'demo' }, { tenantId: { $exists: false } }] });
+      
+      // Reset demo menu items safely using upsert
+      for (const item of DEFAULT_MENU_ITEMS) {
+        await MenuItemModel.findOneAndUpdate(
+          { id: item.id },
+          { $set: { ...item, tenantId: 'demo' } },
+          { upsert: true }
+        );
+      }
+
+      // Reset demo tables safely
+      const demoTables = [
+        { id: 'Stol #1 (Zal 1)', tenantId: 'demo', name: 'Stol 1', zone: 'Zal 1', capacity: 4, isActive: true, notes: 'Deraza oldi' },
+        { id: 'Stol #2 (Zal 1)', tenantId: 'demo', name: 'Stol 2', zone: 'Zal 1', capacity: 2, isActive: true, notes: 'Kichik shinam stol' },
+        { id: 'Stol #3 (Zal 1)', tenantId: 'demo', name: 'Stol 3', zone: 'Zal 1', capacity: 6, isActive: true, notes: 'Katta oilaviy stol' },
+        { id: 'Stol #4 (Zal 1)', tenantId: 'demo', name: 'Stol 4', zone: 'Zal 1', capacity: 4, isActive: true, notes: 'Markaziy zal' },
+        { id: 'Stol #5 (Zal 1)', tenantId: 'demo', name: 'Stol 5', zone: 'Zal 1', capacity: 4, isActive: true, notes: 'Markaziy zal' },
+        { id: 'VIP Kabinet #1', tenantId: 'demo', name: 'VIP 1', zone: 'VIP', capacity: 10, isActive: true, notes: 'Alohida VIP xona va televizor' },
+        { id: 'VIP Terrasa #2', tenantId: 'demo', name: 'VIP Terrasa', zone: 'Terrasa', capacity: 8, isActive: true, notes: 'Ochiq osmon ostidagi veranda' },
+        { id: 'Bar stoli #3', tenantId: 'demo', name: 'Bar 3', zone: 'Bar', capacity: 2, isActive: true, notes: 'Barmen qarshisida' },
+      ];
+      for (const dt of demoTables) {
+        await TableModel.findOneAndUpdate(
+          { id: dt.id },
+          { $set: dt },
+          { upsert: true }
+        );
+      }
+    } else {
+      memoryStore.orders = [];
+      memoryStore.menu = [...DEFAULT_MENU_ITEMS];
+    }
+
+    broadcastRealtimeEvent('demo:reset', { time: new Date().toISOString() });
+    res.json({ success: true, message: 'Demo ma’lumotlari to‘liq qayta tiklandi' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// F. Tenant-Scoped Bootstrap (Loads isolated tenant data for customer menu & POS)
+app.get('/api/tenant-bootstrap/:slug', async (req, res) => {
+  try {
+    const rawSlug = (req.params.slug || 'demo').toLowerCase().trim();
+    let tenant: any = null;
+
+    if (isMongoConnected) {
+      tenant = await TenantModel.findOne({ slug: rawSlug }).lean();
+    } else {
+      tenant = memoryStore.tenants.find((t: any) => t.slug === rawSlug);
+    }
+
+    if (!tenant && rawSlug !== 'demo') {
+      return res.status(404).json({ success: false, notFound: true, message: "Restoran topilmadi" });
+    }
+
+    const computedTenant = computeTenantStatus(tenant || {
+      id: 't-demo',
+      name: 'SAVORIA RESTAURANT (Demo)',
+      slug: 'demo',
+      status: 'active',
+      planMonths: 12,
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+      adminUsername: 'demo',
+      adminPasswordHash: '1111'
+    });
+
+    let menu: any[] = [];
+    let orders: any[] = [];
+    let tables: any[] = [];
+    let reservations: any[] = [];
+    let waiters: any[] = [];
+    let couriers: any[] = [];
+    let settings: any = computedTenant.settings || null;
+    let notifications: any[] = [];
+
+    if (isMongoConnected) {
+      // Find items scoped to this tenant
+      const [m, o, t, r, w, c, n] = await Promise.all([
+        MenuItemModel.find({ tenantId: rawSlug }).lean(),
+        OrderModel.find({ tenantId: rawSlug }).sort({ createdAt: -1 }).lean(),
+        TableModel.find({ tenantId: rawSlug }).lean(),
+        ReservationModel.find({ tenantId: rawSlug }).sort({ createdAt: -1 }).lean(),
+        WaiterModel.find({ tenantId: rawSlug }).lean(),
+        CourierModel.find({ tenantId: rawSlug }).lean(),
+        NotificationModel.find({ tenantId: rawSlug }).sort({ timestamp: -1 }).limit(25).lean()
+      ]);
+
+      menu = m;
+      orders = o;
+      tables = t;
+      reservations = r;
+      waiters = w;
+      couriers = c;
+      notifications = n;
+
+      // Auto-populate starter menu and tables if empty so the restaurant works immediately
+      if (menu.length === 0 && rawSlug !== 'demo') {
+        const starterItems = DEFAULT_MENU_ITEMS.slice(0, 10).map(it => ({
+          ...it,
+          id: `${rawSlug}-${it.id}`,
+          tenantId: rawSlug
+        }));
+        await MenuItemModel.insertMany(starterItems);
+        menu = starterItems;
+      }
+
+      if (tables.length === 0 && rawSlug !== 'demo') {
+        const starterTables = [
+          { id: `${rawSlug}-t1`, tenantId: rawSlug, name: 'Stol 1', zone: 'Zal', capacity: 4, isActive: true },
+          { id: `${rawSlug}-t2`, tenantId: rawSlug, name: 'Stol 2', zone: 'Zal', capacity: 2, isActive: true },
+          { id: `${rawSlug}-t3`, tenantId: rawSlug, name: 'VIP Stol', zone: 'VIP', capacity: 8, isActive: true }
+        ];
+        await TableModel.insertMany(starterTables);
+        tables = starterTables;
+      }
+    } else {
+      menu = memoryStore.menu.filter((m: any) => (m.tenantId || 'demo') === rawSlug);
+      if (menu.length === 0) menu = memoryStore.menu;
+      orders = memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === rawSlug);
+      tables = memoryStore.tables.filter((t: any) => (t.tenantId || 'demo') === rawSlug);
+      if (tables.length === 0) tables = memoryStore.tables;
+    }
+
+    res.json({
+      success: true,
+      tenant: computedTenant,
+      mongoConnected: isMongoConnected,
+      menu,
+      orders,
+      tables,
+      reservations,
+      waiters,
+      couriers,
+      settings: settings || {
+        name: computedTenant.name,
+        phone: computedTenant.phone,
+        serviceFeePercent: 12
+      },
+      notifications,
+      serverTime: new Date().toISOString()
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 3. Complete App Bootstrap (Single-roundtrip fast initialization for all devices)
@@ -827,6 +1549,8 @@ app.get('/api/orders', async (req, res) => {
 app.post('/api/orders', async (req, res) => {
   try {
     const orderData = req.body;
+    const tenantId = (orderData.tenantId || req.query.tenantId || req.headers['x-tenant-id'] || 'demo').toString();
+    orderData.tenantId = tenantId;
     let saved = orderData;
 
     if (isMongoConnected) {
@@ -836,7 +1560,9 @@ app.post('/api/orders', async (req, res) => {
         { upsert: true, new: true }
       ).lean();
     } else {
-      memoryStore.orders.unshift(orderData);
+      const idx = memoryStore.orders.findIndex(o => o.id === orderData.id);
+      if (idx >= 0) memoryStore.orders[idx] = orderData;
+      else memoryStore.orders.unshift(orderData);
     }
 
     // REAL-TIME BROADCAST:
