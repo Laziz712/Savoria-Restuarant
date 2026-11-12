@@ -12,7 +12,7 @@ export const translations = {
     nav_logout: 'Chiqish',
     
     // Categories
-    cat_all: 'Barchasi',
+    cat_all: 'Barchasi', 
     cat_asosiy: 'Steyk & Go\'shtlar',
     cat_pasta: 'Pasta & Risotto',
     cat_fastfood: 'Burger & Fast Food',
