@@ -99,12 +99,21 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
     const timer = setTimeout(() => {
       setIsSlugChecking(true);
       fetch(`/api/check-slug/${encodeURIComponent(clean)}`)
-        .then(r => r.json())
-        .then(res => {
+        .then(async (r) => {
+          const text = await r.text();
+          let res: any = null;
+          try {
+            res = text ? JSON.parse(text) : null;
+          } catch {
+            res = null;
+          }
+          if (!res) {
+            throw new Error(`HTTP ${r.status}`);
+          }
           setSlugStatus({ available: !!res.available, message: res.message || res.reason || (res.available ? 'Ushbu manzil bo\'sh' : 'Bu manzil band') });
         })
         .catch(() => {
-          setSlugStatus({ available: true, message: 'Manzil qulay' });
+          setSlugStatus(null);
         })
         .finally(() => setIsSlugChecking(false));
     }, 400);
@@ -156,7 +165,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
       const img = new Image();
       img.onload = () => {
         try {
-          const MAX_DIM = 1400;
+          const MAX_DIM = 1200;
           let width = img.width;
           let height = img.height;
           if (width > MAX_DIM || height > MAX_DIM) {
@@ -174,7 +183,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
           const ctx = canvas.getContext('2d');
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
-            setReceiptImage(canvas.toDataURL('image/jpeg', 0.82));
+            setReceiptImage(canvas.toDataURL('image/jpeg', 0.78));
           } else {
             setReceiptImage(dataUrl);
           }
@@ -254,7 +263,12 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
       if (res.ok && data && (data.success || data.id || data.order?.id)) {
         setSubmittedOrder(data.order || data);
       } else {
-        setFormError(data?.error || (res.status === 413 ? 'Rasm hajmi juda katta, kichikroq skrinshot yuklang.' : 'So\'rovni yuborishda xatolik yuz berdi. Qaytadan urinib ko\'ring.'));
+        setFormError(
+          data?.error ||
+          (res.status === 413
+            ? 'Rasm hajmi juda katta, kichikroq skrinshot yuklang.'
+            : `So'rovni yuborishda xatolik yuz berdi (Kod: ${res.status}). Qaytadan urinib ko'ring.`)
+        );
       }
     } catch {
       setFormError('Server bilan ulanishda xatolik. Internetni tekshirib qaytadan urinib ko\'ring.');

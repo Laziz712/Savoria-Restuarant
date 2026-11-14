@@ -16,8 +16,8 @@ if (!process.env.VERCEL) {
   }
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename = typeof import.meta?.url === 'string' ? fileURLToPath(import.meta.url) : '';
+const __dirname = __filename ? path.dirname(__filename) : process.cwd();
 
 const app = express();
 app.use(express.json({ limit: '15mb' }));
@@ -26,7 +26,7 @@ app.use(express.json({ limit: '15mb' }));
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Tenant-Id');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -41,11 +41,15 @@ const sanitizedMongoUri = rawMongoUri
 let isMongoConnected = false;
 let mongoErrorMessage = '';
 let mongoConnectionPromise: Promise<boolean> | null = null;
+let hasSeededInProcess = false;
 
 mongoose.set('strictQuery', false);
 
 export async function connectToMongo(): Promise<boolean> {
-  if (isMongoConnected && mongoose.connection.readyState === 1) return true;
+  if (mongoose.connection.readyState === 1) {
+    isMongoConnected = true;
+    return true;
+  }
   if (!sanitizedMongoUri) return false;
   if (mongoConnectionPromise) {
     return mongoConnectionPromise;
@@ -64,17 +68,30 @@ export async function connectToMongo(): Promise<boolean> {
       return true;
     } catch (err: any) {
       isMongoConnected = false;
-      mongoConnectionPromise = null;
       mongoErrorMessage = err?.message || 'Database connection failed';
       console.warn('MongoDB ulanishda ogohlantirish:', mongoErrorMessage);
       return false;
+    } finally {
+      mongoConnectionPromise = null;
     }
   })();
 
   return mongoConnectionPromise;
 }
 
-connectToMongo();
+if (!process.env.VERCEL) {
+  connectToMongo();
+}
+
+// Ensure every API request waits for MongoDB readiness (safe & instant when already connected)
+app.use('/api', async (_req, _res, next) => {
+  try {
+    await connectToMongo();
+  } catch (err) {
+    console.warn('MongoDB middleware warning:', err);
+  }
+  next();
+});
 
 // ==========================================
 // REAL-TIME BROADCAST ENGINE (Server-Sent Events)
@@ -92,19 +109,21 @@ export function broadcastRealtimeEvent(eventType: string, data: any) {
   }
 }
 
-// Keep-alive heartbeat every 15s to keep connections alive through Cloud Run / proxies
-const heartbeatTimer = setInterval(() => {
-  for (const client of sseClients) {
-    try {
-      client.write(': heartbeat\n\n');
-    } catch {
-      sseClients.delete(client);
+// Keep-alive heartbeat every 15s to keep connections alive through Cloud Run / proxies (local/stateful server only)
+if (!process.env.VERCEL) {
+  const heartbeatTimer = setInterval(() => {
+    for (const client of sseClients) {
+      try {
+        client.write(': heartbeat\n\n');
+      } catch {
+        sseClients.delete(client);
+      }
     }
-  }
-}, 15000);
+  }, 15000);
 
-if (heartbeatTimer.unref) {
-  heartbeatTimer.unref();
+  if (heartbeatTimer.unref) {
+    heartbeatTimer.unref();
+  }
 }
 
 // ==========================================
@@ -664,14 +683,20 @@ const memoryStore = {
 };
 
 async function seedDefaultsIfEmpty() {
+  if (hasSeededInProcess) return;
   try {
-    // 1. Ensure all 19 authentic dishes are seeded and up-to-date in MongoDB
-    for (const item of DEFAULT_MENU_ITEMS) {
-      await MenuItemModel.findOneAndUpdate(
-        { id: item.id },
-        { $setOnInsert: { ...item, tenantId: 'demo' } },
-        { upsert: true, new: true }
-      );
+    // 1. Ensure all 19 authentic dishes are seeded in MongoDB (skip per-item queries if already populated)
+    const existingDemoMenuCount = await MenuItemModel.countDocuments({
+      $or: [{ tenantId: 'demo' }, { tenantId: { $exists: false } }]
+    });
+    if (existingDemoMenuCount < DEFAULT_MENU_ITEMS.length) {
+      for (const item of DEFAULT_MENU_ITEMS) {
+        await MenuItemModel.findOneAndUpdate(
+          { id: item.id },
+          { $setOnInsert: { ...item, tenantId: 'demo' } },
+          { upsert: true, new: true }
+        );
+      }
     }
 
     const tableCount = await TableModel.countDocuments();
@@ -864,6 +889,7 @@ async function seedDefaultsIfEmpty() {
         telegramSupport: '@lazizshavkatov712'
       });
     }
+    hasSeededInProcess = true;
   } catch (err) {
     console.warn('Seed tekshirishda ogohlantirish:', err);
   }
@@ -2562,11 +2588,21 @@ app.post('/api/sync/full', async (req, res) => {
   }
 });
 
+// JSON error handler for API requests (e.g., payload too large, invalid JSON, unhandled errors)
+app.use('/api', (err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const status = err?.status || err?.statusCode || (err?.type === 'entity.too.large' ? 413 : 500);
+  const message = err?.type === 'entity.too.large'
+    ? 'Yuborilgan fayl hajmi juda katta (maksimum 15MB)'
+    : (err?.message || 'Serverda kutilmagan xatolik yuz berdi');
+  res.status(status).json({ success: false, error: message });
+});
+
 async function start() {
   const PORT = Number(process.env.PORT) || 3000;
 
   if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-    const { createServer: createViteServer } = await import('vite');
+    const vitePkg = 'vite';
+    const { createServer: createViteServer } = await import(/* @vite-ignore */ vitePkg);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
