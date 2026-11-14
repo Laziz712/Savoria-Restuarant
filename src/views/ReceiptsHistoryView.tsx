@@ -248,13 +248,13 @@ export const ReceiptsHistoryView: React.FC = () => {
           </div>
 
           {/* Payment Method Selector & Sort */}
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2">
             <select
               value={paymentFilter}
               onChange={e => setPaymentFilter(e.target.value as any)}
-              className="bg-[#0a0b10] border border-[#272b3e] text-xs text-neutral-300 rounded-xl px-3 py-2 focus:outline-none focus:border-[#d4af37]"
+              className="w-full sm:w-auto bg-[#0a0b10] border border-[#272b3e] text-base sm:text-xs text-neutral-300 rounded-xl px-3 py-2 focus:outline-none focus:border-[#d4af37]"
             >
-              <option value="barchasi">Barcha to‘lov turlari</option>
+              <option value="barchasi">To‘lov: Barchasi</option>
               <option value="uzcard_humo">Uzcard / Humo</option>
               <option value="naqd">Naqd pul</option>
               <option value="payme_click">Payme / Click</option>
@@ -263,7 +263,7 @@ export const ReceiptsHistoryView: React.FC = () => {
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as any)}
-              className="bg-[#0a0b10] border border-[#272b3e] text-xs text-neutral-300 rounded-xl px-3 py-2 focus:outline-none focus:border-[#d4af37]"
+              className="w-full sm:w-auto bg-[#0a0b10] border border-[#272b3e] text-base sm:text-xs text-neutral-300 rounded-xl px-3 py-2 focus:outline-none focus:border-[#d4af37]"
             >
               <option value="yangi">Eng yangi cheklar</option>
               <option value="qadimgi">Eski cheklar</option>
@@ -325,7 +325,65 @@ export const ReceiptsHistoryView: React.FC = () => {
         </div>
       ) : (
         <div className="rounded-2xl bg-[#11131c] border border-[#212435] shadow-xl overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile Receipts Cards */}
+          <div className="md:hidden divide-y divide-[#1b1e2c]">
+            {filteredReceipts.map(order => {
+              const paymentInfo = getPaymentLabel(order.paymentMethod);
+              const isClosed = order.isPaid || order.status === 'yopildi';
+              const totalItemsQty = order.items.reduce((s, i) => s + (i.quantity || 1), 0);
+
+              return (
+                <div
+                  key={order.id}
+                  onClick={() => openReceiptModal(order)}
+                  className="p-3.5 hover:bg-[#151824] active:bg-[#191d2b] transition-colors space-y-2.5 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-mono font-bold text-xs text-[#d4af37] truncate">#{order.id}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                        isClosed
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                      }`}>
+                        {isClosed ? 'To‘langan' : 'Ochiq'}
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-sm text-white tabular-nums shrink-0">
+                      {formatUZS(order.finalTotal)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-neutral-400 gap-2">
+                    <span className="truncate font-medium text-neutral-300">
+                      {order.tableNumber || (order.type === 'dostavka' ? 'Dostavka' : 'Olib ketish')} · {order.waiterName || order.courierName || 'Kassa'}
+                    </span>
+                    <span className="font-mono text-[10px] shrink-0">{formatDateTime(order.createdAt)}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[10px] border ${paymentInfo.color}`}>
+                      <span>{paymentInfo.icon}</span>
+                      <span>{paymentInfo.label} · {totalItemsQty} ta</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openReceiptModal(order);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-[#1f2335] text-neutral-200 border border-[#2e334a] text-[11px] font-semibold flex items-center gap-1"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-[#d4af37]" />
+                      <span>Chek</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-[#212435] bg-[#161826] text-neutral-400 font-mono text-[11px]">

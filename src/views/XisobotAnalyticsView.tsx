@@ -12,6 +12,7 @@ export const XisobotAnalyticsView: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'bugun' | '7kun' | 'oy'>('bugun');
   const [showZReportModal, setShowZReportModal] = useState(false);
   const [syncSuccessMsg, setSyncSuccessMsg] = useState(false);
+  const [zReportNotice, setZReportNotice] = useState('');
 
   const handleSyncClick = async () => {
     const ok = await syncCloudData();
@@ -101,72 +102,89 @@ export const XisobotAnalyticsView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#08090d] text-[#eaeaea] p-4 sm:p-6 flex flex-col gap-6">
+    <div className="min-h-screen bg-[#08090d] text-[#eaeaea] p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full min-w-0 overflow-x-hidden">
+      {/* Z-Report confirmation toast */}
+      {zReportNotice && (
+        <div className="p-3 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-200 text-xs font-medium flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{zReportNotice}</span>
+          </div>
+          <button type="button" onClick={() => setZReportNotice('')} className="text-neutral-400 hover:text-white px-1.5">✕</button>
+        </div>
+      )}
+
       {/* Analytics Top Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pb-4 border-b border-[#1f2231]">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37]">
+      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 sm:gap-4 pb-4 border-b border-[#1f2231] min-w-0">
+        <div className="min-w-0">
+          <div className="flex items-start sm:items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] shrink-0">
               <BarChart3 className="w-5 h-5" />
             </div>
-            <div>
-              <h1 className="font-serif font-bold text-xl sm:text-2xl text-white tracking-wide">
+            <div className="min-w-0">
+              <h1 className="font-serif font-bold text-base sm:text-xl lg:text-2xl text-white tracking-wide leading-tight break-words">
                 MOLIYAVIY XISOBOT VA STATISTIKA
               </h1>
-              <p className="text-xs text-neutral-400 font-mono">
-                {settings.name || currentTenant?.name || 'Restoran'} daromad tahlili, o'rtacha chek va taomlar reytingi
+              <p className="text-[11px] sm:text-xs text-neutral-400 font-mono truncate mt-0.5">
+                {settings.name || currentTenant?.name || 'Restoran'} daromad tahlili va taomlar reytingi
               </p>
             </div>
           </div>
         </div>
 
-        {/* Date Selector and Export */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1 bg-[#12141e] p-1 rounded-lg border border-[#232738]">
+        {/* Date Selector and Export — Responsive on small phones without right-edge overflow */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full xl:w-auto min-w-0">
+          <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-[#12141e] p-1 rounded-xl border border-[#232738]">
             {(['bugun', '7kun', 'oy'] as const).map(tab => (
               <button
                 key={tab}
+                type="button"
                 onClick={() => setTimeRange(tab)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                className={`px-2 sm:px-3 py-2 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-center transition-colors whitespace-nowrap ${
                   timeRange === tab
                     ? 'bg-[#d4af37] text-neutral-950 font-bold'
                     : 'text-neutral-400 hover:text-white'
                 }`}
               >
-                {tab === 'bugun' ? 'Bugun' : tab === '7kun' ? 'Oxirgi 7 kun' : 'Bu oy'}
+                {tab === 'bugun' ? 'Bugun' : tab === '7kun' ? '7 kun' : 'Bu oy'}
               </button>
             ))}
           </div>
 
-          <button
-            onClick={handleSyncClick}
-            disabled={isSyncingCloud}
-            title="Telefon va kompyuterdagi barcha cheklar va taomlarni MongoDB Atlas bilan birlashtirish"
-            className={`px-3.5 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${
-              syncSuccessMsg
-                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
-                : 'bg-[#191c28] hover:bg-[#232738] text-white border-[#2e334a]'
-            }`}
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-[#d4af37] ${isSyncingCloud ? 'animate-spin text-emerald-400' : ''}`} />
-            <span>{isSyncingCloud ? 'Sinxronlanmoqda...' : syncSuccessMsg ? 'Sinxronlandi ✓' : 'Baza Sinxron'}</span>
-          </button>
+          <div className="grid grid-cols-3 sm:flex items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={handleSyncClick}
+              disabled={isSyncingCloud}
+              title="Telefon va kompyuterdagi barcha cheklar va taomlarni MongoDB Atlas bilan birlashtirish"
+              className={`px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-xl border text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm whitespace-nowrap ${
+                syncSuccessMsg
+                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                  : 'bg-[#191c28] hover:bg-[#232738] text-white border-[#2e334a]'
+              }`}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-[#d4af37] shrink-0 ${isSyncingCloud ? 'animate-spin text-emerald-400' : ''}`} />
+              <span className="truncate">{isSyncingCloud ? 'Sinxron...' : syncSuccessMsg ? 'Sinxron ✓' : 'Sinxron'}</span>
+            </button>
 
-          <button
-            onClick={() => setShowZReportModal(true)}
-            className="px-3.5 py-1.5 rounded-lg bg-[#191c28] hover:bg-[#232738] text-white border border-[#2e334a] text-xs font-semibold flex items-center gap-1.5 transition-colors"
-          >
-            <FileText className="w-3.5 h-3.5 text-[#d4af37]" />
-            <span>Z-Xisobot</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setShowZReportModal(true)}
+              className="px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-xl bg-[#191c28] hover:bg-[#232738] text-white border border-[#2e334a] text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap"
+            >
+              <FileText className="w-3.5 h-3.5 text-[#d4af37] shrink-0" />
+              <span>Z-Xisobot</span>
+            </button>
 
-          <button
-            onClick={handleExportCSV}
-            className="px-3.5 py-1.5 rounded-lg bg-[#d4af37] hover:bg-[#e4be4a] text-neutral-950 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>CSV Eksport</span>
-          </button>
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-xl bg-[#d4af37] hover:bg-[#e4be4a] text-neutral-950 text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-md whitespace-nowrap"
+            >
+              <Download className="w-3.5 h-3.5 shrink-0" />
+              <span>CSV</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -249,49 +267,50 @@ export const XisobotAnalyticsView: React.FC = () => {
       </div>
 
       {/* Visual Charts & Payment Breakdown Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 min-w-0">
         {/* Hourly Revenue Graph (8 cols) */}
-        <div className="lg:col-span-8 p-5 rounded-xl bg-[#12141f] border border-[#222538] shadow-xl flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-serif font-bold text-sm text-white">
+        <div className="lg:col-span-8 p-4 sm:p-5 rounded-xl bg-[#12141f] border border-[#222538] shadow-xl flex flex-col justify-between min-w-0 overflow-hidden">
+          <div className="flex flex-wrap items-start sm:items-center justify-between gap-2 mb-4">
+            <div className="min-w-0">
+              <h3 className="font-serif font-bold text-xs sm:text-sm text-white">
                 SOATLAR KESIMIDA TUSHUM DINAMIKASI
               </h3>
               <p className="text-[11px] text-neutral-400 font-mono mt-0.5">
                 Restorandagi eng qizg'in tushlik va kechki ovqat soatlari
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded bg-[#1b1e2c] border border-[#2e334a] text-xs font-mono text-[#d4af37]">
+            <span className="px-2.5 py-1 rounded bg-[#1b1e2c] border border-[#2e334a] text-[11px] font-mono text-[#d4af37] shrink-0">
               Pik: 19:00 - 21:00
             </span>
           </div>
 
           {/* Bar Chart Bars */}
-          <div className="h-56 flex items-end justify-between gap-3 pt-6 pb-2 border-b border-[#232637]">
+          <div className="h-52 sm:h-56 flex items-end justify-between gap-1.5 sm:gap-3 pt-6 pb-2 border-b border-[#232637] min-w-0">
             {hourlyData.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-mono text-[#d4af37] whitespace-nowrap">
-                  {new Intl.NumberFormat('uz-UZ').format(d.amount)}
+              <div key={i} className="flex-1 min-w-0 flex flex-col items-center gap-1.5 sm:gap-2 group h-full justify-end">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] sm:text-[10px] font-mono text-[#d4af37] whitespace-nowrap">
+                  {Math.round(d.amount / 1000)}k
                 </div>
                 <div
                   style={{ height: d.height }}
-                  className="w-full max-w-[42px] bg-gradient-to-t from-[#202538] via-[#8c7423] to-[#d4af37] rounded-t group-hover:brightness-125 transition-all"
+                  className="w-full max-w-[38px] bg-gradient-to-t from-[#202538] via-[#8c7423] to-[#d4af37] rounded-t group-hover:brightness-125 transition-all"
                 ></div>
-                <span className="text-[11px] font-mono text-neutral-400 mt-1">
-                  {d.hour}
+                <span className="text-[10px] sm:text-[11px] font-mono text-neutral-400 mt-1 tabular-nums">
+                  {d.hour.slice(0, 2)}
+                  <span className="hidden sm:inline">:00</span>
                 </span>
               </div>
             ))}
           </div>
 
-          <div className="mt-3 flex items-center justify-between text-xs text-neutral-400 font-mono">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs text-neutral-400 font-mono">
             <span>Kunduzgi tushlik oqimi</span>
             <span>Kechki loundj va VIP ziyofatlar</span>
           </div>
         </div>
 
         {/* Payment Methods Breakdown (4 cols) */}
-        <div className="lg:col-span-4 p-5 rounded-xl bg-[#12141f] border border-[#222538] shadow-xl flex flex-col justify-between">
+        <div className="lg:col-span-4 p-4 sm:p-5 rounded-xl bg-[#12141f] border border-[#222538] shadow-xl flex flex-col justify-between min-w-0">
           <div>
             <h3 className="font-serif font-bold text-sm text-white">
               TO'LOV USULLARI BO'YICHA TAQSIMOT
@@ -342,45 +361,76 @@ export const XisobotAnalyticsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Top 7 Dishes Table */}
-      <div className="p-5 rounded-xl bg-[#12141f] border border-[#222538] shadow-xl">
-        <h3 className="font-serif font-bold text-sm text-white mb-4 flex items-center justify-between">
-          <span>ENG KO'P SOTILGAN VA DAROMAD KELTIRGAN TAOMLAR REYTINGI</span>
-          <span className="text-xs font-mono text-[#d4af37]">TOP HITS</span>
+      {/* Top 7 Dishes — Mobile Cards + Desktop Table */}
+      <div className="p-4 sm:p-5 rounded-xl bg-[#12141f] border border-[#222538] shadow-xl min-w-0">
+        <h3 className="font-serif font-bold text-xs sm:text-sm text-white mb-4 flex items-center justify-between gap-2">
+          <span className="truncate">ENG KO'P SOTILGAN TAOMLAR REYTINGI</span>
+          <span className="text-[11px] font-mono text-[#d4af37] shrink-0">TOP HITS</span>
         </h3>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono">
-            <thead>
-              <tr className="border-b border-[#232738] text-neutral-400 text-[11px]">
-                <th className="py-2.5 px-3">#</th>
-                <th className="py-2.5 px-3 font-sans">TAOM / ICHIMLIK NOMI</th>
-                <th className="py-2.5 px-3">KATEGORIYA</th>
-                <th className="py-2.5 px-3 text-right">SOTILGAN MIQDOR</th>
-                <th className="py-2.5 px-3 text-right">JAMI DAROMAD</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1e2130]">
+        {sortedTopItems.length === 0 ? (
+          <div className="py-8 text-center text-xs text-neutral-500 font-mono">
+            Hozircha sotilgan taomlar statistikasi shakllanmagan
+          </div>
+        ) : (
+          <>
+            {/* Mobile Compact Card List */}
+            <div className="sm:hidden space-y-2.5">
               {sortedTopItems.map((item, idx) => (
-                <tr key={idx} className="hover:bg-[#181a28] transition-colors">
-                  <td className="py-3 px-3 font-bold text-[#d4af37]">0{idx + 1}</td>
-                  <td className="py-3 px-3 font-sans font-semibold text-white">
-                    {item.name}
-                  </td>
-                  <td className="py-3 px-3 uppercase text-neutral-400 text-[11px]">
-                    {item.category}
-                  </td>
-                  <td className="py-3 px-3 text-right text-white font-bold">
-                    {item.quantity} dona
-                  </td>
-                  <td className="py-3 px-3 text-right text-[#d4af37] font-bold tabular-nums">
+                <div key={idx} className="p-3 rounded-xl bg-[#0d0f18] border border-[#202437] flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-7 h-7 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#d4af37] font-mono font-bold text-xs flex items-center justify-center shrink-0 tabular-nums">
+                      0{idx + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-white truncate">{item.name}</div>
+                      <div className="text-[10px] text-neutral-400 font-mono uppercase mt-0.5">
+                        {item.category} · {item.quantity} dona
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right font-mono font-bold text-xs text-[#d4af37] shrink-0 tabular-nums">
                     {formatUZS(item.revenue)}
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-[#232738] text-neutral-400 text-[11px]">
+                    <th className="py-2.5 px-3">#</th>
+                    <th className="py-2.5 px-3 font-sans">TAOM / ICHIMLIK NOMI</th>
+                    <th className="py-2.5 px-3">KATEGORIYA</th>
+                    <th className="py-2.5 px-3 text-right">SOTILGAN MIQDOR</th>
+                    <th className="py-2.5 px-3 text-right">JAMI DAROMAD</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1e2130]">
+                  {sortedTopItems.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-[#181a28] transition-colors">
+                      <td className="py-3 px-3 font-bold text-[#d4af37] tabular-nums">0{idx + 1}</td>
+                      <td className="py-3 px-3 font-sans font-semibold text-white">
+                        {item.name}
+                      </td>
+                      <td className="py-3 px-3 uppercase text-neutral-400 text-[11px]">
+                        {item.category}
+                      </td>
+                      <td className="py-3 px-3 text-right text-white font-bold tabular-nums">
+                        {item.quantity} dona
+                      </td>
+                      <td className="py-3 px-3 text-right text-[#d4af37] font-bold tabular-nums">
+                        {formatUZS(item.revenue)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Z-Report Modal */}
@@ -444,9 +494,11 @@ export const XisobotAnalyticsView: React.FC = () => {
                 <span>Z-Chekni Chop Etish</span>
               </button>
               <button
+                type="button"
                 onClick={() => {
-                  alert('Smena muvaffaqiyatli yopildi va soliq organiga ma\'lumot uzatildi!');
                   setShowZReportModal(false);
+                  setZReportNotice("Smena muvaffaqiyatli yopildi va Z-xisobot saqlandi!");
+                  setTimeout(() => setZReportNotice(''), 5000);
                 }}
                 className="flex-1 py-2 rounded-lg bg-[#212536] text-white hover:bg-[#2b3044] font-semibold text-xs transition-colors"
               >

@@ -31,6 +31,7 @@ export const WaiterOrderView: React.FC = () => {
   const [cartItems, setCartItems] = useState<{ item: MenuItem; quantity: number; notes?: string }[]>([]);
   const [lastCreatedOrder, setLastCreatedOrder] = useState<any>(null);
   const [successBanner, setSuccessBanner] = useState(false);
+  const [cartErrorMsg, setCartErrorMsg] = useState('');
 
   const categories: { id: ItemCategory | 'barchasi'; label: string }[] = [
     { id: 'barchasi', label: t('cat_all') },
@@ -136,10 +137,12 @@ export const WaiterOrderView: React.FC = () => {
   const handleSendOrder = () => {
     if (!currentLoggedInWaiter) return;
     if (cartItems.length === 0) {
-      alert('Iltimos, avval stol uchun taom yoki ichimlik tanlang');
+      setCartErrorMsg('Iltimos, avval stol uchun taom yoki ichimlik tanlang');
+      setTimeout(() => setCartErrorMsg(''), 3500);
       return;
     }
 
+    setCartErrorMsg('');
     const newOrder = createOrder({
       type: 'zal',
       tableNumber: selectedTable,
@@ -169,6 +172,16 @@ export const WaiterOrderView: React.FC = () => {
     setKitchenNotes('');
   };
 
+  // Lock body scroll while Waiter Passcode Lock Screen is shown on mobile
+  useEffect(() => {
+    if (currentLoggedInWaiter) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [currentLoggedInWaiter]);
+
   // If NOT logged in as a waiter: Show Phone-Style Passcode Lock Screen
   if (!currentLoggedInWaiter) {
     const dialPadButtons = [
@@ -183,39 +196,42 @@ export const WaiterOrderView: React.FC = () => {
       { num: '9', letters: 'WXYZ' },
     ];
 
+    const monogram = (settings.name || 'S').trim()[0]?.toUpperCase() || 'S';
+
     return (
-      <div className="min-h-screen bg-[#07080c] text-[#eaeaea] p-4 flex items-center justify-center animate-fade-in select-none">
+      <div className="fixed inset-0 z-30 pt-16 pb-[max(4.5rem,env(safe-area-inset-bottom))] md:pb-4 bg-[#07080c] text-[#eaeaea] px-3 sm:px-4 flex items-center justify-center overflow-hidden overscroll-none pin-lock-viewport select-none">
         {/* Smartphone Form-factor Card Container */}
-        <div className="w-full max-w-[340px] sm:max-w-[380px] bg-[#0d0f17] border border-[#23283c] rounded-[42px] p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col items-center">
+        <div className="waiter-pin-card w-full max-w-[340px] sm:max-w-[380px] bg-[#0d0f17] border border-[#23283c] rounded-[36px] sm:rounded-[42px] p-5 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col items-center">
           {/* Top Speaker/Camera Bar (Phone Notch Aesthetic) */}
-          <div className="w-24 h-4 bg-black/60 rounded-full mb-4 border border-white/5 flex items-center justify-center">
+          <div className="waiter-pin-notch w-24 h-4 bg-black/60 rounded-full mb-3 sm:mb-4 border border-white/5 flex items-center justify-center">
             <div className="w-10 h-1 bg-neutral-700/60 rounded-full" />
           </div>
 
           {/* Back button to Home view */}
           <button
+            type="button"
             onClick={() => setRoute('mijoz')}
-            className="absolute top-5 left-5 p-2 rounded-full bg-[#151825] text-neutral-400 hover:text-white border border-[#272b3e] transition-colors"
+            className="absolute top-4 left-4 sm:top-5 sm:left-5 p-2 rounded-full bg-[#151825] text-neutral-400 hover:text-white border border-[#272b3e] transition-colors cursor-pointer"
             title="Asosiy menyuga qaytish"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
 
           {/* Terminal Monogram & Header */}
-          <div className="text-center pt-1 pb-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2a1d12] to-[#12141f] border border-orange-500/50 mx-auto flex items-center justify-center text-orange-400 shadow-[0_0_20px_rgba(249,115,22,0.25)] mb-3">
-              <span className="font-serif font-bold text-2xl">S</span>
+          <div className="waiter-pin-header text-center pt-1 pb-2 sm:pb-4">
+            <div className="waiter-pin-avatar w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-[#2a1d12] to-[#12141f] border border-orange-500/50 mx-auto flex items-center justify-center text-orange-400 shadow-[0_0_20px_rgba(249,115,22,0.25)] mb-2 sm:mb-3">
+              <span className="font-serif font-bold text-xl sm:text-2xl">{monogram}</span>
             </div>
-            <h2 className="font-serif font-bold text-base sm:text-lg text-white tracking-widest uppercase">
+            <h2 className="font-serif font-bold text-sm sm:text-lg text-white tracking-widest uppercase">
               OFITSIANT TERMINALI
             </h2>
-            <p className="text-[11px] text-neutral-400 mt-1">
+            <p className="text-[11px] text-neutral-400 mt-0.5 sm:mt-1">
               Kirish uchun 4 xonali PIN kodni tering
             </p>
           </div>
 
           {/* 4 Passcode Indicator Dots (Phone Lock Screen Style) */}
-          <div className={`flex items-center justify-center gap-5 my-4 ${isShaking ? 'animate-shake' : ''}`}>
+          <div className={`waiter-pin-dots flex items-center justify-center gap-5 my-3 sm:my-4 ${isShaking ? 'animate-shake' : ''}`}>
             {[0, 1, 2, 3].map(i => {
               const isFilled = pinCode.length > i;
               return (
@@ -234,9 +250,9 @@ export const WaiterOrderView: React.FC = () => {
           </div>
 
           {/* Error Message if wrong code */}
-          <div className="h-6 flex items-center justify-center mb-2">
+          <div className="h-5 sm:h-6 flex items-center justify-center mb-1.5 sm:mb-2">
             {loginError ? (
-              <p className="text-rose-400 text-xs font-mono font-medium animate-fade-in flex items-center gap-1">
+              <p className="text-rose-400 text-[11px] sm:text-xs font-mono font-medium animate-fade-in flex items-center gap-1">
                 <span>⚠️</span>
                 <span>{loginError}</span>
               </p>
@@ -248,15 +264,15 @@ export const WaiterOrderView: React.FC = () => {
           </div>
 
           {/* Phone Numeric Keypad (Circular dial pad buttons) */}
-          <div className="grid grid-cols-3 gap-3.5 sm:gap-4 my-2 w-full max-w-[270px]">
+          <div className="waiter-dial-grid grid grid-cols-3 gap-3 sm:gap-4 my-1.5 sm:my-2 w-full max-w-[250px] sm:max-w-[270px]">
             {dialPadButtons.map(btn => (
               <button
                 key={btn.num}
                 type="button"
                 onClick={() => handleKeyPress(btn.num)}
-                className="w-16 h-16 sm:w-18 sm:h-18 mx-auto rounded-full bg-[#151724]/90 hover:bg-[#21263a] active:bg-orange-600/30 active:scale-95 border border-[#262b3e] flex flex-col items-center justify-center transition-all duration-150 cursor-pointer shadow-md group"
+                className="waiter-dial-btn w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-full bg-[#151724]/90 hover:bg-[#21263a] active:bg-orange-600/30 active:scale-95 border border-[#262b3e] flex flex-col items-center justify-center transition-all duration-150 cursor-pointer shadow-md group touch-manipulation"
               >
-                <span className="text-xl sm:text-2xl font-semibold text-white group-hover:text-orange-400 transition-colors leading-none">
+                <span className="text-lg sm:text-2xl font-semibold text-white group-hover:text-orange-400 transition-colors leading-none">
                   {btn.num}
                 </span>
                 {btn.letters && (
@@ -271,7 +287,7 @@ export const WaiterOrderView: React.FC = () => {
             <button
               type="button"
               onClick={handleClear}
-              className="w-16 h-16 sm:w-18 sm:h-18 mx-auto rounded-full bg-[#151724]/40 hover:bg-[#21263a] active:scale-95 border border-transparent hover:border-[#262b3e] flex items-center justify-center text-xs font-semibold text-neutral-400 hover:text-white transition-all cursor-pointer"
+              className="waiter-dial-btn w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-full bg-[#151724]/40 hover:bg-[#21263a] active:scale-95 border border-transparent hover:border-[#262b3e] flex items-center justify-center text-[11px] sm:text-xs font-semibold text-neutral-400 hover:text-white transition-all cursor-pointer touch-manipulation"
             >
               Tozalash
             </button>
@@ -279,9 +295,9 @@ export const WaiterOrderView: React.FC = () => {
             <button
               type="button"
               onClick={() => handleKeyPress('0')}
-              className="w-16 h-16 sm:w-18 sm:h-18 mx-auto rounded-full bg-[#151724]/90 hover:bg-[#21263a] active:bg-orange-600/30 active:scale-95 border border-[#262b3e] flex flex-col items-center justify-center transition-all duration-150 cursor-pointer shadow-md group"
+              className="waiter-dial-btn w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-full bg-[#151724]/90 hover:bg-[#21263a] active:bg-orange-600/30 active:scale-95 border border-[#262b3e] flex flex-col items-center justify-center transition-all duration-150 cursor-pointer shadow-md group touch-manipulation"
             >
-              <span className="text-xl sm:text-2xl font-semibold text-white group-hover:text-orange-400 transition-colors leading-none">
+              <span className="text-lg sm:text-2xl font-semibold text-white group-hover:text-orange-400 transition-colors leading-none">
                 0
               </span>
               <span className="text-[8px] font-mono text-neutral-500 mt-0.5">+</span>
@@ -290,7 +306,7 @@ export const WaiterOrderView: React.FC = () => {
             <button
               type="button"
               onClick={handleBackspace}
-              className="w-16 h-16 sm:w-18 sm:h-18 mx-auto rounded-full bg-[#151724]/40 hover:bg-[#21263a] active:scale-95 border border-transparent hover:border-[#262b3e] flex items-center justify-center text-neutral-400 hover:text-rose-400 transition-all cursor-pointer"
+              className="waiter-dial-btn w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-full bg-[#151724]/40 hover:bg-[#21263a] active:scale-95 border border-transparent hover:border-[#262b3e] flex items-center justify-center text-neutral-400 hover:text-rose-400 transition-all cursor-pointer touch-manipulation"
               title="O'chirish"
             >
               <Delete className="w-5 h-5" />
@@ -366,6 +382,14 @@ export const WaiterOrderView: React.FC = () => {
             <span className="hidden sm:inline">Chiqish</span>
           </button>
         </div>
+
+        {/* Inline cart error banner if any */}
+        {cartErrorMsg && (
+          <div className="p-3 rounded-xl bg-rose-950/70 border border-rose-500/50 text-rose-200 text-xs font-medium flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{cartErrorMsg}</span>
+          </div>
+        )}
 
         {/* Success Alert Banner */}
         {successBanner && lastCreatedOrder && (

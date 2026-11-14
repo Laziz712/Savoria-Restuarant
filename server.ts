@@ -329,6 +329,16 @@ const PlatformConfigSchema = new mongoose.Schema({
   telegramSupport: { type: String, default: '@lazizshavkatov712' }
 }, { timestamps: true });
 
+const PresenceSessionSchema = new mongoose.Schema({
+  sessionId: { type: String, required: true, unique: true, index: true },
+  tenantSlug: { type: String, default: 'landing', index: true },
+  path: { type: String, default: '/' },
+  role: { type: String, default: 'mehmon' },
+  userName: { type: String, default: 'Sayt mehmoni' },
+  device: { type: String, default: 'Desktop' },
+  lastSeenAt: { type: Number, default: Date.now, index: true }
+}, { timestamps: true });
+
 const MenuItemModel = mongoose.model('MenuItem', MenuItemSchema);
 const OrderModel = mongoose.model('Order', OrderSchema);
 const TableModel = mongoose.model('RestaurantTable', TableSchema);
@@ -341,6 +351,7 @@ const NotificationModel = mongoose.model('Notification', NotificationSchema);
 const TenantModel = mongoose.model('Tenant', TenantSchema);
 const SubscriptionOrderModel = mongoose.model('SubscriptionOrder', SubscriptionOrderSchema);
 const PlatformConfigModel = mongoose.model('PlatformConfig', PlatformConfigSchema);
+const PresenceSessionModel = mongoose.model('PresenceSession', PresenceSessionSchema);
 
 const DEFAULT_MENU_ITEMS = [
   {
@@ -679,7 +690,8 @@ const memoryStore = {
     cardNumber: '4916 9903 6294 0907',
     cardHolder: 'SOHIBA SHOMURATOVA',
     telegramSupport: '@lazizshavkatov712'
-  } as any
+  } as any,
+  presenceSessions: [] as any[]
 };
 
 async function seedDefaultsIfEmpty() {
@@ -1163,7 +1175,7 @@ app.post('/api/tenants/:slug/extend', async (req, res) => {
     }
 
     broadcastRealtimeEvent('tenant:extended', { slug, newEnd });
-    res.json(computeTenantStatus(tenant.toObject ? tenant.toObject() : tenant));
+    res.json({ success: true, ...computeTenantStatus(tenant.toObject ? tenant.toObject() : tenant) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1437,6 +1449,409 @@ app.post('/api/demo/reset', async (req, res) => {
     res.json({ success: true, message: 'Demo ma’lumotlari to‘liq qayta tiklandi' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// E2. Live Site Presence Tracker (cross-serverless via MongoDB)
+app.post('/api/presence', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const sessionId = String(body.sessionId || '').trim().slice(0, 80);
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'sessionId majburiy' });
+    }
+    const now = Date.now();
+    const payload = {
+      sessionId,
+      tenantSlug: String(body.tenantSlug || 'landing').toLowerCase().trim().slice(0, 60) || 'landing',
+      path: String(body.path || '/').slice(0, 140),
+      role: String(body.role || 'mehmon').slice(0, 40),
+      userName: String(body.userName || 'Sayt mehmoni').slice(0, 80),
+      device: String(body.device || 'Desktop').slice(0, 30),
+      lastSeenAt: now
+    };
+
+    if (isMongoConnected) {
+      await PresenceSessionModel.findOneAndUpdate(
+        { sessionId },
+        { $set: payload },
+        { upsert: true }
+      );
+      // Cleanup sessions inactive for > 15 minutes
+      await PresenceSessionModel.deleteMany({ lastSeenAt: { $lt: now - 15 * 60 * 1000 } }).catch(() => {});
+    } else {
+      const idx = memoryStore.presenceSessions.findIndex((s: any) => s.sessionId === sessionId);
+      if (idx >= 0) memoryStore.presenceSessions[idx] = payload;
+      else memoryStore.presenceSessions.unshift(payload);
+      memoryStore.presenceSessions = memoryStore.presenceSessions.filter((s: any) => (now - s.lastSeenAt) < 15 * 60 * 1000);
+    }
+
+    res.json({ success: true, lastSeenAt: now });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Presence xatosi' });
+  }
+});
+
+// E3. Superadmin Overview: Live Sessions, Unified Site Users Directory & Platform Metrics
+app.get('/api/superadmin/overview', async (_req, res) => {
+  try {
+    const now = Date.now();
+    const activeCutoff = now - 5 * 60 * 1000; // Last 5 minutes = online
+
+    const [
+      rawTenants,
+      rawSubOrders,
+      rawAdmins,
+      rawWaiters,
+      rawCouriers,
+      rawOrders,
+      rawReservations,
+      rawMenu,
+      rawTables,
+      rawPresence
+    ] = isMongoConnected
+      ? await Promise.all([
+          TenantModel.find().lean(),
+          SubscriptionOrderModel.find().lean(),
+          AdminUserModel.find().lean(),
+          WaiterModel.find().lean(),
+          CourierModel.find().lean(),
+          OrderModel.find().sort({ createdAt: -1 }).lean(),
+          ReservationModel.find().sort({ createdAt: -1 }).lean(),
+          MenuItemModel.find().lean(),
+          TableModel.find().lean(),
+          PresenceSessionModel.find({ lastSeenAt: { $gte: activeCutoff } }).sort({ lastSeenAt: -1 }).lean()
+        ])
+      : [
+          memoryStore.tenants,
+          memoryStore.subscriptionOrders,
+          memoryStore.admins,
+          memoryStore.waiters,
+          memoryStore.couriers,
+          memoryStore.orders,
+          memoryStore.reservations,
+          memoryStore.menu,
+          memoryStore.tables,
+          memoryStore.presenceSessions.filter((s: any) => s.lastSeenAt >= activeCutoff)
+        ];
+
+    const computedTenants = (rawTenants || []).map((t: any) => computeTenantStatus(t));
+    const tenantNameMap = new Map<string, string>();
+    computedTenants.forEach((t: any) => tenantNameMap.set((t.slug || 'demo').toLowerCase(), t.name || t.slug));
+    if (!tenantNameMap.has('demo')) tenantNameMap.set('demo', 'Savoria Demo');
+
+    // Per-tenant aggregated stats
+    const tenantMetrics: Record<string, {
+      slug: string;
+      name: string;
+      ordersCount: number;
+      paidRevenue: number;
+      menuCount: number;
+      tablesCount: number;
+      staffCount: number;
+      customersCount: number;
+      onlineCount: number;
+    }> = {};
+
+    const ensureTenantStat = (slugRaw: string) => {
+      const slug = (slugRaw || 'demo').toLowerCase();
+      if (!tenantMetrics[slug]) {
+        tenantMetrics[slug] = {
+          slug,
+          name: tenantNameMap.get(slug) || slug,
+          ordersCount: 0,
+          paidRevenue: 0,
+          menuCount: 0,
+          tablesCount: 0,
+          staffCount: 0,
+          customersCount: 0,
+          onlineCount: 0
+        };
+      }
+      return tenantMetrics[slug];
+    };
+
+    computedTenants.forEach((t: any) => ensureTenantStat(t.slug));
+
+    (rawMenu || []).forEach((m: any) => {
+      ensureTenantStat(m.tenantId || 'demo').menuCount += 1;
+    });
+    (rawTables || []).forEach((tb: any) => {
+      ensureTenantStat(tb.tenantId || 'demo').tablesCount += 1;
+    });
+    (rawOrders || []).forEach((o: any) => {
+      const st = ensureTenantStat(o.tenantId || 'demo');
+      st.ordersCount += 1;
+      if (o.isPaid || o.status === 'yopildi') {
+        st.paidRevenue += Number(o.finalTotal) || 0;
+      }
+    });
+    (rawPresence || []).forEach((p: any) => {
+      if (p.tenantSlug && p.tenantSlug !== 'landing' && p.tenantSlug !== 'superadmin') {
+        ensureTenantStat(p.tenantSlug).onlineCount += 1;
+      }
+    });
+
+    // Build Unified Site Users Directory (no passwords exposed!)
+    const users: Array<{
+      id: string;
+      name: string;
+      role: 'owner' | 'admin' | 'waiter' | 'courier' | 'customer';
+      roleLabel: string;
+      tenantSlug: string;
+      tenantName: string;
+      phone: string;
+      telegram?: string;
+      username?: string;
+      status: string;
+      ordersCount: number;
+      totalSpent: number;
+      lastActiveAt: string;
+      source: string;
+    }> = [];
+
+    const toIsoSafe = (val: any): string => {
+      if (!val) return new Date().toISOString();
+      if (typeof val === 'number') {
+        const d = new Date(val);
+        return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+      }
+      if (val instanceof Date) {
+        return Number.isNaN(val.getTime()) ? new Date().toISOString() : val.toISOString();
+      }
+      const parsed = Date.parse(String(val));
+      return Number.isNaN(parsed) ? String(val) : new Date(parsed).toISOString();
+    };
+    const toEpochMs = (val: any): number => {
+      if (!val) return 0;
+      if (typeof val === 'number') return val;
+      if (val instanceof Date) return val.getTime();
+      const parsed = Date.parse(String(val));
+      return Number.isNaN(parsed) ? 0 : parsed;
+    };
+
+    // 1. Restaurant Owners (Tenants)
+    computedTenants.forEach((t: any) => {
+      const slug = (t.slug || 'demo').toLowerCase();
+      users.push({
+        id: `owner-${slug}`,
+        name: t.ownerName || t.name || slug,
+        role: 'owner',
+        roleLabel: 'Restoran Egasi',
+        tenantSlug: slug,
+        tenantName: t.name || slug,
+        phone: t.phone || '-',
+        telegram: t.telegram || '',
+        username: t.adminUsername || 'admin',
+        status: t.status === 'blocked' ? 'Bloklangan' : t.isExpired ? 'Muddati tugagan' : 'Faol',
+        ordersCount: tenantMetrics[slug]?.ordersCount || 0,
+        totalSpent: tenantMetrics[slug]?.paidRevenue || 0,
+        lastActiveAt: toIsoSafe(t.updatedAt || t.createdAt),
+        source: 'Tenant'
+      });
+    });
+
+    // 2. Admins / Managers / Cashiers
+    (rawAdmins || []).forEach((a: any) => {
+      const slug = (a.tenantId || 'demo').toLowerCase();
+      ensureTenantStat(slug).staffCount += 1;
+      users.push({
+        id: `admin-${slug}-${a.id}`,
+        name: a.name || a.username || 'Administrator',
+        role: 'admin',
+        roleLabel: a.role === 'kassir' ? 'Kassir' : a.role === 'manager' ? 'Menejer' : 'Admin',
+        tenantSlug: slug,
+        tenantName: tenantNameMap.get(slug) || slug,
+        phone: a.phone || '-',
+        username: a.username,
+        status: a.isActive === false ? 'Nofaol' : 'Faol',
+        ordersCount: 0,
+        totalSpent: 0,
+        lastActiveAt: toIsoSafe(a.updatedAt || a.createdAt),
+        source: 'AdminUser'
+      });
+    });
+
+    // 3. Waiters
+    (rawWaiters || []).forEach((w: any) => {
+      const slug = (w.tenantId || 'demo').toLowerCase();
+      ensureTenantStat(slug).staffCount += 1;
+      users.push({
+        id: `waiter-${slug}-${w.id}`,
+        name: w.name || 'Ofitsiant',
+        role: 'waiter',
+        roleLabel: `Ofitsiant (${w.assignedZone || 'Zal'})`,
+        tenantSlug: slug,
+        tenantName: tenantNameMap.get(slug) || slug,
+        phone: w.phone || '-',
+        status: w.isActive === false ? 'Nofaol' : 'Faol',
+        ordersCount: 0,
+        totalSpent: 0,
+        lastActiveAt: toIsoSafe(w.updatedAt || w.createdAt),
+        source: 'Waiter'
+      });
+    });
+
+    // 4. Couriers
+    (rawCouriers || []).forEach((c: any) => {
+      const slug = (c.tenantId || 'demo').toLowerCase();
+      ensureTenantStat(slug).staffCount += 1;
+      users.push({
+        id: `courier-${slug}-${c.id}`,
+        name: c.name || 'Kuryer',
+        role: 'courier',
+        roleLabel: `Kuryer (${c.vehicle || 'Avto'})`,
+        tenantSlug: slug,
+        tenantName: tenantNameMap.get(slug) || slug,
+        phone: c.phone || '-',
+        status: c.status === 'band' ? 'Yetkazishda' : c.status === 'oflayn' ? 'Oflayn' : 'Bo‘sh',
+        ordersCount: c.deliveredCount || 0,
+        totalSpent: 0,
+        lastActiveAt: toIsoSafe(c.updatedAt || c.createdAt),
+        source: 'Courier'
+      });
+    });
+
+    // 5. Unique Customers aggregated from Orders & Reservations
+    const customerMap = new Map<string, any>();
+    (rawOrders || []).forEach((o: any) => {
+      const slug = (o.tenantId || 'demo').toLowerCase();
+      const phone = String(o.customerPhone || '').trim();
+      const name = String(o.customerName || '').trim() || 'Mijoz';
+      // Skip generic empty names without real phone
+      if (!phone && (name === 'Mijoz' || name.startsWith('Stol'))) return;
+      const key = `${slug}::${phone || name.toLowerCase()}`;
+      const existing = customerMap.get(key);
+      const total = Number(o.finalTotal) || 0;
+      const createdIso = toIsoSafe(o.createdAt);
+      if (!existing) {
+        customerMap.set(key, {
+          id: `cust-${key}`,
+          name,
+          role: 'customer' as const,
+          roleLabel: o.type === 'dostavka' ? 'Dostavka Mijoz' : 'Zal Mehmoni',
+          tenantSlug: slug,
+          tenantName: tenantNameMap.get(slug) || slug,
+          phone: phone || '-',
+          status: 'Buyurtmachi',
+          ordersCount: 1,
+          totalSpent: total,
+          lastActiveAt: createdIso,
+          source: 'Order'
+        });
+      } else {
+        existing.ordersCount += 1;
+        existing.totalSpent += total;
+        if (toEpochMs(createdIso) > toEpochMs(existing.lastActiveAt)) existing.lastActiveAt = createdIso;
+      }
+    });
+
+    (rawReservations || []).forEach((r: any) => {
+      const slug = (r.tenantId || 'demo').toLowerCase();
+      const phone = String(r.guestPhone || '').trim();
+      const name = String(r.guestName || '').trim() || 'Mehmon';
+      const key = `${slug}::${phone || name.toLowerCase()}`;
+      if (!customerMap.has(key)) {
+        customerMap.set(key, {
+          id: `res-${key}`,
+          name,
+          role: 'customer' as const,
+          roleLabel: 'Stol Broni',
+          tenantSlug: slug,
+          tenantName: tenantNameMap.get(slug) || slug,
+          phone: phone || '-',
+          status: r.status || 'Bron',
+          ordersCount: 1,
+          totalSpent: 0,
+          lastActiveAt: toIsoSafe(r.createdAt),
+          source: 'Reservation'
+        });
+      }
+    });
+
+    customerMap.forEach((cust) => {
+      ensureTenantStat(cust.tenantSlug).customersCount += 1;
+      users.push(cust);
+    });
+
+    const subscriptionRevenue = (rawSubOrders || [])
+      .filter((o: any) => o.status === 'approved')
+      .reduce((sum: number, o: any) => sum + (Number(o.amount) || 0), 0);
+
+    const totalPlatformGMV = (rawOrders || [])
+      .filter((o: any) => o.isPaid || o.status === 'yopildi')
+      .reduce((sum: number, o: any) => sum + (Number(o.finalTotal) || 0), 0);
+
+    res.json({
+      success: true,
+      generatedAt: new Date().toISOString(),
+      systemHealth: {
+        mongoConnected: isMongoConnected,
+        nodeUptimeSeconds: Math.floor(process.uptime()),
+        activeOnlineCount: (rawPresence || []).length,
+        environment: process.env.VERCEL ? 'Vercel Serverless' : 'Node Dedicated'
+      },
+      platformMetrics: {
+        totalTenants: computedTenants.length,
+        activeTenants: computedTenants.filter((t: any) => t.status === 'active' && !t.isExpired).length,
+        blockedTenants: computedTenants.filter((t: any) => t.status === 'blocked').length,
+        expiredTenants: computedTenants.filter((t: any) => t.isExpired).length,
+        totalOrders: (rawOrders || []).length,
+        totalMenuItems: (rawMenu || []).length,
+        totalTables: (rawTables || []).length,
+        totalUsersCount: users.length,
+        subscriptionRevenue,
+        totalPlatformGMV
+      },
+      tenantMetrics,
+      onlineSessions: (rawPresence || []).map((s: any) => ({
+        sessionId: s.sessionId,
+        tenantSlug: s.tenantSlug,
+        tenantName: tenantNameMap.get(s.tenantSlug) || (s.tenantSlug === 'landing' ? 'Asosiy SaaS Sayt' : s.tenantSlug),
+        path: s.path,
+        role: s.role,
+        userName: s.userName,
+        device: s.device,
+        lastSeenAt: s.lastSeenAt
+      })),
+      users: users.sort((a, b) => toEpochMs(b.lastActiveAt) - toEpochMs(a.lastActiveAt))
+    });
+  } catch (err: any) {
+    console.error('GET /api/superadmin/overview error:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Superadmin overview xatosi' });
+  }
+});
+
+// E4. Superadmin Tenant Admin Password Reset
+app.post('/api/superadmin/tenants/:slug/reset-password', async (req, res) => {
+  try {
+    const slug = req.params.slug.toLowerCase().trim();
+    const newPassword = String(req.body?.newPassword || '').trim();
+    const newUsername = req.body?.newUsername ? String(req.body.newUsername).trim() : undefined;
+
+    if (!newPassword || newPassword.length < 4) {
+      return res.status(400).json({ success: false, error: 'Yangi parol kamida 4 ta belgidan iborat bo‘lishi kerak' });
+    }
+
+    const updates: any = { adminPasswordHash: newPassword };
+    if (newUsername) updates.adminUsername = newUsername;
+
+    if (isMongoConnected) {
+      const updated = await TenantModel.findOneAndUpdate(
+        { slug },
+        { $set: updates },
+        { new: true }
+      ).lean();
+      if (!updated) return res.status(404).json({ success: false, error: 'Restoran topilmadi' });
+      return res.json({ success: true, tenant: computeTenantStatus(updated) });
+    } else {
+      const idx = memoryStore.tenants.findIndex((t: any) => t.slug === slug);
+      if (idx === -1) return res.status(404).json({ success: false, error: 'Restoran topilmadi' });
+      memoryStore.tenants[idx] = { ...memoryStore.tenants[idx], ...updates };
+      return res.json({ success: true, tenant: computeTenantStatus(memoryStore.tenants[idx]) });
+    }
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Parolni tiklashda xatolik' });
   }
 });
 

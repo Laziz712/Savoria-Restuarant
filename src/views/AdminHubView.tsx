@@ -170,6 +170,13 @@ export const AdminHubView: React.FC = () => {
 
   useEffect(() => {
     updateScrollProgress();
+    // Auto-scroll active pill into view horizontally on tab switch
+    if (tabsContainerRef.current) {
+      const activeBtn = tabsContainerRef.current.querySelector('[data-active="true"]') as HTMLElement | null;
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
     const timer = setTimeout(updateScrollProgress, 150);
     window.addEventListener('resize', updateScrollProgress);
     return () => {
@@ -188,14 +195,14 @@ export const AdminHubView: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#08090d] text-[#eaeaea] flex flex-col">
+    <div className="min-h-screen bg-[#08090d] text-[#eaeaea] flex flex-col overflow-x-clip w-full min-w-0">
       {/* Admin Module Command Sub-Header */}
-      <div className="bg-[#10121b] border-b border-[#212435] px-3 sm:px-6 lg:px-8 py-2 sticky top-16 z-40 shadow-lg">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+      <div className="bg-[#10121b] border-b border-[#212435] px-3 sm:px-6 lg:px-8 py-2 sticky top-16 z-40 shadow-lg w-full">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2">
           
           {/* Mobile Top Header: Active Tab Indicator + 3-Lines Burger Button */}
-          <div className="md:hidden flex items-center justify-between w-full">
-            <div className="flex items-center gap-2.5 min-w-0">
+          <div className="md:hidden flex items-center justify-between w-full gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <div className="p-2 rounded-xl bg-[#161826] border border-[#d4af37]/40 text-[#d4af37] shadow-sm shrink-0">
                 {currentTab.icon}
               </div>
@@ -203,13 +210,13 @@ export const AdminHubView: React.FC = () => {
                 <div className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
                   <span className="truncate">{currentTab.label}</span>
                   {typeof currentTab.badge === 'number' && currentTab.badge > 0 && (
-                    <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-[#d4af37] text-neutral-950 shrink-0">
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-[#d4af37] text-neutral-950 shrink-0 tabular-nums">
                       {currentTab.badge}
                     </span>
                   )}
                 </div>
-                <div className="text-[10px] text-neutral-400 font-mono">
-                  Admin Modul
+                <div className="text-[10px] text-neutral-400 font-mono truncate">
+                  {settings.name || currentTenant?.name || 'Admin Modul'}
                 </div>
               </div>
             </div>
@@ -218,12 +225,12 @@ export const AdminHubView: React.FC = () => {
             <button
               onClick={() => setIsModuleDrawerOpen(true)}
               aria-label="Admin Modullari Menyu"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#141624] hover:bg-[#1f2336] border border-[#d4af37]/50 text-[#d4af37] text-xs font-semibold shadow-[0_0_12px_rgba(212,175,55,0.15)] active:scale-95 transition-all shrink-0"
+              className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-xl bg-[#141624] hover:bg-[#1f2336] border border-[#d4af37]/50 text-[#d4af37] text-xs font-semibold shadow-[0_0_12px_rgba(212,175,55,0.15)] active:scale-95 transition-all shrink-0"
             >
               <Menu className="w-4 h-4" />
               <span>Modullar</span>
               {totalAlerts > 0 && (
-                <span className="w-4 h-4 bg-[#d4af37] text-neutral-950 font-mono font-bold text-[9px] rounded-full flex items-center justify-center">
+                <span className="w-4 h-4 bg-[#d4af37] text-neutral-950 font-mono font-bold text-[9px] rounded-full flex items-center justify-center tabular-nums">
                   {totalAlerts}
                 </span>
               )}
@@ -237,15 +244,16 @@ export const AdminHubView: React.FC = () => {
               ref={tabsContainerRef}
               onScroll={updateScrollProgress}
               onWheel={handleTabsWheel}
-              className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 scroll-smooth"
+              className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 scroll-smooth snap-x"
             >
               {tabs.map(tab => {
                 const isActive = adminSubTab === tab.id;
                 return (
                   <button
                     key={tab.id}
+                    data-active={isActive ? 'true' : 'false'}
                     onClick={() => handleSelectTab(tab.id)}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+                    className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shrink-0 snap-center ${
                       isActive
                         ? 'bg-[#d4af37] text-neutral-950 shadow-[0_0_15px_rgba(212,175,55,0.35)] font-bold'
                         : 'text-neutral-400 hover:text-white bg-[#151724] hover:bg-[#1d202e] border border-[#252839]'
@@ -254,7 +262,7 @@ export const AdminHubView: React.FC = () => {
                     {tab.icon}
                     <span>{tab.label}</span>
                     {typeof tab.badge === 'number' && tab.badge > 0 && (
-                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
+                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold tabular-nums ${
                         isActive ? 'bg-black text-[#d4af37]' : tab.badgeColor || 'bg-[#292e42] text-white'
                       }`}>
                         {tab.badge}
@@ -265,8 +273,8 @@ export const AdminHubView: React.FC = () => {
               })}
             </div>
 
-            {/* O'TKAZGICH (Interactive Horizontal Line Slider / Scrubber Track) */}
-            <div className="flex items-center gap-2 pt-1 select-none">
+            {/* O'TKAZGICH (Interactive Horizontal Line Slider / Scrubber Track - tablet/desktop only) */}
+            <div className="hidden sm:flex items-center gap-2 pt-1 select-none">
               {/* Left Scroll Button */}
               <button
                 type="button"
@@ -435,10 +443,10 @@ export const AdminHubView: React.FC = () => {
       )}
 
       {/* Active Tab View Body */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0 w-full overflow-x-hidden">
         {adminSubTab === 'kassa' && <KassaPOSView />}
         {adminSubTab === 'cheklar' && (
-          <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+          <div className="p-3 sm:p-6 max-w-7xl mx-auto min-w-0 w-full">
             <ReceiptsHistoryView />
           </div>
         )}

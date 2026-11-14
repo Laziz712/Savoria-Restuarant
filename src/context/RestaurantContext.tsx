@@ -990,6 +990,64 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     };
   }, [effectiveSlug, playChime, activeRoute, currentLoggedInWaiter, currentTableContext, isAdminAuthenticated]);
 
+  // Live Site Presence Heartbeat (allows /superadmin to see active visitors & staff across serverless)
+  useEffect(() => {
+    let sessionId = '';
+    try {
+      sessionId = sessionStorage.getItem('savoria_presence_session_id') || '';
+      if (!sessionId) {
+        sessionId = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        sessionStorage.setItem('savoria_presence_session_id', sessionId);
+      }
+    } catch {
+      sessionId = `sess-${Date.now()}`;
+    }
+
+    const sendPresence = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+      const resolvedTenantSlug =
+        currentPath === '/' || currentPath === '/buy'
+          ? 'landing'
+          : currentPath.startsWith('/superadmin')
+          ? 'superadmin'
+          : effectiveSlug;
+      const resolvedRole = currentPath.startsWith('/superadmin')
+        ? 'superadmin'
+        : currentLoggedInWaiter
+        ? 'ofitsiant'
+        : isAdminAuthenticated
+        ? 'admin'
+        : isMenuOnlyMode
+        ? 'qr_mehmon'
+        : 'mehmon';
+      const resolvedName = currentLoggedInWaiter
+        ? currentLoggedInWaiter.name
+        : isAdminAuthenticated
+        ? `${settings.name || effectiveSlug} Admin`
+        : currentTableContext
+        ? `Stol: ${currentTableContext}`
+        : 'Sayt tashrifchisi';
+
+      fetch('/api/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          tenantSlug: resolvedTenantSlug,
+          path: currentPath || '/',
+          role: resolvedRole,
+          userName: resolvedName,
+          device: isMobile ? 'Mobil' : 'Kompyuter'
+        })
+      }).catch(() => {});
+    };
+
+    sendPresence();
+    const timer = setInterval(sendPresence, 45000);
+    return () => clearInterval(timer);
+  }, [currentPath, effectiveSlug, currentLoggedInWaiter, isAdminAuthenticated, isMenuOnlyMode, currentTableContext, settings.name]);
+
   // Dispatch Admin Push Notification
   const sendPushNotification = async (notifData: Omit<PushNotification, 'id' | 'timestamp'>): Promise<boolean> => {
     const newNotif: PushNotification = {

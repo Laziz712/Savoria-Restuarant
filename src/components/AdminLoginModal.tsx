@@ -36,6 +36,17 @@ export const AdminLoginModal: React.FC = () => {
   const [usePinPad, setUsePinPad] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+
+  // Lock background page scroll while login modal is active
+  useEffect(() => {
+    if (!showAdminLoginModal) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [showAdminLoginModal]);
 
   if (!showAdminLoginModal) return null;
 
@@ -105,8 +116,8 @@ export const AdminLoginModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto">
-      <div className="w-full max-w-md bg-[#0f111a] border border-[#d4af37]/40 rounded-3xl p-5 sm:p-7 shadow-[0_0_50px_rgba(212,175,55,0.15)] relative overflow-hidden my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fade-in overflow-hidden overscroll-none pin-lock-viewport">
+      <div className="w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain bg-[#0f111a] border border-[#d4af37]/40 rounded-3xl p-4 sm:p-7 shadow-[0_0_50px_rgba(212,175,55,0.15)] relative">
         {/* Subtle decorative glow */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-[#d4af37]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-[#d4af37]/10 rounded-full blur-3xl pointer-events-none" />
@@ -203,7 +214,7 @@ export const AdminLoginModal: React.FC = () => {
                 <select
                   value={selectedAdminId}
                   onChange={e => setSelectedAdminId(e.target.value)}
-                  className="w-full bg-[#0a0b12] border border-[#262a3d] focus:border-[#d4af37] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white focus:outline-none appearance-none"
+                  className="w-full bg-[#0a0b12] border border-[#262a3d] focus:border-[#d4af37] rounded-xl pl-10 pr-3.5 py-2.5 text-base sm:text-xs text-white focus:outline-none appearance-none"
                 >
                   {adminUsers.map(u => (
                     <option key={u.id} value={u.username}>
@@ -225,7 +236,7 @@ export const AdminLoginModal: React.FC = () => {
                 <select
                   value={selectedWaiterId}
                   onChange={e => setSelectedWaiterId(e.target.value)}
-                  className="w-full bg-[#0a0b12] border border-[#262a3d] focus:border-[#d4af37] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white focus:outline-none appearance-none"
+                  className="w-full bg-[#0a0b12] border border-[#262a3d] focus:border-[#d4af37] rounded-xl pl-10 pr-3.5 py-2.5 text-base sm:text-xs text-white focus:outline-none appearance-none"
                 >
                   {waiters.map(w => (
                     <option key={w.id} value={w.id}>
@@ -272,15 +283,17 @@ export const AdminLoginModal: React.FC = () => {
               </div>
               <input
                 type={showPassword ? 'text' : 'password'}
+                inputMode={usePinPad ? 'none' : undefined}
+                readOnly={usePinPad && !isDesktop}
                 required
-                autoFocus
+                autoFocus={isDesktop}
                 placeholder={activeRole === 'waiter' ? 'PIN-kodni kiriting' : 'Parolni kiriting'}
                 value={password}
                 onChange={e => {
                   setPassword(e.target.value);
                   if (errorMsg) setErrorMsg('');
                 }}
-                className="w-full bg-[#0a0b12] border border-[#262a3d] focus:border-[#d4af37] rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-neutral-500 font-mono tracking-wider focus:outline-none transition-colors"
+                className="w-full bg-[#0a0b12] border border-[#262a3d] focus:border-[#d4af37] rounded-xl pl-10 pr-10 py-2.5 text-base sm:text-sm text-white placeholder-neutral-500 font-mono tracking-wider focus:outline-none transition-colors"
               />
               <button
                 type="button"
@@ -301,14 +314,14 @@ export const AdminLoginModal: React.FC = () => {
 
           {/* Touchscreen PIN Pad (If enabled) */}
           {usePinPad && (
-            <div className="bg-[#090a10] border border-[#222536] p-3 rounded-2xl animate-fade-in space-y-2">
-              <div className="grid grid-cols-3 gap-2">
+            <div className="bg-[#090a10] border border-[#222536] p-2.5 sm:p-3 rounded-2xl animate-fade-in space-y-2 touch-manipulation">
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                 {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
                   <button
                     key={num}
                     type="button"
                     onClick={() => handlePinDigit(num)}
-                    className="py-3 rounded-xl bg-[#141624] hover:bg-[#1f2234] border border-[#272b3e] text-white font-mono font-bold text-base active:scale-95 transition-all"
+                    className="py-2.5 sm:py-3 rounded-xl bg-[#141624] hover:bg-[#1f2234] border border-[#272b3e] text-white font-mono font-bold text-base active:scale-95 transition-all touch-manipulation"
                   >
                     {num}
                   </button>
@@ -316,21 +329,21 @@ export const AdminLoginModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={handlePinClear}
-                  className="py-3 rounded-xl bg-[#221316] hover:bg-rose-950/60 border border-rose-900/40 text-rose-400 font-mono text-xs font-bold active:scale-95 transition-all"
+                  className="py-2.5 sm:py-3 rounded-xl bg-[#221316] hover:bg-rose-950/60 border border-rose-900/40 text-rose-400 font-mono text-xs font-bold active:scale-95 transition-all touch-manipulation"
                 >
                   C
                 </button>
                 <button
                   type="button"
                   onClick={() => handlePinDigit('0')}
-                  className="py-3 rounded-xl bg-[#141624] hover:bg-[#1f2234] border border-[#272b3e] text-white font-mono font-bold text-base active:scale-95 transition-all"
+                  className="py-2.5 sm:py-3 rounded-xl bg-[#141624] hover:bg-[#1f2234] border border-[#272b3e] text-white font-mono font-bold text-base active:scale-95 transition-all touch-manipulation"
                 >
                   0
                 </button>
                 <button
                   type="button"
                   onClick={handlePinBackspace}
-                  className="py-3 rounded-xl bg-[#141624] hover:bg-[#1f2234] border border-[#272b3e] text-neutral-400 hover:text-white flex items-center justify-center active:scale-95 transition-all"
+                  className="py-2.5 sm:py-3 rounded-xl bg-[#141624] hover:bg-[#1f2234] border border-[#272b3e] text-neutral-400 hover:text-white flex items-center justify-center active:scale-95 transition-all touch-manipulation"
                 >
                   <Delete className="w-4 h-4" />
                 </button>

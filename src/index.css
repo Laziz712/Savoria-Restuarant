@@ -4,11 +4,16 @@
   html {
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     overscroll-behavior-y: none;
+    overflow-x: clip;
+    max-width: 100%;
+    background-color: #07080d;
   }
 
   button, a, input, select, textarea {
@@ -22,6 +27,96 @@
   .font-mono, .tabular-nums {
     font-family: 'JetBrains Mono', monospace;
     font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Hide scrollbars cleanly on horizontal chip bars across iOS, Android & Desktop */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fixed non-bouncing viewport lock for Waiter & Admin PIN terminals */
+.pin-lock-viewport {
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Premium Responsive Media Queries for Mobile & Short Screens */
+@media (max-width: 640px) {
+  /* Prevent mobile browser auto-zoom when tapping inputs or selects */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Guarantee comfortable mobile touch targets in interactive headers/bars */
+  .mobile-touch-target {
+    min-height: 44px;
+  }
+
+  /* Tighter premium card rounding & spacing on compact mobile viewports */
+  .mobile-compact-card {
+    padding: 0.875rem;
+    border-radius: 1rem;
+  }
+}
+
+/* Adaptive Waiter PIN screen sizing on short mobile viewports (360x640, iPhone SE, etc.) */
+@media (max-height: 740px) and (max-width: 640px) {
+  .waiter-pin-card {
+    padding: 1rem 1.25rem !important;
+    border-radius: 1.75rem !important;
+  }
+  .waiter-pin-notch {
+    margin-bottom: 0.5rem !important;
+  }
+  .waiter-pin-header {
+    padding-bottom: 0.5rem !important;
+  }
+  .waiter-pin-avatar {
+    width: 2.75rem !important;
+    height: 2.75rem !important;
+    margin-bottom: 0.35rem !important;
+  }
+  .waiter-pin-dots {
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .waiter-dial-grid {
+    gap: 0.5rem !important;
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  .waiter-dial-btn {
+    width: 3.35rem !important;
+    height: 3.35rem !important;
+  }
+}
+
+@media (max-height: 620px) and (max-width: 640px) {
+  .waiter-pin-notch {
+    display: none !important;
+  }
+  .waiter-dial-btn {
+    width: 3rem !important;
+    height: 3rem !important;
+  }
+}
+
+/* Respect accessibility motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

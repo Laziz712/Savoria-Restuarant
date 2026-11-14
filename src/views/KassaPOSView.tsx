@@ -34,6 +34,12 @@ export const KassaPOSView: React.FC = () => {
 
   // Mobile View Switcher between Catalog and Check
   const [mobilePosTab, setMobilePosTab] = useState<'catalog' | 'check'>('catalog');
+  const [posNotice, setPosNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const showPosNotice = (type: 'success' | 'error', text: string) => {
+    setPosNotice({ type, text });
+    setTimeout(() => setPosNotice(null), 3500);
+  };
 
   // Open unpaid table orders
   const openOrders = orders.filter(o => o.status !== 'yopildi');
@@ -55,7 +61,7 @@ export const KassaPOSView: React.FC = () => {
 
   const addItemToPOS = (item: MenuItem) => {
     if (!item.isAvailable) {
-      alert('Ushbu taom hozirda sotuvda mavjud emas (Stop-list)');
+      showPosNotice('error', 'Ushbu taom hozirda sotuvda mavjud emas (Stop-list)');
       return;
     }
     setCartItems(prev => {
@@ -91,7 +97,7 @@ export const KassaPOSView: React.FC = () => {
   // Send to kitchen
   const handleSendToKitchen = () => {
     if (cartItems.length === 0) {
-      alert('Kassaga hech qanday taom qo\'shilmagan');
+      showPosNotice('error', "Kassaga hech qanday taom qo'shilmagan");
       return;
     }
 
@@ -122,7 +128,7 @@ export const KassaPOSView: React.FC = () => {
 
     setActiveExistingOrderId(created.id);
     setCartItems([]);
-    alert(`Buyurtma #${created.id} oshxonaga yuborildi!`);
+    showPosNotice('success', `Buyurtma #${created.id} oshxonaga yuborildi!`);
   };
 
   // Quick Settle Payment
@@ -140,7 +146,7 @@ export const KassaPOSView: React.FC = () => {
 
     // Otherwise settle current cart items directly
     if (cartItems.length === 0) {
-      alert('To\'lov uchun taomlar tanlanmagan');
+      showPosNotice('error', "To'lov uchun taomlar tanlanmagan");
       return;
     }
 
@@ -180,7 +186,17 @@ export const KassaPOSView: React.FC = () => {
     : null;
 
   return (
-    <div className="min-h-screen bg-[#090a0f] text-[#eaeaea] p-4 sm:p-6 flex flex-col gap-5">
+    <div className="min-h-screen bg-[#090a0f] text-[#eaeaea] p-3 sm:p-6 flex flex-col gap-4 sm:gap-5 w-full min-w-0 overflow-x-hidden">
+      {posNotice && (
+        <div className={`p-3 rounded-xl border text-xs font-medium flex items-center justify-between gap-2 ${
+          posNotice.type === 'success'
+            ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-200'
+            : 'bg-rose-950/70 border-rose-500/40 text-rose-200'
+        }`}>
+          <span>{posNotice.text}</span>
+          <button type="button" onClick={() => setPosNotice(null)} className="px-1.5 opacity-80 hover:opacity-100">✕</button>
+        </div>
+      )}
       {/* Top POS Control Bar */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 pb-4 border-b border-[#202332]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-1">

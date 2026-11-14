@@ -158,29 +158,29 @@ export const SalesDashboardView: React.FC = () => {
     : monthlyTrends.slice(-6).map(m => ({ ...m, label: m.month }));
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-5 sm:space-y-6 pb-12 w-full min-w-0 overflow-x-hidden">
       {/* 1. Header with Period Controls and Live Badge */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-5 sm:p-6 bg-[#11131e] border border-[#24283c] rounded-3xl shadow-xl relative overflow-hidden">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-4 sm:p-6 bg-[#11131e] border border-[#24283c] rounded-2xl sm:rounded-3xl shadow-xl relative overflow-hidden min-w-0">
         {/* Glow */}
         <div className="absolute top-0 right-0 w-96 h-40 bg-[#d4af37]/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#b38a1a] text-neutral-950 flex items-center justify-center font-bold shadow-lg">
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-start sm:items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#b38a1a] text-neutral-950 flex items-center justify-center font-bold shadow-lg shrink-0">
               <TrendingUp className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-xl font-serif font-bold text-white tracking-wide">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-base sm:text-xl font-serif font-bold text-white tracking-wide">
                   SAVDO BOSHQARUV PANELI
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span>{isRealtimeConnected ? 'Jonli Real-Time' : 'MongoDB Atlas'}</span>
                 </span>
               </div>
-              <p className="text-xs text-neutral-400">
-                Backend API umumlashtirilgan tahlillari va Recharts interaktiv vizualizatsiyasi
+              <p className="text-xs text-neutral-400 truncate mt-0.5">
+                Kunlik va oylik savdo dinamikasi hamda real-vaqtli ko‘rsatkichlar
               </p>
             </div>
           </div>
@@ -189,26 +189,26 @@ export const SalesDashboardView: React.FC = () => {
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           {/* Period Toggle */}
-          <div className="flex items-center bg-[#090a10] border border-[#24283c] p-1 rounded-xl">
+          <div className="flex-1 sm:flex-none grid grid-cols-2 sm:flex items-center bg-[#090a10] border border-[#24283c] p-1 rounded-xl">
             <button
               onClick={() => setPeriod('kunlik')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 period === 'kunlik'
                   ? 'bg-[#d4af37] text-neutral-950 font-bold shadow-md'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
-              📅 Kunlik Tendensiyalar
+              📅 Kunlik
             </button>
             <button
               onClick={() => setPeriod('oylik')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 period === 'oylik'
                   ? 'bg-[#d4af37] text-neutral-950 font-bold shadow-md'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
-              📊 Oylik Tendensiyalar
+              📊 Oylik
             </button>
           </div>
 
@@ -300,16 +300,16 @@ export const SalesDashboardView: React.FC = () => {
       </div>
 
       {/* 3. PRIMARY BIG CHART: Revenue & Orders Trend (AreaChart) */}
-      <div className="p-5 sm:p-6 bg-[#11131e] border border-[#24283c] rounded-3xl shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
+      <div className="p-4 sm:p-6 bg-[#11131e] border border-[#24283c] rounded-2xl sm:rounded-3xl shadow-xl space-y-4 min-w-0 overflow-hidden">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#d4af37]" />
-              <h3 className="font-serif font-bold text-white text-base tracking-wide">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#d4af37] shrink-0" />
+              <h3 className="font-serif font-bold text-white text-sm sm:text-base tracking-wide">
                 {period === 'kunlik' ? 'KUNLIK DAROMAD VA SAVDO TENDENSIYASI' : 'OYLIK DAROMAD VA DINAMIKA TAHLILI'}
               </h3>
             </div>
-            <p className="text-xs text-neutral-400 mt-0.5">
+            <p className="text-[11px] sm:text-xs text-neutral-400 mt-0.5">
               {period === 'kunlik' 
                 ? 'Oxirgi 10 kun bo‘yicha har kungi umumiy tushum va buyurtmalar hajmi'
                 : 'Oylar kesimida umumiy tushum, sof foyda va hajm ko‘rsatkichlari'}
@@ -317,36 +317,36 @@ export const SalesDashboardView: React.FC = () => {
           </div>
 
           {/* Metric View Switcher */}
-          <div className="flex items-center bg-[#0a0c12] border border-[#232738] p-1 rounded-xl text-xs">
+          <div className="grid grid-cols-3 sm:flex items-center bg-[#0a0c12] border border-[#232738] p-1 rounded-xl text-[11px] sm:text-xs shrink-0">
             <button
               onClick={() => setMetricView('daromad')}
-              className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-1 rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
                 metricView === 'daromad' ? 'bg-[#1e2236] text-[#d4af37] font-bold' : 'text-neutral-400 hover:text-white'
               }`}
             >
-              Tushum (UZS)
+              Tushum
             </button>
             <button
               onClick={() => setMetricView('buyurtmalar')}
-              className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-1 rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
                 metricView === 'buyurtmalar' ? 'bg-[#1e2236] text-sky-400 font-bold' : 'text-neutral-400 hover:text-white'
               }`}
             >
-              Buyurtmalar Soni
+              Buyurtma
             </button>
             <button
               onClick={() => setMetricView('ikkalasi')}
-              className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-1 rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
                 metricView === 'ikkalasi' ? 'bg-[#1e2236] text-emerald-400 font-bold' : 'text-neutral-400 hover:text-white'
               }`}
             >
-              Kombinatsiya
+              Ikkalasi
             </button>
           </div>
         </div>
 
         {/* Recharts Area Chart */}
-        <div className="w-full h-80 sm:h-96 pt-3">
+        <div className="w-full h-64 sm:h-96 pt-2 min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart 
               data={chartData}
@@ -566,18 +566,53 @@ export const SalesDashboardView: React.FC = () => {
         </div>
 
         {/* Right (2 cols): Best Selling Dishes Ranked */}
-        <div className="lg:col-span-2 p-5 sm:p-6 bg-[#11131e] border border-[#24283c] rounded-3xl shadow-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Award className="w-4 h-4 text-[#d4af37]" />
-              <h3 className="font-serif font-bold text-white text-base">
-                ENG KO‘P DAROMAD KELTIRGAN TOP TAOMLAR
+        <div className="lg:col-span-2 p-4 sm:p-6 bg-[#11131e] border border-[#24283c] rounded-2xl sm:rounded-3xl shadow-xl space-y-4 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Award className="w-4 h-4 text-[#d4af37] shrink-0" />
+              <h3 className="font-serif font-bold text-white text-sm sm:text-base truncate">
+                ENG KO‘P DAROMAD KELTIRGAN TAOMLAR
               </h3>
             </div>
-            <span className="text-[11px] font-mono text-[#d4af37]">Sotuv reytingi</span>
+            <span className="text-[11px] font-mono text-[#d4af37] shrink-0">Reyting</span>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Compact List */}
+          <div className="sm:hidden space-y-2.5">
+            {topDishes.map((dish, i) => {
+              const maxRev = topDishes[0]?.revenue || 1;
+              const percentOfTop = Math.round((dish.revenue / maxRev) * 100);
+              return (
+                <div key={i} className="p-3 rounded-xl bg-[#0b0d16] border border-[#1e2234] space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 ${
+                        i === 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
+                        i === 1 ? 'bg-neutral-700/50 text-neutral-300' :
+                        i === 2 ? 'bg-amber-900/30 text-amber-400' : 'bg-[#171a29] text-neutral-400'
+                      }`}>
+                        {i + 1}
+                      </span>
+                      <span className="text-xs font-semibold text-white truncate">{dish.name}</span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-[#d4af37] shrink-0 tabular-nums">
+                      {formatUZS(dish.revenue)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400">
+                    <span className="uppercase">{dish.category}</span>
+                    <span className="text-emerald-400 font-bold">{dish.quantity} porsiya</span>
+                  </div>
+                  <div className="w-full bg-[#1b1f30] h-1.5 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-[#d4af37] to-amber-500 rounded-full" style={{ width: `${percentOfTop}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-[#212538] text-neutral-400 font-mono text-[11px]">
@@ -610,10 +645,10 @@ export const SalesDashboardView: React.FC = () => {
                           {dish.category}
                         </span>
                       </td>
-                      <td className="py-3 text-center font-mono font-bold text-emerald-400">
+                      <td className="py-3 text-center font-mono font-bold text-emerald-400 tabular-nums">
                         {dish.quantity} porsiya
                       </td>
-                      <td className="py-3 text-right font-mono font-bold text-white">
+                      <td className="py-3 text-right font-mono font-bold text-white tabular-nums">
                         {formatUZS(dish.revenue)}
                       </td>
                       <td className="py-3 text-right">

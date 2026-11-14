@@ -81,7 +81,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#090a0f] text-[#eaeaea] flex flex-col font-sans selection:bg-[#d4af37]/30 selection:text-white">
+    <div className="min-h-screen bg-[#090a0f] text-[#eaeaea] flex flex-col font-sans selection:bg-[#d4af37]/30 selection:text-white overflow-x-clip w-full">
       {/* Multi-Tenant SaaS Banner (Demo Mode, Subscription Expired/Warning) */}
       <TenantBanner />
 
@@ -89,7 +89,7 @@ const AppContent: React.FC = () => {
       <Navbar />
 
       {/* Main View Router */}
-      <div className="flex-1 pb-20 md:pb-0">
+      <div className="flex-1 min-w-0 w-full pb-20 md:pb-0">
         {activeRoute === 'mijoz' && <CustomerMenuView />}
         {activeRoute === 'ofitsiant' && <WaiterOrderView />}
         {activeRoute === 'admin' && <AdminHubView />}
