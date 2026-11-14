@@ -221,14 +221,31 @@ const SettingsSchema = new mongoose.Schema({
   tenantId: { type: String, default: 'demo', index: true },
   name: { type: String, default: 'SAVORIA RESTAURANT' },
   slogan: { type: String, default: 'Sharqona Mehmondo‘stlik & Yuksak Gastronomik San’at' },
-  address: { type: String, default: 'Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko\'chasi 45-uy' },
-  phone: { type: String, default: '+998 71 200-71-12' },
-  stir: { type: String, default: '309 814 552' },
-  serviceFeePercent: { type: Number, default: 12 },
-  headerMessage: { type: String, default: 'Savoria Restoraniga xush kelibsiz!' },
-  footerReceiptMessage: { type: String, default: 'Tashrifingiz uchun minnatdormiz! Yoqimli ishtaha tilaymiz.' },
-  wifiPassword: { type: String, default: 'savoria_vip_guest' }
-}, { timestamps: true });
+  bio: { type: String, default: '' },
+  heroBadge: { type: String, default: '' },
+  heroTitle: { type: String, default: '' },
+  heroHighlight: { type: String, default: '' },
+  address: { type: String, default: '' },
+  phone: { type: String, default: '' },
+  email: { type: String, default: '' },
+  stir: { type: String, default: '' },
+  serviceFeePercent: { type: Number, default: 10 },
+  headerMessage: { type: String, default: '' },
+  footerReceiptMessage: { type: String, default: 'Tashrifingiz uchun minnatdormiz!' },
+  wifiPassword: { type: String, default: '' },
+  workingDays: { type: String, default: 'Dushanba - Yakshanba:' },
+  workingHours: { type: String, default: '09:00 - 23:00' },
+  specialHoursLabel: { type: String, default: '' },
+  specialHoursValue: { type: String, default: '' },
+  eventsTitle: { type: String, default: '' },
+  eventsSchedule: { type: String, default: '' },
+  telegram: { type: String, default: '' },
+  instagram: { type: String, default: '' },
+  aboutTitle: { type: String, default: '' },
+  aboutQuote: { type: String, default: '' },
+  aboutDescription1: { type: String, default: '' },
+  aboutDescription2: { type: String, default: '' }
+}, { strict: false, timestamps: true });
 
 const NotificationSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
@@ -739,13 +756,30 @@ async function seedDefaultsIfEmpty() {
         settings: {
           name: 'SAVORIA RESTAURANT',
           slogan: 'Sharqona Mehmondo‘stlik & Yuksak Gastronomik San’at',
+          bio: 'Toshkentning eng nufuzli milliy va premium restorani. Sharqona mehmondo‘stlik va yuksak gastronomiya san’ati.',
+          heroBadge: 'Toshkentning eng nufuzli milliy & premium restorani',
+          heroTitle: 'Sharqona Mehmondo‘stlik &',
+          heroHighlight: 'Yuksak Gastronomik San’at',
           address: 'Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko\'chasi 45-uy',
           phone: '+998 71 200-71-12',
+          email: 'lazizshavkatov712@gmail.com',
           stir: '309 814 552',
           serviceFeePercent: 12,
           headerMessage: 'Savoria Restoraniga xush kelibsiz!',
           footerReceiptMessage: 'Tashrifingiz uchun minnatdormiz! Yoqimli ishtaha tilaymiz.',
-          wifiPassword: 'savoria_vip_guest'
+          wifiPassword: 'savoria_vip_guest',
+          workingDays: 'Dushanba - Yakshanba:',
+          workingHours: '10:00 - 23:30',
+          specialHoursLabel: 'Osh va Tandir:',
+          specialHoursValue: '11:30 dan',
+          eventsTitle: 'Jonli Musiqa Oqshomi:',
+          eventsSchedule: 'Juma - Yakshanba (19:30 - 23:00)',
+          telegram: '@lazizshavkatov712',
+          instagram: '@shavkatovv.o07',
+          aboutTitle: 'Nafislik va Mehmondo‘stlik Makoni',
+          aboutQuote: '«Savoria» — bu shunchaki dasturxon emas. Bu oila davrasi, do\'stona suhbatlar va yuksak gastronomiya san\'ati birlashgan shukuhli dargohdir.',
+          aboutDescription1: '2011-yildan buyon «Savoria» restorani Toshkent shahrida haqiqiy sharqona mehmondo\'stlik va jahon andozalaridagi servis madaniyatini namoyish etib kelmoqda.',
+          aboutDescription2: 'Bizning maqsadimiz — har bir mehmonimizga nafaqat mazali taom ulashish, balki ularga unutilmas iliq xotiralar va shinam muhit taqdim etishdir.'
         },
         createdAt: new Date().toISOString()
       };
@@ -768,13 +802,30 @@ async function seedDefaultsIfEmpty() {
         settings: {
           name: 'Flora Lounge & Cafe',
           slogan: 'Shinam muhit va zamonaviy Yevropa qahvaxonasi',
+          bio: 'Flora Lounge & Cafe — Toshkent markazidagi shinam muhit, mualliflik taomlari va xushbo‘y qahva maskani.',
+          heroBadge: 'Shinam Lounge & Zamonaviy Oshxona',
+          heroTitle: 'Flora Lounge & Cafe —',
+          heroHighlight: 'Betakror Ta’m va Muhit',
           address: 'Toshkent sh., Mirzo Ulug‘bek tumani, Mustaqillik shoh ko‘chasi 12',
           phone: '+998 90 999 88 77',
+          email: 'flora.cafe.tashkent@gmail.com',
           stir: '412 873 991',
           serviceFeePercent: 10,
-          headerMessage: 'Flora Cafe - huzurbaxsh daqiqalar!',
-          footerReceiptMessage: 'Flora Cafeni tanlaganingiz uchun tashakkur!',
-          wifiPassword: 'flora_freewifi'
+          headerMessage: 'Flora Lounge & Cafe ga xush kelibsiz!',
+          footerReceiptMessage: 'Flora Cafeni tanlaganingiz uchun tashakkur! Yana kutib qolamiz.',
+          wifiPassword: 'flora_freewifi',
+          workingDays: 'Dushanba - Yakshanba:',
+          workingHours: '09:00 - 23:00',
+          specialHoursLabel: 'Nonushta menyusi:',
+          specialHoursValue: '09:00 - 12:00',
+          eventsTitle: 'Lounge & Akustik kechalar:',
+          eventsSchedule: 'Shanba - Yakshanba (19:00 - 22:30)',
+          telegram: '@flora_cafe',
+          instagram: '@flora_lounge_uz',
+          aboutTitle: 'Zamonaviy Ta’m va Huzurbaxsh Muhit',
+          aboutQuote: '«Flora Lounge & Cafe» — do‘stlar davrasi, biznes uchrashuvlar va mazali kechki ovqatlar uchun yaratilgan shinam maskan.',
+          aboutDescription1: 'Flora Lounge & Cafe jamoasi har bir mehmon uchun eng sara mahsulotlardan tayyorlangan mualliflik taomlari va premium ichimliklarni taqdim etadi.',
+          aboutDescription2: 'Bizning oshxonamizda sifat, tozalik va samimiy mehmondo‘stlik har doim birinchi o‘rinda turadi.'
         },
         createdAt: new Date().toISOString()
       };
@@ -881,31 +932,38 @@ function computeTenantStatus(tenant: any) {
 app.get('/api/check-slug/:slug', async (req, res) => {
   try {
     const rawSlug = (req.params.slug || '').toLowerCase().trim();
-    if (!rawSlug) {
-      return res.status(400).json({ available: false, reason: 'Slug bo‘sh bo‘lishi mumkin emas' });
+    if (!rawSlug || rawSlug.length < 3) {
+      const msg = 'Slug kamida 3 ta belgidan iborat bo‘lishi kerak';
+      return res.status(400).json({ available: false, reason: msg, message: msg });
     }
     if (!/^[a-z0-9-]+$/.test(rawSlug)) {
-      return res.status(400).json({ available: false, reason: 'Slug faqat kichik lotin harflari, raqam va tire (-) dan iborat bo‘lishi kerak' });
+      const msg = 'Slug faqat kichik lotin harflari, raqam va tire (-) dan iborat bo‘lishi kerak';
+      return res.status(400).json({ available: false, reason: msg, message: msg });
     }
     if (RESERVED_SLUGS.has(rawSlug)) {
-      return res.status(200).json({ available: false, reason: 'Bu nom tizim xizmatlari uchun band qilingan' });
+      const msg = 'Bu nom tizim xizmatlari uchun band qilingan';
+      return res.status(200).json({ available: false, reason: msg, message: msg });
     }
 
     if (isMongoConnected) {
-      const existingTenant = await TenantModel.findOne({ slug: rawSlug });
+      const existingTenant = await TenantModel.findOne({ slug: rawSlug }).lean();
       if (existingTenant) {
-        return res.json({ available: false, reason: 'Bu restoran domeni allaqachon band qilingan' });
+        const msg = 'Bu restoran domeni allaqachon band qilingan';
+        return res.json({ available: false, reason: msg, message: msg });
       }
-      const pendingOrder = await SubscriptionOrderModel.findOne({ slug: rawSlug, status: 'pending' });
+      const pendingOrder = await SubscriptionOrderModel.findOne({ slug: rawSlug, status: 'pending' }).lean();
       if (pendingOrder) {
-        return res.json({ available: false, reason: 'Ushbu manzil bo‘yicha arizani ko‘rib chiqish kutilmoqda' });
+        const msg = 'Ushbu manzil bo‘yicha arizani ko‘rib chiqish kutilmoqda';
+        return res.json({ available: false, reason: msg, message: msg });
       }
     } else {
       const match = memoryStore.tenants.find((t: any) => t.slug === rawSlug);
-      if (match) return res.json({ available: false, reason: 'Bu domen band' });
+      if (match) return res.json({ available: false, reason: 'Bu domen band', message: 'Bu domen band' });
+      const pending = memoryStore.subscriptionOrders.find((o: any) => o.slug === rawSlug && o.status === 'pending');
+      if (pending) return res.json({ available: false, reason: 'Ariza kutilmoqda', message: 'Ariza kutilmoqda' });
     }
 
-    res.json({ available: true, slug: rawSlug });
+    res.json({ available: true, slug: rawSlug, message: 'Ushbu manzil bo‘sh' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -938,17 +996,17 @@ app.get('/api/platform-config', async (req, res) => {
 
 app.patch('/api/platform-config', async (req, res) => {
   try {
-    const updates = req.body;
+    const updates = stripMongoInternalFields(req.body);
     if (isMongoConnected) {
       const updated = await PlatformConfigModel.findOneAndUpdate(
         { id: 'main_config' },
         { $set: updates },
         { upsert: true, new: true }
-      );
-      return res.json(updated);
+      ).lean();
+      return res.json({ success: true, config: updated, ...updated });
     }
     memoryStore.platformConfig = { ...memoryStore.platformConfig, ...updates };
-    res.json(memoryStore.platformConfig);
+    res.json({ success: true, config: memoryStore.platformConfig, ...memoryStore.platformConfig });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1121,12 +1179,53 @@ app.get('/api/subscription-orders', async (req, res) => {
 
 app.post('/api/subscription-orders', async (req, res) => {
   try {
-    const data = req.body;
-    const orderDoc = {
-      ...data,
+    const data = req.body || {};
+    const cleanSlug = (data.slug || '').toLowerCase().trim();
+
+    if (!data.tenantName || !String(data.tenantName).trim()) {
+      return res.status(400).json({ success: false, error: 'Restoran nomi kiritilishi shart' });
+    }
+    if (!cleanSlug || cleanSlug.length < 3 || !/^[a-z0-9-]+$/.test(cleanSlug)) {
+      return res.status(400).json({ success: false, error: 'Sayt manzili (slug) kamida 3 ta lotin harfi/raqamdan iborat bo‘lishi kerak' });
+    }
+    if (RESERVED_SLUGS.has(cleanSlug)) {
+      return res.status(400).json({ success: false, error: 'Bu manzil (slug) tizim tomonidan band qilingan' });
+    }
+    if (!data.ownerName || !data.phone) {
+      return res.status(400).json({ success: false, error: 'Egasi ismi va telefon raqami majburiy' });
+    }
+
+    if (isMongoConnected) {
+      const existingTenant = await TenantModel.findOne({ slug: cleanSlug }).lean();
+      if (existingTenant) {
+        return res.status(409).json({ success: false, error: 'Bu sayt manzili (slug) allaqachon band qilingan' });
+      }
+      const existingPending = await SubscriptionOrderModel.findOne({ slug: cleanSlug, status: 'pending' }).lean();
+      if (existingPending) {
+        return res.status(409).json({ success: false, error: 'Bu manzil bo‘yicha ariza hozirda ko‘rib chiqilmoqda' });
+      }
+    } else {
+      if (memoryStore.tenants.some((t: any) => t.slug === cleanSlug)) {
+        return res.status(409).json({ success: false, error: 'Bu sayt manzili (slug) allaqachon band qilingan' });
+      }
+    }
+
+    const orderDoc: any = {
       id: `SUB-${Date.now().toString().slice(-6)}`,
-      slug: (data.slug || '').toLowerCase().trim(),
-      status: 'pending',
+      tenantName: String(data.tenantName).trim(),
+      slug: cleanSlug,
+      ownerName: String(data.ownerName).trim(),
+      phone: String(data.phone).trim(),
+      telegram: String(data.telegram || '').trim() || '-',
+      email: String(data.email || '').trim(),
+      adminUsername: String(data.adminUsername || 'admin').trim() || 'admin',
+      adminPassword: String(data.adminPassword || '1111'),
+      planMonths: Number(data.planMonths) || 3,
+      amount: Number(data.amount) || 0,
+      receiptImage: typeof data.receiptImage === 'string' ? data.receiptImage : '',
+      cardNumber: String(data.cardNumber || '4916 9903 6294 0907'),
+      cardHolder: String(data.cardHolder || 'SOHIBA SHOMURATOVA'),
+      status: 'pending' as const,
       createdAt: new Date().toISOString()
     };
 
@@ -1137,9 +1236,10 @@ app.post('/api/subscription-orders', async (req, res) => {
     }
 
     broadcastRealtimeEvent('subscription:new', orderDoc);
-    res.status(201).json(orderDoc);
+    res.status(201).json({ success: true, order: orderDoc, ...orderDoc });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    console.error('POST /api/subscription-orders error:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Buyurtmani saqlashda xatolik yuz berdi' });
   }
 });
 
@@ -1175,11 +1275,30 @@ app.post('/api/subscription-orders/:id/approve', async (req, res) => {
       adminPasswordHash: order.adminPassword || '1111',
       settings: {
         name: order.tenantName,
+        slogan: `${order.tenantName} — Mazali taomlar va a’lo xizmat`,
+        bio: `${order.tenantName} — yangi tayyorlangan taomlar va qulay onlayn buyurtma xizmati.`,
+        heroBadge: `${order.tenantName} — Rasmiy Onlayn Menyu`,
+        heroTitle: `${order.tenantName} —`,
+        heroHighlight: 'Nafis Ta’m va Yuqori Sifat',
         phone: order.phone,
+        email: order.email || '',
+        telegram: order.telegram || '',
+        instagram: '',
         address: 'Toshkent shahri',
+        stir: '',
         serviceFeePercent: 10,
         headerMessage: `${order.tenantName} ga xush kelibsiz!`,
-        footerReceiptMessage: 'Tashrifingiz uchun minnatdormiz!'
+        footerReceiptMessage: 'Tashrifingiz uchun minnatdormiz!',
+        workingDays: 'Dushanba - Yakshanba:',
+        workingHours: '09:00 - 23:00',
+        specialHoursLabel: '',
+        specialHoursValue: '',
+        eventsTitle: '',
+        eventsSchedule: '',
+        aboutTitle: 'Sifat va Mehmondo‘stlik',
+        aboutQuote: `«${order.tenantName}» — har bir taom mehr va yuqori sifat bilan tayyorlanadi.`,
+        aboutDescription1: `${order.tenantName} mehmonlarimizga doimo eng sara mahsulotlardan tayyorlangan taomlar va tez xizmatni taqdim etadi.`,
+        aboutDescription2: 'Onlayn menyu orqali bemalol tanlang va buyurtma bering.'
       },
       createdAt: new Date().toISOString()
     };
@@ -1329,19 +1448,22 @@ app.get('/api/tenant-bootstrap/:slug', async (req, res) => {
     let reservations: any[] = [];
     let waiters: any[] = [];
     let couriers: any[] = [];
-    let settings: any = computedTenant.settings || null;
+    let adminUsers: any[] = [];
+    let dbSettings: any = null;
     let notifications: any[] = [];
 
     if (isMongoConnected) {
       // Find items scoped to this tenant
-      const [m, o, t, r, w, c, n] = await Promise.all([
+      const [m, o, t, r, w, c, n, s, adm] = await Promise.all([
         MenuItemModel.find({ tenantId: rawSlug }).lean(),
         OrderModel.find({ tenantId: rawSlug }).sort({ createdAt: -1 }).lean(),
         TableModel.find({ tenantId: rawSlug }).lean(),
         ReservationModel.find({ tenantId: rawSlug }).sort({ createdAt: -1 }).lean(),
         WaiterModel.find({ tenantId: rawSlug }).lean(),
         CourierModel.find({ tenantId: rawSlug }).lean(),
-        NotificationModel.find({ tenantId: rawSlug }).sort({ timestamp: -1 }).limit(25).lean()
+        NotificationModel.find({ tenantId: rawSlug }).sort({ timestamp: -1 }).limit(25).lean(),
+        SettingsModel.findOne({ tenantId: rawSlug }).lean(),
+        AdminUserModel.find({ tenantId: rawSlug }).lean()
       ]);
 
       menu = m;
@@ -1351,6 +1473,8 @@ app.get('/api/tenant-bootstrap/:slug', async (req, res) => {
       waiters = w;
       couriers = c;
       notifications = n;
+      dbSettings = s;
+      adminUsers = adm;
 
       // Auto-populate starter menu and tables if empty so the restaurant works immediately
       if (menu.length === 0 && rawSlug !== 'demo') {
@@ -1378,7 +1502,89 @@ app.get('/api/tenant-bootstrap/:slug', async (req, res) => {
       orders = memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === rawSlug);
       tables = memoryStore.tables.filter((t: any) => (t.tenantId || 'demo') === rawSlug);
       if (tables.length === 0) tables = memoryStore.tables;
+      if (memoryStore.settings && (memoryStore.settings.tenantId || 'demo') === rawSlug) {
+        dbSettings = memoryStore.settings;
+      }
     }
+
+    // Build tenant-isolated admin list so tenant owner can log in immediately
+    if (adminUsers.length === 0 && computedTenant) {
+      adminUsers = [{
+        id: `adm-${rawSlug}`,
+        tenantId: rawSlug,
+        name: `${computedTenant.ownerName || computedTenant.name} (Admin)`,
+        username: computedTenant.adminUsername || 'admin',
+        passwordHash: computedTenant.adminPasswordHash || '1111',
+        role: 'superadmin',
+        createdAt: computedTenant.createdAt || new Date().toISOString()
+      }];
+    }
+
+    // Build clean, white-labeled settings for this tenant (NO Savoria leaks for client tenants!)
+    const tenantDefaults = rawSlug === 'demo'
+      ? {
+          name: 'SAVORIA RESTAURANT',
+          slogan: 'Sharqona Mehmondo‘stlik & Yuksak Gastronomik San’at',
+          bio: 'Toshkentning eng nufuzli milliy va premium restorani. Sharqona mehmondo‘stlik va yuksak gastronomiya san’ati.',
+          heroBadge: 'Toshkentning eng nufuzli milliy & premium restorani',
+          heroTitle: 'Sharqona Mehmondo‘stlik &',
+          heroHighlight: 'Yuksak Gastronomik San’at',
+          address: 'Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko\'chasi 45-uy',
+          phone: '+998 71 200-71-12',
+          email: 'lazizshavkatov712@gmail.com',
+          stir: '309 814 552',
+          serviceFeePercent: 12,
+          headerMessage: 'Savoria Restoraniga xush kelibsiz!',
+          footerReceiptMessage: 'Tashrifingiz uchun minnatdormiz! Yoqimli ishtaha tilaymiz.',
+          wifiPassword: 'savoria_vip_guest',
+          workingDays: 'Dushanba - Yakshanba:',
+          workingHours: '10:00 - 23:30',
+          specialHoursLabel: 'Osh va Tandir:',
+          specialHoursValue: '11:30 dan',
+          eventsTitle: 'Jonli Musiqa Oqshomi:',
+          eventsSchedule: 'Juma - Yakshanba (19:30 - 23:00)',
+          telegram: '@lazizshavkatov712',
+          instagram: '@shavkatovv.o07',
+          aboutTitle: 'Nafislik va Mehmondo‘stlik Makoni',
+          aboutQuote: '«Savoria» — bu shunchaki dasturxon emas. Bu oila davrasi va yuksak gastronomiya san\'ati.',
+          aboutDescription1: '2011-yildan buyon «Savoria» restorani Toshkent shahrida haqiqiy sharqona mehmondo\'stlikni namoyish etib kelmoqda.',
+          aboutDescription2: 'Bizning maqsadimiz — har bir mehmonimizga unutilmas iliq xotiralar taqdim etishdir.'
+        }
+      : {
+          name: computedTenant.name,
+          slogan: `${computedTenant.name} — Mazali taomlar va sifatli xizmat`,
+          bio: `${computedTenant.name} — shinam muhit, sara taomlar va tezkor xizmat maskani.`,
+          heroBadge: `${computedTenant.name} — Rasmiy Menyu`,
+          heroTitle: `${computedTenant.name} —`,
+          heroHighlight: 'Betakror Ta’m va Yuqori Sifat',
+          address: computedTenant.settings?.address || 'Toshkent shahri',
+          phone: computedTenant.phone || '',
+          email: computedTenant.email || '',
+          stir: computedTenant.settings?.stir || '',
+          serviceFeePercent: 10,
+          headerMessage: `${computedTenant.name} ga xush kelibsiz!`,
+          footerReceiptMessage: 'Tashrifingiz uchun minnatdormiz!',
+          wifiPassword: '',
+          workingDays: 'Dushanba - Yakshanba:',
+          workingHours: '09:00 - 23:00',
+          specialHoursLabel: '',
+          specialHoursValue: '',
+          eventsTitle: '',
+          eventsSchedule: '',
+          telegram: computedTenant.telegram || '',
+          instagram: '',
+          aboutTitle: 'Sifat va Mehmondo‘stlik Makoni',
+          aboutQuote: `«${computedTenant.name}» — bu har bir taom mehr va yuksak mahorat bilan tayyorlanadigan maskan.`,
+          aboutDescription1: `${computedTenant.name} jamoasi mehmonlarimizga doimo yangi va mazali taomlarni taqdim etishdan mamnun.`,
+          aboutDescription2: 'Biz uchun har bir mehmonning roziligi va samimiy tabassumi eng oliy qadriyatdir.'
+        };
+
+    const mergedSettings = {
+      ...tenantDefaults,
+      ...(computedTenant.settings || {}),
+      ...(dbSettings || {}),
+      tenantId: rawSlug
+    };
 
     res.json({
       success: true,
@@ -1390,11 +1596,8 @@ app.get('/api/tenant-bootstrap/:slug', async (req, res) => {
       reservations,
       waiters,
       couriers,
-      settings: settings || {
-        name: computedTenant.name,
-        phone: computedTenant.phone,
-        serviceFeePercent: 12
-      },
+      adminUsers,
+      settings: mergedSettings,
       notifications,
       serverTime: new Date().toISOString()
     });
@@ -1403,28 +1606,40 @@ app.get('/api/tenant-bootstrap/:slug', async (req, res) => {
   }
 });
 
-// 3. Complete App Bootstrap (Single-roundtrip fast initialization for all devices)
+function getTenantId(req: express.Request): string {
+  const raw = req.query?.tenantId || req.body?.tenantId || req.headers['x-tenant-id'] || 'demo';
+  return String(raw).toLowerCase().trim() || 'demo';
+}
+
+function stripMongoInternalFields(obj: any): any {
+  if (!obj || typeof obj !== 'object') return {};
+  const { _id, __v, createdAt, updatedAt, ...rest } = obj;
+  return rest;
+}
+
+// 3. Complete App Bootstrap (Single-roundtrip fast initialization scoped by tenantId)
 app.get('/api/bootstrap', async (req, res) => {
   try {
-    let menu = memoryStore.menu;
-    let orders = memoryStore.orders;
-    let tables = memoryStore.tables;
-    let reservations = memoryStore.reservations;
-    let waiters = memoryStore.waiters;
-    let couriers = memoryStore.couriers;
+    const tenantId = getTenantId(req);
+    let menu = memoryStore.menu.filter((m: any) => (m.tenantId || 'demo') === tenantId);
+    let orders = memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId);
+    let tables = memoryStore.tables.filter((t: any) => (t.tenantId || 'demo') === tenantId);
+    let reservations = memoryStore.reservations.filter((r: any) => (r.tenantId || 'demo') === tenantId);
+    let waiters = memoryStore.waiters.filter((w: any) => (w.tenantId || 'demo') === tenantId);
+    let couriers = memoryStore.couriers.filter((c: any) => (c.tenantId || 'demo') === tenantId);
     let settings = memoryStore.settings;
-    let notifications = memoryStore.notifications;
+    let notifications = memoryStore.notifications.filter((n: any) => (n.tenantId || 'demo') === tenantId);
 
     if (isMongoConnected) {
       const [m, o, t, r, w, c, s, n] = await Promise.all([
-        MenuItemModel.find().lean(),
-        OrderModel.find().sort({ createdAt: -1 }).lean(),
-        TableModel.find().lean(),
-        ReservationModel.find().sort({ createdAt: -1 }).lean(),
-        WaiterModel.find().lean(),
-        CourierModel.find().lean(),
-        SettingsModel.findOne().lean(),
-        NotificationModel.find().sort({ timestamp: -1 }).limit(25).lean()
+        MenuItemModel.find({ tenantId }).lean(),
+        OrderModel.find({ tenantId }).sort({ createdAt: -1 }).lean(),
+        TableModel.find({ tenantId }).lean(),
+        ReservationModel.find({ tenantId }).sort({ createdAt: -1 }).lean(),
+        WaiterModel.find({ tenantId }).lean(),
+        CourierModel.find({ tenantId }).lean(),
+        SettingsModel.findOne({ tenantId }).lean(),
+        NotificationModel.find({ tenantId }).sort({ timestamp: -1 }).limit(25).lean()
       ]);
       menu = m;
       orders = o;
@@ -1438,6 +1653,7 @@ app.get('/api/bootstrap', async (req, res) => {
 
     res.json({
       success: true,
+      tenantId,
       mongoConnected: isMongoConnected,
       menu,
       orders,
@@ -1454,14 +1670,15 @@ app.get('/api/bootstrap', async (req, res) => {
   }
 });
 
-// 4. Menu Items CRUD (Real-Time Broadcast)
+// 4. Menu Items CRUD (Tenant-Isolated & Real-Time Broadcast)
 app.get('/api/menu', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     if (isMongoConnected) {
-      const items = await MenuItemModel.find().lean();
+      const items = await MenuItemModel.find({ tenantId }).lean();
       return res.json(items);
     }
-    res.json(memoryStore.menu);
+    res.json(memoryStore.menu.filter((m: any) => (m.tenantId || 'demo') === tenantId));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1469,13 +1686,14 @@ app.get('/api/menu', async (req, res) => {
 
 app.post('/api/menu', async (req, res) => {
   try {
-    const itemData = req.body;
+    const tenantId = getTenantId(req);
+    const itemData = { ...stripMongoInternalFields(req.body), tenantId };
     let saved = itemData;
 
     if (isMongoConnected) {
       saved = await MenuItemModel.findOneAndUpdate(
         { id: itemData.id },
-        itemData,
+        { $set: itemData },
         { upsert: true, new: true }
       ).lean();
     } else {
@@ -1484,7 +1702,6 @@ app.post('/api/menu', async (req, res) => {
       else memoryStore.menu.unshift(itemData);
     }
 
-    // Real-Time broadcast to all connected devices (Customers, Waiters, Kitchen, Admin)
     broadcastRealtimeEvent('menu:created', saved);
     res.json(saved);
   } catch (err: any) {
@@ -1495,7 +1712,7 @@ app.post('/api/menu', async (req, res) => {
 app.patch('/api/menu/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = stripMongoInternalFields(req.body);
     let updated = null;
 
     if (isMongoConnected) {
@@ -1521,12 +1738,16 @@ app.patch('/api/menu/:id', async (req, res) => {
 app.delete('/api/menu/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const tenantId = getTenantId(req);
+    let existingTenantId = tenantId;
     if (isMongoConnected) {
+      const existing = await MenuItemModel.findOne({ id }).lean();
+      if (existing?.tenantId) existingTenantId = existing.tenantId;
       await MenuItemModel.deleteOne({ id });
     }
     memoryStore.menu = memoryStore.menu.filter(i => i.id !== id);
 
-    broadcastRealtimeEvent('menu:deleted', { id });
+    broadcastRealtimeEvent('menu:deleted', { id, tenantId: existingTenantId });
     res.json({ success: true, id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1536,11 +1757,12 @@ app.delete('/api/menu/:id', async (req, res) => {
 // 5. Orders CRUD & Real-Time Notification System
 app.get('/api/orders', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     if (isMongoConnected) {
-      const orders = await OrderModel.find().sort({ createdAt: -1 }).lean();
+      const orders = await OrderModel.find({ tenantId }).sort({ createdAt: -1 }).lean();
       return res.json(orders);
     }
-    res.json(memoryStore.orders);
+    res.json(memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1548,15 +1770,14 @@ app.get('/api/orders', async (req, res) => {
 
 app.post('/api/orders', async (req, res) => {
   try {
-    const orderData = req.body;
-    const tenantId = (orderData.tenantId || req.query.tenantId || req.headers['x-tenant-id'] || 'demo').toString();
-    orderData.tenantId = tenantId;
+    const tenantId = getTenantId(req);
+    const orderData = { ...stripMongoInternalFields(req.body), tenantId };
     let saved = orderData;
 
     if (isMongoConnected) {
       saved = await OrderModel.findOneAndUpdate(
         { id: orderData.id },
-        orderData,
+        { $set: orderData },
         { upsert: true, new: true }
       ).lean();
     } else {
@@ -1565,8 +1786,6 @@ app.post('/api/orders', async (req, res) => {
       else memoryStore.orders.unshift(orderData);
     }
 
-    // REAL-TIME BROADCAST:
-    // Kitchen, POS, Waiters, and Admin instantly receive order, ring chime, and increment badges!
     broadcastRealtimeEvent('order:created', saved);
     res.json(saved);
   } catch (err: any) {
@@ -1577,7 +1796,7 @@ app.post('/api/orders', async (req, res) => {
 app.patch('/api/orders/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = stripMongoInternalFields(req.body);
     let updated = null;
 
     if (isMongoConnected) {
@@ -1591,8 +1810,6 @@ app.patch('/api/orders/:id', async (req, res) => {
     }
 
     if (updated) {
-      // REAL-TIME BROADCAST:
-      // Customers, Couriers, Kitchen, and Waiters immediately see updated status
       broadcastRealtimeEvent('order:updated', updated);
       return res.json(updated);
     }
@@ -1605,12 +1822,16 @@ app.patch('/api/orders/:id', async (req, res) => {
 app.delete('/api/orders/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const tenantId = getTenantId(req);
+    let existingTenantId = tenantId;
     if (isMongoConnected) {
+      const existing = await OrderModel.findOne({ id }).lean();
+      if (existing?.tenantId) existingTenantId = existing.tenantId;
       await OrderModel.deleteOne({ id });
     }
     memoryStore.orders = memoryStore.orders.filter(o => o.id !== id);
 
-    broadcastRealtimeEvent('order:deleted', { id });
+    broadcastRealtimeEvent('order:deleted', { id, tenantId: existingTenantId });
     res.json({ success: true, id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1620,11 +1841,12 @@ app.delete('/api/orders/:id', async (req, res) => {
 // 6. Tables & Zones Management
 app.get('/api/tables', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     if (isMongoConnected) {
-      const tables = await TableModel.find().lean();
+      const tables = await TableModel.find({ tenantId }).lean();
       return res.json(tables);
     }
-    res.json(memoryStore.tables);
+    res.json(memoryStore.tables.filter((t: any) => (t.tenantId || 'demo') === tenantId));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1632,10 +1854,11 @@ app.get('/api/tables', async (req, res) => {
 
 app.post('/api/tables', async (req, res) => {
   try {
-    const tableData = req.body;
+    const tenantId = getTenantId(req);
+    const tableData = { ...stripMongoInternalFields(req.body), tenantId };
     let saved = tableData;
     if (isMongoConnected) {
-      saved = await TableModel.findOneAndUpdate({ id: tableData.id }, tableData, { upsert: true, new: true }).lean();
+      saved = await TableModel.findOneAndUpdate({ id: tableData.id }, { $set: tableData }, { upsert: true, new: true }).lean();
     } else {
       const idx = memoryStore.tables.findIndex(t => t.id === tableData.id);
       if (idx >= 0) memoryStore.tables[idx] = tableData;
@@ -1651,9 +1874,15 @@ app.post('/api/tables', async (req, res) => {
 app.delete('/api/tables/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    if (isMongoConnected) await TableModel.deleteOne({ id });
+    const tenantId = getTenantId(req);
+    let existingTenantId = tenantId;
+    if (isMongoConnected) {
+      const existing = await TableModel.findOne({ id }).lean();
+      if (existing?.tenantId) existingTenantId = existing.tenantId;
+      await TableModel.deleteOne({ id });
+    }
     memoryStore.tables = memoryStore.tables.filter(t => t.id !== id);
-    broadcastRealtimeEvent('table:deleted', { id });
+    broadcastRealtimeEvent('table:deleted', { id, tenantId: existingTenantId });
     res.json({ success: true, id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1663,11 +1892,12 @@ app.delete('/api/tables/:id', async (req, res) => {
 // 7. Reservations Endpoints
 app.get('/api/reservations', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     if (isMongoConnected) {
-      const resList = await ReservationModel.find().sort({ createdAt: -1 }).lean();
+      const resList = await ReservationModel.find({ tenantId }).sort({ createdAt: -1 }).lean();
       return res.json(resList);
     }
-    res.json(memoryStore.reservations);
+    res.json(memoryStore.reservations.filter((r: any) => (r.tenantId || 'demo') === tenantId));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1675,10 +1905,11 @@ app.get('/api/reservations', async (req, res) => {
 
 app.post('/api/reservations', async (req, res) => {
   try {
-    const resData = req.body;
+    const tenantId = getTenantId(req);
+    const resData = { ...stripMongoInternalFields(req.body), tenantId };
     let saved = resData;
     if (isMongoConnected) {
-      saved = await ReservationModel.findOneAndUpdate({ id: resData.id }, resData, { upsert: true, new: true }).lean();
+      saved = await ReservationModel.findOneAndUpdate({ id: resData.id }, { $set: resData }, { upsert: true, new: true }).lean();
     } else {
       memoryStore.reservations.unshift(resData);
     }
@@ -1692,7 +1923,7 @@ app.post('/api/reservations', async (req, res) => {
 app.patch('/api/reservations/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = stripMongoInternalFields(req.body);
     let updated = null;
     if (isMongoConnected) {
       updated = await ReservationModel.findOneAndUpdate({ id }, { $set: updates }, { new: true }).lean();
@@ -1713,10 +1944,23 @@ app.patch('/api/reservations/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/reservations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (isMongoConnected) await ReservationModel.deleteOne({ id });
+    memoryStore.reservations = memoryStore.reservations.filter(r => r.id !== id);
+    res.json({ success: true, id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 8. Waiter Call Buzzer (Real-Time table alert)
 app.post('/api/waiter-call', (req, res) => {
   const { table, timestamp } = req.body;
+  const tenantId = getTenantId(req);
   const alertData = {
+    tenantId,
     table: table || 'Stol',
     timestamp: timestamp || Date.now()
   };
@@ -1724,17 +1968,19 @@ app.post('/api/waiter-call', (req, res) => {
   res.json({ success: true, alert: alertData });
 });
 
-// 8b. Admin Real-Time Push Notification Dispatcher (To Customers, Waiters, or Specific Table)
+// 8b. Admin Real-Time Push Notification Dispatcher
 app.post('/api/realtime/broadcast-notification', async (req, res) => {
   try {
     const { title, message, target, targetTable, priority, sender } = req.body;
+    const tenantId = getTenantId(req);
     const notif = {
       id: `push-${Date.now()}`,
+      tenantId,
       title: title || 'Admin Bildirishnomasi',
       message: message || '',
-      target: target || 'all', // 'all' | 'waiters' | 'customers' | 'table'
+      target: target || 'all',
       targetTable: targetTable || '',
-      priority: priority || 'normal', // 'normal' | 'alert' | 'urgent'
+      priority: priority || 'normal',
       sender: sender || 'Administrator',
       timestamp: Date.now()
     };
@@ -1755,11 +2001,12 @@ app.post('/api/realtime/broadcast-notification', async (req, res) => {
 
 app.get('/api/notifications', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     if (isMongoConnected) {
-      const list = await NotificationModel.find().sort({ timestamp: -1 }).limit(30).lean();
+      const list = await NotificationModel.find({ tenantId }).sort({ timestamp: -1 }).limit(30).lean();
       return res.json(list);
     }
-    res.json(memoryStore.notifications);
+    res.json(memoryStore.notifications.filter((n: any) => (n.tenantId || 'demo') === tenantId));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1768,11 +2015,12 @@ app.get('/api/notifications', async (req, res) => {
 // 9. Staff & Couriers
 app.get('/api/waiters', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     if (isMongoConnected) {
-      const waiters = await WaiterModel.find().lean();
+      const waiters = await WaiterModel.find({ tenantId }).lean();
       return res.json(waiters);
     }
-    res.json(memoryStore.waiters);
+    res.json(memoryStore.waiters.filter((w: any) => (w.tenantId || 'demo') === tenantId));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1780,10 +2028,11 @@ app.get('/api/waiters', async (req, res) => {
 
 app.post('/api/waiters', async (req, res) => {
   try {
-    const waiter = req.body;
+    const tenantId = getTenantId(req);
+    const waiter = { ...stripMongoInternalFields(req.body), tenantId };
     let saved = waiter;
     if (isMongoConnected) {
-      saved = await WaiterModel.findOneAndUpdate({ id: waiter.id }, waiter, { upsert: true, new: true }).lean();
+      saved = await WaiterModel.findOneAndUpdate({ id: waiter.id }, { $set: waiter }, { upsert: true, new: true }).lean();
     } else {
       const idx = memoryStore.waiters.findIndex(w => w.id === waiter.id);
       if (idx >= 0) memoryStore.waiters[idx] = waiter;
@@ -1799,9 +2048,10 @@ app.post('/api/waiters', async (req, res) => {
 app.delete('/api/waiters/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const tenantId = getTenantId(req);
     if (isMongoConnected) await WaiterModel.deleteOne({ id });
     memoryStore.waiters = memoryStore.waiters.filter(w => w.id !== id);
-    broadcastRealtimeEvent('waiter:deleted', { id });
+    broadcastRealtimeEvent('waiter:deleted', { id, tenantId });
     res.json({ success: true, id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1810,11 +2060,12 @@ app.delete('/api/waiters/:id', async (req, res) => {
 
 app.get('/api/couriers', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     if (isMongoConnected) {
-      const couriers = await CourierModel.find().lean();
+      const couriers = await CourierModel.find({ tenantId }).lean();
       return res.json(couriers);
     }
-    res.json(memoryStore.couriers);
+    res.json(memoryStore.couriers.filter((c: any) => (c.tenantId || 'demo') === tenantId));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1822,10 +2073,11 @@ app.get('/api/couriers', async (req, res) => {
 
 app.post('/api/couriers', async (req, res) => {
   try {
-    const courier = req.body;
+    const tenantId = getTenantId(req);
+    const courier = { ...stripMongoInternalFields(req.body), tenantId };
     let saved = courier;
     if (isMongoConnected) {
-      saved = await CourierModel.findOneAndUpdate({ id: courier.id }, courier, { upsert: true, new: true }).lean();
+      saved = await CourierModel.findOneAndUpdate({ id: courier.id }, { $set: courier }, { upsert: true, new: true }).lean();
     } else {
       const idx = memoryStore.couriers.findIndex(c => c.id === courier.id);
       if (idx >= 0) memoryStore.couriers[idx] = courier;
@@ -1841,22 +2093,28 @@ app.post('/api/couriers', async (req, res) => {
 app.delete('/api/couriers/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const tenantId = getTenantId(req);
     if (isMongoConnected) await CourierModel.deleteOne({ id });
     memoryStore.couriers = memoryStore.couriers.filter(c => c.id !== id);
-    broadcastRealtimeEvent('courier:deleted', { id });
+    broadcastRealtimeEvent('courier:deleted', { id, tenantId });
     res.json({ success: true, id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 10. Settings & Admins
+// 10. Settings & Admins (Tenant-Scoped!)
 app.get('/api/settings', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     if (isMongoConnected) {
-      const s = await SettingsModel.findOne().lean();
+      const s = await SettingsModel.findOne({ tenantId }).lean();
       if (s) return res.json(s);
+      const t = await TenantModel.findOne({ slug: tenantId }).lean();
+      if (t?.settings) return res.json({ ...t.settings, tenantId });
     }
+    const memT = memoryStore.tenants.find((t: any) => t.slug === tenantId);
+    if (memT?.settings) return res.json({ ...memT.settings, tenantId });
     res.json(memoryStore.settings);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1865,15 +2123,49 @@ app.get('/api/settings', async (req, res) => {
 
 app.put('/api/settings', async (req, res) => {
   try {
-    const newSettings = req.body;
-    let saved = newSettings;
+    const tenantId = getTenantId(req);
+    const cleanSettings = stripMongoInternalFields(req.body);
+    cleanSettings.tenantId = tenantId;
+    let saved: any = cleanSettings;
+
     if (isMongoConnected) {
-      saved = await SettingsModel.findOneAndUpdate({}, newSettings, { upsert: true, new: true }).lean();
+      saved = await SettingsModel.findOneAndUpdate(
+        { tenantId },
+        { $set: cleanSettings },
+        { upsert: true, new: true }
+      ).lean();
+
+      const tenantUpdates: Record<string, any> = {
+        settings: cleanSettings
+      };
+      if (cleanSettings.name) tenantUpdates.name = cleanSettings.name;
+      if (cleanSettings.phone !== undefined) tenantUpdates.phone = cleanSettings.phone;
+      if (cleanSettings.email !== undefined) tenantUpdates.email = cleanSettings.email;
+      if (cleanSettings.telegram !== undefined) tenantUpdates.telegram = cleanSettings.telegram;
+
+      await TenantModel.findOneAndUpdate(
+        { slug: tenantId },
+        { $set: tenantUpdates }
+      );
     } else {
-      memoryStore.settings = newSettings;
+      if (tenantId === 'demo') {
+        memoryStore.settings = cleanSettings;
+      }
+      const idx = memoryStore.tenants.findIndex((t: any) => t.slug === tenantId);
+      if (idx >= 0) {
+        memoryStore.tenants[idx] = {
+          ...memoryStore.tenants[idx],
+          name: cleanSettings.name || memoryStore.tenants[idx].name,
+          phone: cleanSettings.phone ?? memoryStore.tenants[idx].phone,
+          email: cleanSettings.email ?? memoryStore.tenants[idx].email,
+          telegram: cleanSettings.telegram ?? memoryStore.tenants[idx].telegram,
+          settings: cleanSettings
+        };
+      }
     }
-    broadcastRealtimeEvent('settings:updated', saved);
-    res.json(saved);
+
+    broadcastRealtimeEvent('settings:updated', { ...saved, tenantId });
+    res.json({ ...saved, tenantId });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1881,11 +2173,12 @@ app.put('/api/settings', async (req, res) => {
 
 app.get('/api/admins', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     if (isMongoConnected) {
-      const admins = await AdminUserModel.find().lean();
+      const admins = await AdminUserModel.find({ tenantId }).lean();
       return res.json(admins);
     }
-    res.json(memoryStore.admins);
+    res.json(memoryStore.admins.filter((a: any) => (a.tenantId || 'demo') === tenantId));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1893,10 +2186,11 @@ app.get('/api/admins', async (req, res) => {
 
 app.post('/api/admins', async (req, res) => {
   try {
-    const admin = req.body;
+    const tenantId = getTenantId(req);
+    const admin = { ...stripMongoInternalFields(req.body), tenantId };
     let saved = admin;
     if (isMongoConnected) {
-      saved = await AdminUserModel.findOneAndUpdate({ id: admin.id }, admin, { upsert: true, new: true }).lean();
+      saved = await AdminUserModel.findOneAndUpdate({ id: admin.id }, { $set: admin }, { upsert: true, new: true }).lean();
     } else {
       const idx = memoryStore.admins.findIndex(a => a.id === admin.id);
       if (idx >= 0) memoryStore.admins[idx] = admin;
@@ -1911,11 +2205,12 @@ app.post('/api/admins', async (req, res) => {
 // 11. Centralized Real-Time Analytics API
 app.get('/api/analytics', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     let orders: any[] = [];
     if (isMongoConnected) {
-      orders = await OrderModel.find().lean();
+      orders = await OrderModel.find({ tenantId }).lean();
     } else {
-      orders = memoryStore.orders;
+      orders = memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId);
     }
 
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -1927,7 +2222,6 @@ app.get('/api/analytics', async (req, res) => {
     const todayRevenue = todayPaidOrders.reduce((sum, o) => sum + (o.finalTotal || 0), 0);
     const avgCheck = paidOrders.length > 0 ? Math.round(totalRevenue / paidOrders.length) : 0;
 
-    // Delivery vs Dine-in
     const deliveryOrders = orders.filter(o => o.type === 'dostavka');
     const dineInOrders = orders.filter(o => o.type === 'zal');
 
@@ -1950,18 +2244,19 @@ app.get('/api/analytics', async (req, res) => {
 // 11b. Sales Dashboard Aggregated Analytics (For Recharts Visualizations)
 app.get('/api/analytics/sales-dashboard', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     let orders: any[] = [];
     let menu: any[] = [];
     if (isMongoConnected) {
       const [o, m] = await Promise.all([
-        OrderModel.find().lean(),
-        MenuItemModel.find().lean()
+        OrderModel.find({ tenantId }).lean(),
+        MenuItemModel.find({ tenantId }).lean()
       ]);
       orders = o;
       menu = m;
     } else {
-      orders = memoryStore.orders;
-      menu = memoryStore.menu;
+      orders = memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId);
+      menu = memoryStore.menu.filter((m: any) => (m.tenantId || 'demo') === tenantId);
     }
 
     const paidOrders = orders.filter(o => o.isPaid || o.status === 'yopildi');
@@ -1972,7 +2267,6 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10);
 
-    // This week & month calculations
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -1984,7 +2278,6 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
     const thisWeekRevenue = thisWeekPaid.reduce((sum, o) => sum + (o.finalTotal || 0), 0);
     const thisMonthRevenue = thisMonthPaid.reduce((sum, o) => sum + (o.finalTotal || 0), 0);
 
-    // 1. Daily Trends (Last 10 days)
     const monthNamesUz = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
     const dailyMap = new Map<string, { date: string; fullDate: string; daromad: number; buyurtmalar: number; zal: number; dostavka: number; avgCheck: number }>();
 
@@ -1992,8 +2285,7 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const iso = d.toISOString().slice(0, 10);
       const label = `${d.getDate()}-${monthNamesUz[d.getMonth()]}`;
-      // Base realistic restaurant baseline + actual live orders from MongoDB
-      const baselineOrders = Math.floor(18 + Math.sin(i * 1.5) * 8 + (d.getDay() === 0 || d.getDay() === 6 ? 12 : 0));
+      const baselineOrders = tenantId === 'demo' ? Math.floor(18 + Math.sin(i * 1.5) * 8 + (d.getDay() === 0 || d.getDay() === 6 ? 12 : 0)) : 0;
       const baselineRevenue = baselineOrders * 125000;
       dailyMap.set(iso, {
         date: label,
@@ -2002,11 +2294,10 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
         buyurtmalar: baselineOrders,
         zal: Math.round(baselineRevenue * 0.72),
         dostavka: Math.round(baselineRevenue * 0.28),
-        avgCheck: 125000
+        avgCheck: baselineOrders > 0 ? 125000 : 0
       });
     }
 
-    // Overlay real MongoDB orders
     for (const ord of paidOrders) {
       const iso = (ord.createdAt || '').slice(0, 10);
       if (dailyMap.has(iso)) {
@@ -2023,34 +2314,36 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
     }
     const dailyTrends = Array.from(dailyMap.values());
 
-    // 2. Monthly Trends (Last 7 months)
-    const monthlyTrends = [
-      { month: 'May', daromad: 38500000, buyurtmalar: 310, zal: 27500000, dostavka: 11000000, sofFoyda: 16170000 },
-      { month: 'Iyun', daromad: 42100000, buyurtmalar: 345, zal: 29800000, dostavka: 12300000, sofFoyda: 17682000 },
-      { month: 'Iyul', daromad: 46800000, buyurtmalar: 390, zal: 33200000, dostavka: 13600000, sofFoyda: 19656000 },
-      { month: 'Avgust', daromad: 51200000, buyurtmalar: 420, zal: 36800000, dostavka: 14400000, sofFoyda: 21504000 },
-      { month: 'Sentabr', daromad: 47900000, buyurtmalar: 388, zal: 34100000, dostavka: 13800000, sofFoyda: 20118000 },
-      { month: 'Oktabr', daromad: 54600000 + Math.round(totalRevenue * 0.6), buyurtmalar: 452 + orders.length, zal: 39200000, dostavka: 15400000, sofFoyda: 22932000 },
-      { month: 'Noyabr', daromad: Math.max(12800000, totalRevenue), buyurtmalar: Math.max(94, orders.length), zal: Math.round(Math.max(12800000, totalRevenue) * 0.74), dostavka: Math.round(Math.max(12800000, totalRevenue) * 0.26), sofFoyda: Math.round(Math.max(12800000, totalRevenue) * 0.42) }
-    ];
+    const isDemo = tenantId === 'demo';
+    const monthlyTrends = isDemo
+      ? [
+          { month: 'May', daromad: 38500000, buyurtmalar: 310, zal: 27500000, dostavka: 11000000, sofFoyda: 16170000 },
+          { month: 'Iyun', daromad: 42100000, buyurtmalar: 345, zal: 29800000, dostavka: 12300000, sofFoyda: 17682000 },
+          { month: 'Iyul', daromad: 46800000, buyurtmalar: 390, zal: 33200000, dostavka: 13600000, sofFoyda: 19656000 },
+          { month: 'Avgust', daromad: 51200000, buyurtmalar: 420, zal: 36800000, dostavka: 14400000, sofFoyda: 21504000 },
+          { month: 'Sentabr', daromad: 47900000, buyurtmalar: 388, zal: 34100000, dostavka: 13800000, sofFoyda: 20118000 },
+          { month: 'Oktabr', daromad: 54600000 + Math.round(totalRevenue * 0.6), buyurtmalar: 452 + orders.length, zal: 39200000, dostavka: 15400000, sofFoyda: 22932000 },
+          { month: 'Noyabr', daromad: Math.max(12800000, totalRevenue), buyurtmalar: Math.max(94, orders.length), zal: Math.round(Math.max(12800000, totalRevenue) * 0.74), dostavka: Math.round(Math.max(12800000, totalRevenue) * 0.26), sofFoyda: Math.round(Math.max(12800000, totalRevenue) * 0.42) }
+        ]
+      : [
+          { month: monthNamesUz[now.getMonth()], daromad: totalRevenue, buyurtmalar: orders.length, zal: paidOrders.filter(o => o.type === 'zal').reduce((s, o) => s + (o.finalTotal || 0), 0), dostavka: paidOrders.filter(o => o.type === 'dostavka').reduce((s, o) => s + (o.finalTotal || 0), 0), sofFoyda: Math.round(totalRevenue * 0.4) }
+        ];
 
-    // 3. Channels Distribution
-    const zalSum = paidOrders.filter(o => o.type === 'zal').reduce((s, o) => s + (o.finalTotal || 0), 0) + 38400000;
-    const dostavkaSum = paidOrders.filter(o => o.type === 'dostavka').reduce((s, o) => s + (o.finalTotal || 0), 0) + 14200000;
-    const olibKetishSum = paidOrders.filter(o => o.type === 'olib_ketish').reduce((s, o) => s + (o.finalTotal || 0), 0) + 4800000;
-    const grandChannelsTotal = zalSum + dostavkaSum + olibKetishSum;
+    const zalSum = paidOrders.filter(o => o.type === 'zal').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 38400000 : 0);
+    const dostavkaSum = paidOrders.filter(o => o.type === 'dostavka').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 14200000 : 0);
+    const olibKetishSum = paidOrders.filter(o => o.type === 'olib_ketish').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 4800000 : 0);
+    const grandChannelsTotal = Math.max(1, zalSum + dostavkaSum + olibKetishSum);
 
     const channelDistribution = [
-      { name: 'Zal (Restoran)', value: zalSum, count: 320, percentage: Math.round((zalSum / grandChannelsTotal) * 100), color: '#d4af37' },
-      { name: 'Yetkazib berish (Dostavka)', value: dostavkaSum, count: 140, percentage: Math.round((dostavkaSum / grandChannelsTotal) * 100), color: '#0ea5e9' },
-      { name: 'Olib ketish (Takeaway)', value: olibKetishSum, count: 48, percentage: Math.round((olibKetishSum / grandChannelsTotal) * 100), color: '#10b981' }
+      { name: 'Zal (Restoran)', value: zalSum, count: paidOrders.filter(o => o.type === 'zal').length + (isDemo ? 320 : 0), percentage: Math.round((zalSum / grandChannelsTotal) * 100), color: '#d4af37' },
+      { name: 'Yetkazib berish (Dostavka)', value: dostavkaSum, count: paidOrders.filter(o => o.type === 'dostavka').length + (isDemo ? 140 : 0), percentage: Math.round((dostavkaSum / grandChannelsTotal) * 100), color: '#0ea5e9' },
+      { name: 'Olib ketish (Takeaway)', value: olibKetishSum, count: paidOrders.filter(o => o.type === 'olib_ketish').length + (isDemo ? 48 : 0), percentage: Math.round((olibKetishSum / grandChannelsTotal) * 100), color: '#10b981' }
     ];
 
-    // 4. Payment Methods Distribution
-    const cardSum = paidOrders.filter(o => o.paymentMethod === 'uzcard_humo').reduce((s, o) => s + (o.finalTotal || 0), 0) + 29400000;
-    const onlineSum = paidOrders.filter(o => o.paymentMethod === 'payme_click').reduce((s, o) => s + (o.finalTotal || 0), 0) + 18200000;
-    const cashSum = paidOrders.filter(o => o.paymentMethod === 'naqd').reduce((s, o) => s + (o.finalTotal || 0), 0) + 9800000;
-    const grandPayTotal = cardSum + onlineSum + cashSum;
+    const cardSum = paidOrders.filter(o => o.paymentMethod === 'uzcard_humo').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 29400000 : 0);
+    const onlineSum = paidOrders.filter(o => o.paymentMethod === 'payme_click').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 18200000 : 0);
+    const cashSum = paidOrders.filter(o => o.paymentMethod === 'naqd').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 9800000 : 0);
+    const grandPayTotal = Math.max(1, cardSum + onlineSum + cashSum);
 
     const paymentDistribution = [
       { name: 'Uzcard / Humo', value: cardSum, percentage: Math.round((cardSum / grandPayTotal) * 100), color: '#3b82f6' },
@@ -2058,24 +2351,24 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
       { name: 'Naqd Pul', value: cashSum, percentage: Math.round((cashSum / grandPayTotal) * 100), color: '#f59e0b' }
     ];
 
-    // 5. Hourly Peak Trends (11:00 to 23:00)
-    const hourlyTrends = [
-      { hour: '11:00', tushum: 850000, buyurtmalar: 7 },
-      { hour: '12:00', tushum: 2450000, buyurtmalar: 19 },
-      { hour: '13:00', tushum: 4890000, buyurtmalar: 36 },
-      { hour: '14:00', tushum: 3120000, buyurtmalar: 24 },
-      { hour: '15:00', tushum: 1450000, buyurtmalar: 11 },
-      { hour: '16:00', tushum: 1100000, buyurtmalar: 9 },
-      { hour: '17:00', tushum: 1950000, buyurtmalar: 15 },
-      { hour: '18:00', tushum: 4200000, buyurtmalar: 31 },
-      { hour: '19:00', tushum: 7650000, buyurtmalar: 58 },
-      { hour: '20:00', tushum: 8900000, buyurtmalar: 64 },
-      { hour: '21:00', tushum: 6450000, buyurtmalar: 45 },
-      { hour: '22:00', tushum: 3200000, buyurtmalar: 22 },
-      { hour: '23:00', tushum: 1250000, buyurtmalar: 9 }
-    ];
+    const hourlyTrends = isDemo
+      ? [
+          { hour: '11:00', tushum: 850000, buyurtmalar: 7 },
+          { hour: '12:00', tushum: 2450000, buyurtmalar: 19 },
+          { hour: '13:00', tushum: 4890000, buyurtmalar: 36 },
+          { hour: '14:00', tushum: 3120000, buyurtmalar: 24 },
+          { hour: '15:00', tushum: 1450000, buyurtmalar: 11 },
+          { hour: '16:00', tushum: 1100000, buyurtmalar: 9 },
+          { hour: '17:00', tushum: 1950000, buyurtmalar: 15 },
+          { hour: '18:00', tushum: 4200000, buyurtmalar: 31 },
+          { hour: '19:00', tushum: 7650000, buyurtmalar: 58 },
+          { hour: '20:00', tushum: 8900000, buyurtmalar: 64 },
+          { hour: '21:00', tushum: 6450000, buyurtmalar: 45 },
+          { hour: '22:00', tushum: 3200000, buyurtmalar: 22 },
+          { hour: '23:00', tushum: 1250000, buyurtmalar: 9 }
+        ]
+      : ['11:00', '13:00', '15:00', '17:00', '19:00', '21:00', '23:00'].map(h => ({ hour: h, tushum: 0, buyurtmalar: 0 }));
 
-    // 6. Top Dishes Performance
     const itemMap = new Map<string, { name: string; category: string; quantity: number; revenue: number }>();
     for (const ord of paidOrders) {
       if (Array.isArray(ord.items)) {
@@ -2091,38 +2384,44 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
       }
     }
 
-    const defaultTopDishes = [
-      { name: 'To‘y Oshi (Savoria Maxsus Osh)', category: 'milliy', quantity: 184, revenue: 12512000 },
-      { name: 'Tandir Qozon Kabob', category: 'milliy', quantity: 126, revenue: 11970000 },
-      { name: 'G‘ijduvoncha Qiyma Shashlik', category: 'shashlik', quantity: 240, revenue: 7680000 },
-      { name: 'Wagyu Ribeye Steyk', category: 'steak', quantity: 38, revenue: 13680000 },
-      { name: 'Turkcha Pista Paxlava', category: 'shirinliklar', quantity: 142, revenue: 7810000 },
-      { name: 'San-Sebastian Cheesecake', category: 'shirinliklar', quantity: 118, revenue: 8260000 }
-    ];
+    const defaultTopDishes = isDemo
+      ? [
+          { name: 'To‘y Oshi (Savoria Maxsus Osh)', category: 'milliy', quantity: 184, revenue: 12512000 },
+          { name: 'Tandir Qozon Kabob', category: 'milliy', quantity: 126, revenue: 11970000 },
+          { name: 'G‘ijduvoncha Qiyma Shashlik', category: 'shashlik', quantity: 240, revenue: 7680000 },
+          { name: 'Wagyu Ribeye Steyk', category: 'steak', quantity: 38, revenue: 13680000 },
+          { name: 'Turkcha Pista Paxlava', category: 'shirinliklar', quantity: 142, revenue: 7810000 },
+          { name: 'San-Sebastian Cheesecake', category: 'shirinliklar', quantity: 118, revenue: 8260000 }
+        ]
+      : menu.slice(0, 5).map((m: any) => ({ name: m.name, category: m.category, quantity: 0, revenue: 0 }));
 
-    const mergedDishes = defaultTopDishes.map(d => {
-      const live = itemMap.get(d.name);
-      if (live) {
-        return {
-          ...d,
-          quantity: d.quantity + live.quantity,
-          revenue: d.revenue + live.revenue
-        };
-      }
-      return d;
-    }).sort((a, b) => b.revenue - a.revenue);
+    const mergedDishes = (itemMap.size > 0 && !isDemo
+      ? Array.from(itemMap.values())
+      : defaultTopDishes.map(d => {
+          const live = itemMap.get(d.name);
+          if (live) {
+            return {
+              ...d,
+              quantity: d.quantity + live.quantity,
+              revenue: d.revenue + live.revenue
+            };
+          }
+          return d;
+        })
+    ).sort((a, b) => b.revenue - a.revenue);
 
     res.json({
       success: true,
+      tenantId,
       timestamp: new Date().toISOString(),
       kpis: {
-        totalRevenue: totalRevenue + 57400000,
-        todayRevenue: todayRevenue > 0 ? todayRevenue : 4850000,
-        thisWeekRevenue: thisWeekRevenue > 0 ? thisWeekRevenue : 32400000,
-        thisMonthRevenue: thisMonthRevenue > 0 ? thisMonthRevenue : 54600000,
-        totalOrdersCount: totalOrdersCount + 512,
-        todayOrdersCount: todayPaid.length > 0 ? todayPaid.length : 38,
-        avgCheck: avgCheck > 0 ? avgCheck : 142000,
+        totalRevenue: totalRevenue + (isDemo ? 57400000 : 0),
+        todayRevenue: todayRevenue > 0 ? todayRevenue : (isDemo ? 4850000 : 0),
+        thisWeekRevenue: thisWeekRevenue > 0 ? thisWeekRevenue : (isDemo ? 32400000 : 0),
+        thisMonthRevenue: thisMonthRevenue > 0 ? thisMonthRevenue : (isDemo ? 54600000 : 0),
+        totalOrdersCount: totalOrdersCount + (isDemo ? 512 : 0),
+        todayOrdersCount: todayPaid.length > 0 ? todayPaid.length : (isDemo ? 38 : 0),
+        avgCheck: avgCheck > 0 ? avgCheck : (isDemo ? 142000 : 0),
         growthPercentage: 18.4,
         profitMarginRate: 42
       },
@@ -2138,9 +2437,10 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
   }
 });
 
-// 12. Safe Bulk Sync Endpoint (Never destructively overwrites, only upserts)
+// 12. Safe Bulk Sync Endpoint (Tenant-Scoped)
 app.post('/api/sync-all', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     const { orders, menuItems, waiters, couriers, adminUsers, settings, tables, reservations } = req.body;
     let syncedCount = 0;
 
@@ -2148,43 +2448,51 @@ app.post('/api/sync-all', async (req, res) => {
       if (Array.isArray(orders) && orders.length > 0) {
         for (const o of orders) {
           if (!o || !o.id) continue;
-          await OrderModel.findOneAndUpdate({ id: o.id }, o, { upsert: true });
+          await OrderModel.findOneAndUpdate({ id: o.id }, { $set: { ...stripMongoInternalFields(o), tenantId } }, { upsert: true });
           syncedCount++;
         }
       }
       if (Array.isArray(menuItems) && menuItems.length > 0) {
         for (const item of menuItems) {
-          await MenuItemModel.findOneAndUpdate({ id: item.id }, item, { upsert: true });
+          if (!item || !item.id) continue;
+          await MenuItemModel.findOneAndUpdate({ id: item.id }, { $set: { ...stripMongoInternalFields(item), tenantId } }, { upsert: true });
           syncedCount++;
         }
       }
       if (Array.isArray(tables) && tables.length > 0) {
         for (const tbl of tables) {
-          await TableModel.findOneAndUpdate({ id: tbl.id }, tbl, { upsert: true });
+          if (!tbl || !tbl.id) continue;
+          await TableModel.findOneAndUpdate({ id: tbl.id }, { $set: { ...stripMongoInternalFields(tbl), tenantId } }, { upsert: true });
         }
       }
       if (Array.isArray(reservations) && reservations.length > 0) {
         for (const r of reservations) {
-          await ReservationModel.findOneAndUpdate({ id: r.id }, r, { upsert: true });
+          if (!r || !r.id) continue;
+          await ReservationModel.findOneAndUpdate({ id: r.id }, { $set: { ...stripMongoInternalFields(r), tenantId } }, { upsert: true });
         }
       }
       if (Array.isArray(waiters) && waiters.length > 0) {
         for (const w of waiters) {
-          await WaiterModel.findOneAndUpdate({ id: w.id }, w, { upsert: true });
+          if (!w || !w.id) continue;
+          await WaiterModel.findOneAndUpdate({ id: w.id }, { $set: { ...stripMongoInternalFields(w), tenantId } }, { upsert: true });
         }
       }
       if (Array.isArray(couriers) && couriers.length > 0) {
         for (const c of couriers) {
-          await CourierModel.findOneAndUpdate({ id: c.id }, c, { upsert: true });
+          if (!c || !c.id) continue;
+          await CourierModel.findOneAndUpdate({ id: c.id }, { $set: { ...stripMongoInternalFields(c), tenantId } }, { upsert: true });
         }
       }
       if (Array.isArray(adminUsers) && adminUsers.length > 0) {
         for (const a of adminUsers) {
-          await AdminUserModel.findOneAndUpdate({ id: a.id }, a, { upsert: true });
+          if (!a || !a.id) continue;
+          await AdminUserModel.findOneAndUpdate({ id: a.id }, { $set: { ...stripMongoInternalFields(a), tenantId } }, { upsert: true });
         }
       }
       if (settings && typeof settings === 'object') {
-        await SettingsModel.findOneAndUpdate({}, settings, { upsert: true });
+        const cleanS = { ...stripMongoInternalFields(settings), tenantId };
+        await SettingsModel.findOneAndUpdate({ tenantId }, { $set: cleanS }, { upsert: true });
+        await TenantModel.findOneAndUpdate({ slug: tenantId }, { $set: { settings: cleanS } });
       }
 
       return res.json({ 
@@ -2201,51 +2509,50 @@ app.post('/api/sync-all', async (req, res) => {
   }
 });
 
-// 13. Two-Way Instant Full Sync (Ensures Phone and PC have identical stats and full menu)
+// 13. Two-Way Instant Full Sync (Tenant-Scoped)
 app.post('/api/sync/full', async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     const { localOrders = [], localMenuItems = [] } = req.body;
     let syncedOrders = localOrders;
     let syncedMenu = localMenuItems;
 
     if (isMongoConnected) {
-      // Ingest any local orders into MongoDB
       if (Array.isArray(localOrders) && localOrders.length > 0) {
         for (const o of localOrders) {
           if (!o || !o.id) continue;
-          await OrderModel.findOneAndUpdate({ id: o.id }, o, { upsert: true, new: true });
+          await OrderModel.findOneAndUpdate({ id: o.id }, { $set: { ...stripMongoInternalFields(o), tenantId } }, { upsert: true, new: true });
         }
       }
 
-      // Ingest local menu items if provided
       if (Array.isArray(localMenuItems) && localMenuItems.length > 0) {
         for (const it of localMenuItems) {
           if (!it || !it.id) continue;
-          await MenuItemModel.findOneAndUpdate({ id: it.id }, it, { upsert: true, new: true });
+          await MenuItemModel.findOneAndUpdate({ id: it.id }, { $set: { ...stripMongoInternalFields(it), tenantId } }, { upsert: true, new: true });
         }
       }
 
-      // Fetch unified authoritative orders and menu from MongoDB
-      syncedOrders = await OrderModel.find().sort({ createdAt: -1 }).lean();
-      syncedMenu = await MenuItemModel.find().lean();
+      syncedOrders = await OrderModel.find({ tenantId }).sort({ createdAt: -1 }).lean();
+      syncedMenu = await MenuItemModel.find({ tenantId }).lean();
     } else {
       if (Array.isArray(localOrders)) {
-        localOrders.forEach(lo => {
+        localOrders.forEach((lo: any) => {
           if (!lo || !lo.id) return;
+          const itemWithTenant = { ...lo, tenantId };
           const idx = memoryStore.orders.findIndex(o => o.id === lo.id);
-          if (idx >= 0) memoryStore.orders[idx] = lo;
-          else memoryStore.orders.unshift(lo);
+          if (idx >= 0) memoryStore.orders[idx] = itemWithTenant;
+          else memoryStore.orders.unshift(itemWithTenant);
         });
       }
-      syncedOrders = memoryStore.orders;
-      syncedMenu = memoryStore.menu;
+      syncedOrders = memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId);
+      syncedMenu = memoryStore.menu.filter((m: any) => (m.tenantId || 'demo') === tenantId);
     }
 
-    // Broadcast unified orders to all connected devices via SSE
-    broadcastRealtimeEvent('orders:synced', syncedOrders);
+    broadcastRealtimeEvent('orders:synced', { tenantId, orders: syncedOrders, menu: syncedMenu });
 
     res.json({
       success: true,
+      tenantId,
       mongoConnected: isMongoConnected,
       orders: syncedOrders,
       menu: syncedMenu

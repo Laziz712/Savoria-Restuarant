@@ -24,7 +24,7 @@ export const CustomerMenuView: React.FC = () => {
     menuItems, createOrder, formatUZS, settings, 
     openReceiptModal, orders, t, setRoute, tables,
     chefs, reviews, addReview, reservations, addReservation,
-    currentTableContext, isMenuOnlyMode, callWaiterFromTable
+    currentTableContext, isMenuOnlyMode, callWaiterFromTable, currentTenant
   } = useRestaurant();
 
   const [waiterCalledBanner, setWaiterCalledBanner] = useState(false);
@@ -227,7 +227,7 @@ export const CustomerMenuView: React.FC = () => {
       authorRole: 'Doimiy mehmon',
       rating: newReviewRating,
       comment: newReviewComment.trim(),
-      recommendedDish: 'To‘y Oshi (Savoria Maxsus Osh)'
+      recommendedDish: menuItems[0]?.name || settings.name || currentTenant?.name || 'Maxsus Taom'
     });
     setReviewSubmittedSuccess(true);
     setNewReviewComment('');
@@ -305,24 +305,24 @@ export const CustomerMenuView: React.FC = () => {
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
-          {/* Top Badge: "Toshkentning eng nufuzli milliy & premium restorani" */}
+          {/* Top Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-950/60 border border-orange-500/40 text-orange-400 text-xs sm:text-sm font-medium tracking-wide mb-6 shadow-[0_0_20px_rgba(249,115,22,0.15)] animate-fade-in">
             <span className="text-amber-400">✨</span>
-            <span>Toshkentning eng nufuzli milliy & premium restorani</span>
+            <span>{settings.heroBadge || settings.slogan || settings.name || currentTenant?.name || 'Xush kelibsiz'}</span>
             <span className="text-amber-400">✨</span>
           </div>
 
           {/* Large Serif Title */}
           <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-white tracking-tight leading-[1.15] mb-6 text-balance">
-            Sharqona Mehmondo‘stlik & <br className="hidden sm:inline" />
+            {settings.heroTitle || settings.name || currentTenant?.name || 'Restoran'} <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-orange-400 via-amber-300 to-orange-500 bg-clip-text text-transparent">
-              Yuksak Gastronomik San’at
+              {settings.heroHighlight || settings.slogan || 'Mazali Taomlar & Sifatli Xizmat'}
             </span>
           </h1>
 
           {/* Subtitle */}
           <p className="text-sm sm:text-base md:text-lg text-neutral-300 max-w-2xl leading-relaxed mb-8">
-            Asil o‘zbek milliy taomlari va xalqaro lazzatlar uyg‘unligi. Tandirda pishgan barra qozon kabob, G‘ijduvon shashligi va Gaziantep pista baklavasi sizni kutmoqda.
+            {settings.bio || settings.slogan || "Yangi tayyorlangan sara taomlar, samimiy muhit va qulay buyurtma tizimi sizning xizmatingizda."}
           </p>
 
           {/* CTA Buttons */}
@@ -397,7 +397,7 @@ export const CustomerMenuView: React.FC = () => {
             KATTA MENYU & NARXLAR
           </div>
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-serif font-bold text-white tracking-tight mb-3">
-            Savoria Restorani Shohona Menyusi
+            {settings.name || currentTenant?.name || 'Restoran'} Menyusi
           </h2>
           <p className="text-sm sm:text-base text-neutral-400">
             Har bir taom eng sara yangi masalliqlardan, oshpazlarimizning ko'p yillik maxfiy retseptlari asosida mehr bilan tayyorlanadi.
@@ -647,10 +647,10 @@ export const CustomerMenuView: React.FC = () => {
               FALSAFAMIZ & TARIXIMIZ
             </div>
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-serif font-bold text-white tracking-tight mb-4">
-              Savoria Restaurant — Nafislik va Mehmondo‘stlik Makoni
+              {settings.aboutTitle || `${settings.name || currentTenant?.name || 'Restoran'} — Nafislik va Mehmondo‘stlik Makoni`}
             </h2>
             <p className="text-sm sm:text-base text-neutral-300 italic font-serif leading-relaxed">
-              «Savoria» — bu shunchaki dasturxon emas. Bu oila davrasi, do'stona suhbatlar va yuksak gastronomiya san'ati birlashgan shukuhli dargohdir.
+              {settings.aboutQuote || `«${settings.name || currentTenant?.name || 'Restoranimiz'}» — oila davrasi, do'stona suhbatlar va yuksak gastronomiya san'ati birlashgan shinam maskan.`}
             </p>
           </div>
 
@@ -663,11 +663,11 @@ export const CustomerMenuView: React.FC = () => {
               </h3>
 
               <p className="text-neutral-300 text-sm sm:text-base leading-relaxed">
-                2011-yildan buyon «Savoria» restorani Toshkent shahrida haqiqiy sharqona mehmondo'stlik va jahon andozalaridagi servis madaniyatini namoyish etib kelmoqda. Biz har tong eng barra, saralangan go'sht va tabiiy sabzavotlarni shaxsan tekshirib qabul qilamiz.
+                {settings.aboutDescription1 || `${settings.name || currentTenant?.name || 'Restoranimiz'}da har bir taom eng sara yangi masalliqlar va mahoratli oshpazlar mehri bilan tayyorlanadi.`}
               </p>
 
               <p className="text-neutral-300 text-sm sm:text-base leading-relaxed">
-                Bizning maqsadimiz — har bir mehmonimizga nafaqat mazali taom ulashish, balki ularga unutilmas iliq xotiralar, shinam muhit va qadrdonlik hissini taqdim etishdir. Maxsus tandirlarimizda damlangan qozon kabob va ochiq mangaldagi shashliklarimiz esa restoranimizning faxridir.
+                {settings.aboutDescription2 || "Bizning maqsadimiz — har bir mehmonimizga mazali taomlar, shinam muhit va yuqori darajadagi xizmat ko'rsatish madaniyatini taqdim etishdir."}
               </p>
 
               {/* 2 Highlight Stat Cards */}
@@ -1141,7 +1141,7 @@ export const CustomerMenuView: React.FC = () => {
             MEHMONLARIMIZ FIKRLARI
           </div>
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-serif font-bold text-white tracking-tight mb-3">
-            Mijozlarimiz Savoria Restorani Haqida
+            Mijozlarimiz {settings.name || currentTenant?.name || 'Restoranimiz'} Haqida
           </h2>
           <p className="text-sm sm:text-base text-neutral-400">
             Biz har bir mehmonimizning xursand bo'lib ketishi va yana qaytib kelishi uchun chin dildan harakat qilamiz.

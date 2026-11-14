@@ -10,16 +10,17 @@ import { TableManagementTab } from './TableManagementTab';
 import { AdminReservationsTab } from './AdminReservationsTab';
 import { ReceiptsHistoryView } from './ReceiptsHistoryView';
 import { SalesDashboardView } from './SalesDashboardView';
+import { AdminSettingsView } from './AdminSettingsView';
 import { 
   Receipt, Utensils, Bike, BarChart3, 
   UtensilsCrossed, Users, Menu, X, ChevronRight, ChevronLeft, LogOut, ShieldCheck,
-  LayoutGrid, CalendarCheck, ScrollText, TrendingUp
+  LayoutGrid, CalendarCheck, ScrollText, TrendingUp, Settings
 } from 'lucide-react';
 
 export const AdminHubView: React.FC = () => {
   const { 
     adminSubTab, setAdminSubTab, orders, couriers, 
-    waiters, adminUsers, adminLogout, tables, reservations, t
+    waiters, adminUsers, adminLogout, tables, reservations, settings, currentTenant, t
   } = useRestaurant();
 
   const [isModuleDrawerOpen, setIsModuleDrawerOpen] = useState(false);
@@ -115,6 +116,12 @@ export const AdminHubView: React.FC = () => {
       icon: <Users className="w-4 h-4" />, 
       badge: staffCount,
       badgeColor: 'bg-emerald-500/20 text-emerald-300'
+    },
+    {
+      id: 'sozlamalar',
+      label: 'Sozlamalar',
+      subLabel: 'Restoran nomi, manzil, aloqa, ish vaqti, parol',
+      icon: <Settings className="w-4 h-4" />
     },
   ];
 
@@ -345,7 +352,7 @@ export const AdminHubView: React.FC = () => {
                   ADMIN BOSHQARUV MODULLARI
                 </div>
                 <div className="text-[10px] text-[#d4af37] tracking-widest font-mono uppercase">
-                  SAVORIA RESTAURANT
+                  {settings.name || currentTenant?.name || 'Restoran'}
                 </div>
               </div>
               <button
@@ -421,7 +428,7 @@ export const AdminHubView: React.FC = () => {
 
             {/* Drawer Footer */}
             <div className="p-4 border-t border-[#1e2230] bg-[#090a10] text-[11px] text-neutral-400 text-center font-mono">
-              SAVORIA RESTAURANT · Admin Hub
+              {settings.name || currentTenant?.name || 'Restoran'} · Admin Hub
             </div>
           </div>
         </div>
@@ -451,6 +458,7 @@ export const AdminHubView: React.FC = () => {
             <StaffManagementTab />
           </div>
         )}
+        {adminSubTab === 'sozlamalar' && <AdminSettingsView />}
       </div>
     </div>
   );

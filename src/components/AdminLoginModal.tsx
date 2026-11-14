@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { 
   Lock, KeyRound, Eye, EyeOff, X, User, 
@@ -10,7 +10,7 @@ export const AdminLoginModal: React.FC = () => {
   const { 
     showAdminLoginModal, setShowAdminLoginModal, 
     adminLogin, waiterLogin, waiters, adminUsers,
-    setRoute, setAdminSubTab, t 
+    setRoute, setAdminSubTab, settings, currentTenant, t 
   } = useRestaurant();
 
   // Role: 'admin' | 'waiter' | 'cashier'
@@ -19,6 +19,18 @@ export const AdminLoginModal: React.FC = () => {
   // Credentials
   const [selectedAdminId, setSelectedAdminId] = useState<string>(adminUsers[0]?.username || 'admin');
   const [selectedWaiterId, setSelectedWaiterId] = useState<string>(waiters[0]?.id || '');
+
+  useEffect(() => {
+    if (adminUsers.length > 0 && !adminUsers.some(u => u.username === selectedAdminId)) {
+      setSelectedAdminId(adminUsers[0].username);
+    }
+  }, [adminUsers, selectedAdminId]);
+
+  useEffect(() => {
+    if (waiters.length > 0 && !waiters.some(w => w.id === selectedWaiterId)) {
+      setSelectedWaiterId(waiters[0].id);
+    }
+  }, [waiters, selectedWaiterId]);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [usePinPad, setUsePinPad] = useState(false);
@@ -110,10 +122,12 @@ export const AdminLoginModal: React.FC = () => {
         {/* Brand Header */}
         <div className="text-center pt-2 pb-5">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2a2415] to-[#12131d] border border-[#d4af37]/60 mx-auto flex items-center justify-center text-[#d4af37] shadow-[0_0_20px_rgba(212,175,55,0.25)] mb-3">
-            <span className="font-serif font-bold text-2xl tracking-tighter">S</span>
+            <span className="font-serif font-bold text-2xl tracking-tighter">
+              {(settings.name || currentTenant?.name || 'R')[0].toUpperCase()}
+            </span>
           </div>
           <h2 className="font-serif font-bold text-lg sm:text-xl text-white tracking-widest uppercase">
-            SAVORIA RESTAURANT
+            {settings.name || currentTenant?.name || 'Restoran'}
           </h2>
           <p className="text-xs text-[#d4af37]/90 font-mono mt-0.5 tracking-wide">
             Tizimga Kirish & Avtorizatsiya

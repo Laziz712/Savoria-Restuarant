@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 export const XisobotAnalyticsView: React.FC = () => {
-  const { orders, menuItems, formatUZS, settings, syncCloudData, isSyncingCloud, mongoStatus } = useRestaurant();
+  const { orders, menuItems, formatUZS, settings, syncCloudData, isSyncingCloud, mongoStatus, tenantSlug, currentTenant } = useRestaurant();
 
   const [timeRange, setTimeRange] = useState<'bugun' | '7kun' | 'oy'>('bugun');
   const [showZReportModal, setShowZReportModal] = useState(false);
@@ -94,7 +94,7 @@ export const XisobotAnalyticsView: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `savoria_hisobot_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `${(tenantSlug || 'restoran').toLowerCase()}_hisobot_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -114,7 +114,7 @@ export const XisobotAnalyticsView: React.FC = () => {
                 MOLIYAVIY XISOBOT VA STATISTIKA
               </h1>
               <p className="text-xs text-neutral-400 font-mono">
-                Savoria Restorani daromad tahlili, o'rtacha chek va taomlar reytingi
+                {settings.name || currentTenant?.name || 'Restoran'} daromad tahlili, o'rtacha chek va taomlar reytingi
               </p>
             </div>
           </div>

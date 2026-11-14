@@ -27,7 +27,7 @@ const AppContent: React.FC = () => {
     activeRoute, setRoute, isAdminAuthenticated, 
     setShowAdminLoginModal, orders, t,
     isMenuOnlyMode, currentTableContext, callWaiterFromTable,
-    currentPath, navigateTo
+    currentPath, navigateTo, settings, currentTenant, tenantSlug, isDemoMode
   } = useRestaurant();
 
   const [waiterCalledMob, setWaiterCalledMob] = React.useState(false);
@@ -199,7 +199,7 @@ const AppContent: React.FC = () => {
       {/* Thermal Receipt Modal (Active when check opened or paid) */}
       <ThermalReceiptModal />
 
-      {/* Luxury Footer Matching Screenshot 10 */}
+      {/* Footer */}
       <footer className="border-t border-[#1b1e2a] bg-[#07080c] pt-14 pb-12 px-4 sm:px-6 lg:px-8 text-neutral-400 text-xs">
         <div className="max-w-7xl mx-auto">
           {/* 4-Column Footer Grid */}
@@ -208,17 +208,17 @@ const AppContent: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg border border-[#ea580c]/50 bg-gradient-to-br from-[#2a1810] to-[#12131a] flex items-center justify-center text-orange-400 font-serif font-bold text-sm shadow-[0_0_12px_rgba(234,88,12,0.25)]">
-                  S
+                  {(settings.name || currentTenant?.name || 'R')[0].toUpperCase()}
                 </div>
                 <div className="font-serif font-bold text-white tracking-wider text-base">
-                  SAVORIA RESTAURANT
+                  {settings.name || currentTenant?.name || 'Restoran'}
                 </div>
               </div>
               <p className="text-xs text-neutral-400 leading-relaxed">
-                Toshkentning eng nufuzli milliy va premium restorani. Sharqona mehmondo‘stlik va yuksak gastronomiya san’ati.
+                {settings.bio || settings.slogan || 'Mazali taomlar va sifatli xizmat.'}
               </p>
               <div className="text-[11px] text-amber-400/90 font-medium">
-                ★ 4.9/5.0 (500+ mamnun mehmonlar)
+                ★ 4.9/5.0 (Mamnun mehmonlar tanlovi)
               </div>
             </div>
 
@@ -228,22 +228,33 @@ const AppContent: React.FC = () => {
                 Bog‘lanish
               </h4>
               <ul className="space-y-2 text-xs text-neutral-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-orange-400">📍</span>
-                  <span>Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko'chasi 45-uy</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-orange-400">📞</span>
-                  <a href="tel:+998712007112" className="hover:text-orange-400 font-mono transition-colors">
-                    +998 71 200-71-12
-                  </a>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-orange-400">✉️</span>
-                  <a href="mailto:lazizshavkatov712@gmail.com" className="hover:text-orange-400 transition-colors">
-                    lazizshavkatov712@gmail.com
-                  </a>
-                </li>
+                {settings.address && (
+                  <li className="flex items-start gap-2">
+                    <span className="text-orange-400">📍</span>
+                    <span>{settings.address}</span>
+                  </li>
+                )}
+                {settings.phone && (
+                  <li className="flex items-center gap-2">
+                    <span className="text-orange-400">📞</span>
+                    <a href={`tel:${settings.phone.replace(/\s+/g, '')}`} className="hover:text-orange-400 font-mono transition-colors">
+                      {settings.phone}
+                    </a>
+                  </li>
+                )}
+                {settings.email && (
+                  <li className="flex items-center gap-2">
+                    <span className="text-orange-400">✉️</span>
+                    <a href={`mailto:${settings.email}`} className="hover:text-orange-400 transition-colors">
+                      {settings.email}
+                    </a>
+                  </li>
+                )}
+                {!settings.address && !settings.phone && !settings.email && (
+                  <li className="text-neutral-500 italic">
+                    Aloqa ma'lumotlari Admin Sozlamalarida kiritiladi
+                  </li>
+                )}
               </ul>
             </div>
 
@@ -253,18 +264,22 @@ const AppContent: React.FC = () => {
                 Ish Vaqti
               </h4>
               <ul className="space-y-2 text-xs text-neutral-300">
-                <li className="flex justify-between">
-                  <span className="text-neutral-400">Dushanba - Yakshanba:</span>
-                  <span className="font-mono text-white">10:00 - 23:30</span>
+                <li className="flex justify-between gap-2">
+                  <span className="text-neutral-400">{settings.workingDays || 'Har kuni'}:</span>
+                  <span className="font-mono text-white">{settings.workingHours || '09:00 - 23:00'}</span>
                 </li>
-                <li className="flex justify-between">
-                  <span className="text-neutral-400">Osh va Tandir:</span>
-                  <span className="font-mono text-white">11:30 dan</span>
-                </li>
-                <li className="pt-2 border-t border-[#181b28]">
-                  <span className="text-orange-400 font-medium">Jonli Musiqa Oqshomi:</span>
-                  <div className="text-[11px] text-neutral-400 mt-0.5">Juma - Yakshanba (19:30 - 23:00)</div>
-                </li>
+                {settings.specialHoursLabel && settings.specialHoursValue && (
+                  <li className="flex justify-between gap-2">
+                    <span className="text-neutral-400">{settings.specialHoursLabel}:</span>
+                    <span className="font-mono text-white">{settings.specialHoursValue}</span>
+                  </li>
+                )}
+                {settings.eventsTitle && settings.eventsSchedule && (
+                  <li className="pt-2 border-t border-[#181b28]">
+                    <span className="text-orange-400 font-medium">{settings.eventsTitle}:</span>
+                    <div className="text-[11px] text-neutral-400 mt-0.5">{settings.eventsSchedule}</div>
+                  </li>
+                )}
               </ul>
             </div>
 
@@ -274,31 +289,39 @@ const AppContent: React.FC = () => {
                 Ijtimoiy Tarmoqlar
               </h4>
               <div className="flex flex-col gap-2">
-                <a
-                  href="https://t.me/lazizshavkatov712"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-2 text-neutral-300 hover:text-orange-400 transition-colors"
-                >
-                  <div className="w-6 h-6 rounded-full bg-[#141724] border border-[#282d42] group-hover:border-orange-500/60 flex items-center justify-center text-orange-400 transition-all">
-                    <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.37.74-.56 2.92-1.27 4.86-2.11 5.83-2.52 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.23 0 .37z" />
-                    </svg>
-                  </div>
-                  <span className="text-xs font-mono">@lazizshavkatov712</span>
-                </a>
+                {settings.telegram && (
+                  <a
+                    href={settings.telegram.startsWith('http') ? settings.telegram : `https://t.me/${settings.telegram.replace(/^@/, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-2 text-neutral-300 hover:text-orange-400 transition-colors"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-[#141724] border border-[#282d42] group-hover:border-orange-500/60 flex items-center justify-center text-orange-400 transition-all">
+                      <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.37.74-.56 2.92-1.27 4.86-2.11 5.83-2.52 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.23 0 .37z" />
+                      </svg>
+                    </div>
+                    <span className="text-xs font-mono">
+                      {settings.telegram.startsWith('http') ? settings.telegram : (settings.telegram.startsWith('@') ? settings.telegram : `@${settings.telegram}`)}
+                    </span>
+                  </a>
+                )}
 
-                <a
-                  href="https://instagram.com/shavkatovv.o07"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-2 text-neutral-300 hover:text-orange-400 transition-colors"
-                >
-                  <div className="w-6 h-6 rounded-full bg-[#141724] border border-[#282d42] group-hover:border-orange-500/60 flex items-center justify-center text-orange-400 transition-all">
-                    <Instagram className="w-3 h-3" />
-                  </div>
-                  <span className="text-xs font-mono">@shavkatovv.o07</span>
-                </a>
+                {settings.instagram && (
+                  <a
+                    href={settings.instagram.startsWith('http') ? settings.instagram : `https://instagram.com/${settings.instagram.replace(/^@/, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-2 text-neutral-300 hover:text-orange-400 transition-colors"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-[#141724] border border-[#282d42] group-hover:border-orange-500/60 flex items-center justify-center text-orange-400 transition-all">
+                      <Instagram className="w-3 h-3" />
+                    </div>
+                    <span className="text-xs font-mono">
+                      {settings.instagram.startsWith('http') ? settings.instagram : (settings.instagram.startsWith('@') ? settings.instagram : `@${settings.instagram}`)}
+                    </span>
+                  </a>
+                )}
 
                 <div className="pt-1">
                   <button
@@ -314,29 +337,40 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Bottom Copyright and URL Bar */}
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-neutral-500 text-[11px]">
-            <div>
-              © 2026 SAVORIA SaaS Platform. Barcha huquqlar himoyalangan.
+          {isDemoMode ? (
+            <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-neutral-500 text-[11px]">
+              <div>
+                © 2026 SAVORIA SaaS Platform. Barcha huquqlar himoyalangan.
+              </div>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => navigateTo('/')}
+                  className="hover:text-amber-400 transition-colors font-mono cursor-pointer"
+                  title="SaaS Bosh Sahifasiga o'tish"
+                >
+                  https://savoria-restaurant.uz/
+                </button>
+                <span>·</span>
+                <button
+                  onClick={() => navigateTo('/superadmin')}
+                  className="hover:text-amber-400 text-neutral-500 transition-colors cursor-pointer"
+                >
+                  Superadmin
+                </button>
+                <span>·</span>
+                <span>100% Bulutli Kafolat</span>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigateTo('/')}
-                className="hover:text-amber-400 transition-colors font-mono cursor-pointer"
-                title="SaaS Bosh Sahifasiga o'tish"
-              >
-                https://savoria-restaurant.uz/
-              </button>
-              <span>·</span>
-              <button
-                onClick={() => navigateTo('/superadmin')}
-                className="hover:text-amber-400 text-neutral-500 transition-colors cursor-pointer"
-              >
-                Superadmin
-              </button>
-              <span>·</span>
-              <span>100% Bulutli Kafolat</span>
+          ) : (
+            <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-neutral-500 text-[11px]">
+              <div>
+                © 2026 {settings.name || currentTenant?.name || 'Restoran'}. Barcha huquqlar himoyalangan.
+              </div>
+              <div className="flex items-center gap-4 font-mono">
+                <span>https://savoria-restaurant.uz/{tenantSlug}</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </footer>
     </div>

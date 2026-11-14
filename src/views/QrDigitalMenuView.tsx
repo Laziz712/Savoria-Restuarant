@@ -29,7 +29,8 @@ interface CategoryBanner {
 export const QrDigitalMenuView: React.FC = () => {
   const { 
     menuItems, settings, formatUZS, currentTableContext, 
-    callWaiterFromTable, setIsMenuOnlyMode, setCurrentTableContext
+    callWaiterFromTable, setIsMenuOnlyMode, setCurrentTableContext,
+    tenantSlug, currentTenant
   } = useRestaurant();
 
   // Navigation State
@@ -121,7 +122,7 @@ export const QrDigitalMenuView: React.FC = () => {
         <div className="relative w-full h-44 sm:h-52 overflow-hidden bg-[#12141f]">
           <img
             src={restaurantCoverImg}
-            alt="Savoria Restaurant"
+            alt={settings.name || currentTenant?.name || 'Restoran'}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e15] via-black/40 to-black/30" />
@@ -149,7 +150,7 @@ export const QrDigitalMenuView: React.FC = () => {
                 setIsMenuOnlyMode(false);
                 setCurrentTableContext(null);
                 try {
-                  window.history.pushState({}, '', '/');
+                  window.history.pushState({}, '', tenantSlug ? `/${tenantSlug}` : '/');
                 } catch {}
               }}
               className="text-[10px] font-mono px-2 py-1 rounded-lg bg-black/60 backdrop-blur-md text-neutral-300 hover:text-white border border-white/20 transition-colors"
@@ -180,12 +181,12 @@ export const QrDigitalMenuView: React.FC = () => {
             2. RESTAURANT TITLE & MENU / BAR PILL SWITCHER (Matching Screenshot 1)
             ========================================================================= */}
         <div className="px-4 pt-4 pb-3">
-          {/* Restaurant Title: "SAVORIA RESTAURANT" */}
+          {/* Restaurant Title */}
           <h1 className="font-serif font-extrabold text-2xl text-white tracking-wide">
-            SAVORIA RESTAURANT
+            {settings.name || currentTenant?.name || 'Restoran'}
           </h1>
           <p className="text-xs text-neutral-400 mt-0.5">
-            Shohona taomlar va premium sharqona mehmondo‘stlik
+            {settings.slogan || settings.bio || 'Shohona taomlar va sifatli xizmat'}
           </p>
 
           {/* Menu / Bar Pill Toggle Buttons (Screenshot 1: Menu vs Bar) */}
@@ -374,86 +375,105 @@ export const QrDigitalMenuView: React.FC = () => {
         </div>
 
         {/* =========================================================================
-            COMPACT SAVORIA FOOTER (Qisqartirilgan restoranning ma'lumotlar paneli)
+            COMPACT RESTAURANT FOOTER
             ========================================================================= */}
         <div className="mt-8 border-t border-[#1f2334] bg-gradient-to-b from-[#0e1018] to-[#08090f] p-4 sm:p-5 rounded-b-3xl space-y-3.5">
           {/* Brand header */}
           <div className="flex items-center justify-between pb-2.5 border-b border-[#1b1f2e]">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#2a2415] to-[#12131d] border border-[#d4af37]/60 flex items-center justify-center text-[#d4af37] font-serif font-bold text-sm shadow">
-                S
+                {(settings.name || currentTenant?.name || 'R')[0].toUpperCase()}
               </div>
               <div>
                 <h4 className="font-serif font-bold text-xs sm:text-sm text-white tracking-wider uppercase">
-                  SAVORIA RESTAURANT
+                  {settings.name || currentTenant?.name || 'Restoran'}
                 </h4>
                 <p className="text-[10px] text-[#d4af37] font-mono">
-                  100% Halol Kafolati · ★ 4.9 (500+ baholar)
+                  {settings.slogan || '100% Halol Kafolati · ★ 4.9'}
                 </p>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono">
-              10:00 - 23:30
-            </span>
+            {settings.workingHours && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono">
+                {settings.workingHours}
+              </span>
+            )}
           </div>
 
           {/* Contact & Hours Quick Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
             {/* Bog'lanish */}
             <div className="bg-[#121521] border border-[#1e2335] rounded-xl p-2.5 space-y-1.5">
-              <a 
-                href="tel:+998712007112" 
-                className="flex items-center gap-2 text-neutral-200 hover:text-emerald-400 font-mono transition-colors"
-              >
-                <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="font-bold">+998 71 200-71-12</span>
-              </a>
-              <div className="flex items-center gap-2 text-neutral-300">
-                <MapPin className="w-3.5 h-3.5 text-[#d4af37] shrink-0" />
-                <span className="truncate">Toshkent, Bunyodkor shohi 45</span>
-              </div>
-              <div className="flex items-center gap-2 text-neutral-400 font-mono text-[10px]">
-                <Mail className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-                <span className="truncate">lazizshavkatov712@gmail.com</span>
-              </div>
+              {settings.phone && (
+                <a 
+                  href={`tel:${settings.phone.replace(/\s+/g, '')}`} 
+                  className="flex items-center gap-2 text-neutral-200 hover:text-emerald-400 font-mono transition-colors"
+                >
+                  <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="font-bold">{settings.phone}</span>
+                </a>
+              )}
+              {settings.address && (
+                <div className="flex items-center gap-2 text-neutral-300">
+                  <MapPin className="w-3.5 h-3.5 text-[#d4af37] shrink-0" />
+                  <span className="truncate">{settings.address}</span>
+                </div>
+              )}
+              {settings.email && (
+                <div className="flex items-center gap-2 text-neutral-400 font-mono text-[10px]">
+                  <Mail className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                  <span className="truncate">{settings.email}</span>
+                </div>
+              )}
             </div>
 
             {/* Ish vaqti & Tarmoqlar */}
             <div className="bg-[#121521] border border-[#1e2335] rounded-xl p-2.5 space-y-1.5">
               <div className="flex items-center gap-2 text-neutral-300">
                 <Clock className="w-3.5 h-3.5 text-[#d4af37] shrink-0" />
-                <span>Har kuni: <b>10:00 - 23:30</b> (Osh: 11:30)</span>
+                <span>
+                  {settings.workingDays || 'Har kuni'}: <b>{settings.workingHours || '09:00 - 23:00'}</b>
+                  {settings.specialHoursLabel && settings.specialHoursValue ? ` (${settings.specialHoursLabel}: ${settings.specialHoursValue})` : ''}
+                </span>
               </div>
-              <div className="flex items-center gap-2 text-amber-400/90 text-[10px]">
-                <Music className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>Jonli musiqa: Juma - Yakshanba (19:30)</span>
-              </div>
-              <div className="flex items-center gap-3 pt-0.5 text-[10px] font-mono">
-                <a 
-                  href="https://t.me/lazizshavkatov712" 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="text-sky-400 hover:underline flex items-center gap-1"
-                >
-                  <span>Telegram: @lazizshavkatov712</span>
-                </a>
-                <span className="text-neutral-600">·</span>
-                <a 
-                  href="https://instagram.com/shavkatovv.o07" 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="text-pink-400 hover:underline flex items-center gap-1"
-                >
-                  <span>Instagram</span>
-                </a>
-              </div>
+              {settings.eventsTitle && settings.eventsSchedule && (
+                <div className="flex items-center gap-2 text-amber-400/90 text-[10px]">
+                  <Music className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>{settings.eventsTitle}: {settings.eventsSchedule}</span>
+                </div>
+              )}
+              {(settings.telegram || settings.instagram) && (
+                <div className="flex items-center gap-3 pt-0.5 text-[10px] font-mono">
+                  {settings.telegram && (
+                    <a 
+                      href={settings.telegram.startsWith('http') ? settings.telegram : `https://t.me/${settings.telegram.replace(/^@/, '')}`} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="text-sky-400 hover:underline flex items-center gap-1"
+                    >
+                      <span>Telegram: {settings.telegram.startsWith('@') ? settings.telegram : `@${settings.telegram}`}</span>
+                    </a>
+                  )}
+                  {settings.telegram && settings.instagram && <span className="text-neutral-600">·</span>}
+                  {settings.instagram && (
+                    <a 
+                      href={settings.instagram.startsWith('http') ? settings.instagram : `https://instagram.com/${settings.instagram.replace(/^@/, '')}`} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="text-pink-400 hover:underline flex items-center gap-1"
+                    >
+                      <span>Instagram</span>
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Copyright & Website */}
           <div className="flex flex-col sm:flex-row items-center justify-between pt-2 border-t border-[#171a26] text-[10px] text-neutral-400 font-mono gap-1 text-center sm:text-left">
-            <span>© 2026 SAVORIA RESTAURANT · 100% Halol</span>
-            <span className="text-[#d4af37]">https://savoria-restaurant.uz</span>
+            <span>© 2026 {settings.name || currentTenant?.name || 'Restoran'} · 100% Halol</span>
+            <span className="text-[#d4af37]">https://savoria-restaurant.uz/{tenantSlug || 'demo'}</span>
           </div>
         </div>
       </div>

@@ -27,13 +27,30 @@ export { restaurantInteriorImg, vipHallImg, gijduvonShashlikImg, turkishBaklavaI
 export const INITIAL_SETTINGS: RestaurantSettings = {
   name: 'SAVORIA RESTAURANT',
   slogan: 'Sharqona Mehmondo‘stlik & Yuksak Gastronomik San’at',
+  bio: 'Toshkentning eng nufuzli milliy va premium restorani. Sharqona mehmondo‘stlik va yuksak gastronomiya san’ati.',
+  heroBadge: 'Toshkentning eng nufuzli milliy & premium restorani',
+  heroTitle: 'Sharqona Mehmondo‘stlik &',
+  heroHighlight: 'Yuksak Gastronomik San’at',
   address: 'Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko\'chasi 45-uy',
   phone: '+998 71 200-71-12',
+  email: 'lazizshavkatov712@gmail.com',
   stir: '309 814 552',
   serviceFeePercent: 12,
   headerMessage: 'Savoria Restoraniga xush kelibsiz!',
   footerReceiptMessage: 'Tashrifingiz uchun minnatdormiz! Yoqimli ishtaha tilaymiz.',
-  wifiPassword: 'savoria_vip_guest'
+  wifiPassword: 'savoria_vip_guest',
+  workingDays: 'Dushanba - Yakshanba:',
+  workingHours: '10:00 - 23:30',
+  specialHoursLabel: 'Osh va Tandir:',
+  specialHoursValue: '11:30 dan',
+  eventsTitle: 'Jonli Musiqa Oqshomi:',
+  eventsSchedule: 'Juma - Yakshanba (19:30 - 23:00)',
+  telegram: '@lazizshavkatov712',
+  instagram: '@shavkatovv.o07',
+  aboutTitle: 'Nafislik va Mehmondo‘stlik Makoni',
+  aboutQuote: '«Savoria» — bu shunchaki dasturxon emas. Bu oila davrasi, do\'stona suhbatlar va yuksak gastronomiya san\'ati birlashgan shukuhli dargohdir.',
+  aboutDescription1: '2011-yildan buyon «Savoria» restorani Toshkent shahrida haqiqiy sharqona mehmondo\'stlik va jahon andozalaridagi servis madaniyatini namoyish etib kelmoqda. Biz har tong eng barra, saralangan go\'sht va tabiiy sabzavotlarni shaxsan tekshirib qabul qilamiz.',
+  aboutDescription2: 'Bizning maqsadimiz — har bir mehmonimizga nafaqat mazali taom ulashish, balki ularga unutilmas iliq xotiralar, shinam muhit va qadrdonlik hissini taqdim etishdir.'
 };
 
 export const INITIAL_MENU_ITEMS: MenuItem[] = [

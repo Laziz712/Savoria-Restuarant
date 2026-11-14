@@ -37,6 +37,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
   const [copiedCard, setCopiedCard] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedOrder, setSubmittedOrder] = useState<any | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Slug check
   const [isSlugChecking, setIsSlugChecking] = useState(false);
@@ -100,7 +101,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
       fetch(`/api/check-slug/${encodeURIComponent(clean)}`)
         .then(r => r.json())
         .then(res => {
-          setSlugStatus({ available: !!res.available, message: res.message || (res.available ? 'Ushbu manzil bo\'sh' : 'Bu manzil band') });
+          setSlugStatus({ available: !!res.available, message: res.message || res.reason || (res.available ? 'Ushbu manzil bo\'sh' : 'Bu manzil band') });
         })
         .catch(() => {
           setSlugStatus({ available: true, message: 'Manzil qulay' });
@@ -136,54 +137,87 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setFormError(null);
 
     if (!file.type.startsWith('image/')) {
-      alert('Iltimos, faqat rasm faylini yuklang (PNG, JPG, WEBP)');
+      setFormError('Iltimos, faqat rasm faylini yuklang (PNG, JPG, WEBP)');
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Rasm hajmi 5MB dan oshmasligi kerak');
+    if (file.size > 10 * 1024 * 1024) {
+      setFormError('Rasm hajmi 10MB dan oshmasligi kerak');
       return;
     }
 
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = () => {
-      setReceiptImage(reader.result as string);
+      const dataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const MAX_DIM = 1400;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            setReceiptImage(canvas.toDataURL('image/jpeg', 0.82));
+          } else {
+            setReceiptImage(dataUrl);
+          }
+        } catch {
+          setReceiptImage(dataUrl);
+        }
+      };
+      img.onerror = () => setReceiptImage(dataUrl);
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
 
     if (!restaurantName.trim()) {
-      alert('Iltimos, restoran nomini kiriting');
+      setFormError('Iltimos, restoran nomini kiriting');
       return;
     }
     if (!slug || slug.length < 3) {
-      alert('Iltimos, kamida 3 belgidan iborat manzil (slug) tanlang');
+      setFormError('Iltimos, kamida 3 belgidan iborat manzil (slug) tanlang');
       return;
     }
     if (slugStatus && !slugStatus.available) {
-      alert('Iltimos, boshqa bo\'sh manzil (slug) tanlang');
+      setFormError('Iltimos, boshqa bo\'sh manzil (slug) tanlang');
       return;
     }
     if (!ownerName.trim()) {
-      alert('Iltimos, egasining ismini kiriting');
+      setFormError('Iltimos, egasining ismini kiriting');
       return;
     }
     if (!phone || phone.length < 9) {
-      alert('Iltimos, telefon raqamingizni kiriting');
+      setFormError('Iltimos, telefon raqamingizni kiriting');
       return;
     }
     if (!adminPassword || adminPassword.length < 4) {
-      alert('Iltimos, admin panel uchun kamida 4 belgili parol o\'ylab toping');
+      setFormError('Iltimos, admin panel uchun kamida 4 belgili parol o\'ylab toping');
       return;
     }
     if (!receiptImage) {
-      alert('Iltimos, to\'lov cheki (skrinshot) rasmini yuklang');
+      setFormError('Iltimos, to\'lov cheki (skrinshot) rasmini yuklang');
       return;
     }
 
@@ -209,14 +243,21 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
         })
       });
 
-      const data = await res.json();
-      if (data && data.success) {
-        setSubmittedOrder(data.order);
+      const rawText = await res.text();
+      let data: any = null;
+      try {
+        data = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        data = null;
+      }
+
+      if (res.ok && data && (data.success || data.id || data.order?.id)) {
+        setSubmittedOrder(data.order || data);
       } else {
-        alert(data.error || 'Xatolik yuz berdi. Iltimos qaytadan urinib ko\'ring.');
+        setFormError(data?.error || (res.status === 413 ? 'Rasm hajmi juda katta, kichikroq skrinshot yuklang.' : 'So\'rovni yuborishda xatolik yuz berdi. Qaytadan urinib ko\'ring.'));
       }
     } catch {
-      alert('Server bilan ulanishda xatolik. Qaytadan urinib ko\'ring.');
+      setFormError('Server bilan ulanishda xatolik. Internetni tekshirib qaytadan urinib ko\'ring.');
     } finally {
       setIsSubmitting(false);
     }
@@ -598,6 +639,14 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
                   </label>
                 </div>
               </div>
+
+              {/* Inline Error Banner */}
+              {formError && (
+                <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-300 text-xs font-medium">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
 
               {/* Submit Button */}
               <div className="pt-3">

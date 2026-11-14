@@ -22,16 +22,19 @@ export const TableQrModal: React.FC<TableQrModalProps> = ({
   onClose,
   mode = 'single'
 }) => {
-  const { setRoute, setCurrentTableContext, setIsMenuOnlyMode } = useRestaurant();
+  const { setRoute, setCurrentTableContext, setIsMenuOnlyMode, settings, currentTenant, tenantSlug } = useRestaurant();
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [activeViewMode, setActiveViewMode] = useState<'single' | 'all'>(mode);
 
   if (!isOpen) return null;
 
+  const brandName = settings?.name || currentTenant?.name || 'Restoran';
+  const brandInitial = brandName[0]?.toUpperCase() || 'R';
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
 
   const getTableQrUrl = (tableName: string) => {
-    return `${currentOrigin}/?table=${encodeURIComponent(tableName)}&mode=menu_only`;
+    const prefix = tenantSlug ? `/${tenantSlug}` : '';
+    return `${currentOrigin}${prefix}/?table=${encodeURIComponent(tableName)}&mode=menu_only`;
   };
 
   const handleCopyLink = (tableName: string) => {
@@ -60,7 +63,7 @@ export const TableQrModal: React.FC<TableQrModalProps> = ({
     const svgUrl = URL.createObjectURL(svgBlob);
     const downloadLink = document.createElement('a');
     downloadLink.href = svgUrl;
-    downloadLink.download = `savoria_qr_${tableName.toLowerCase().replace(/\s+/g, '_')}.svg`;
+    downloadLink.download = `${(tenantSlug || 'restoran').toLowerCase()}_qr_${tableName.toLowerCase().replace(/\s+/g, '_')}.svg`;
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
@@ -158,14 +161,14 @@ export const TableQrModal: React.FC<TableQrModalProps> = ({
 
                   {/* Logo Crest */}
                   <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-[#2a1c10] to-[#12131b] border border-[#d4af37]/60 flex items-center justify-center text-[#d4af37] font-serif font-extrabold text-xl mb-2.5 shadow-lg">
-                    S
+                    {brandInitial}
                   </div>
 
                   <h3 className="font-serif font-extrabold text-white text-base tracking-wider">
-                    SAVORIA RESTAURANT
+                    {brandName}
                   </h3>
                   <div className="text-[10px] uppercase font-mono tracking-widest text-[#d4af37] mb-4">
-                    Shohona Raqamli Menyu
+                    Raqamli Stol Menyusi
                   </div>
 
                   {/* Table Badge */}
@@ -357,7 +360,7 @@ export const TableQrModal: React.FC<TableQrModalProps> = ({
         <div className="px-6 py-4 bg-[#0a0b11] border-t border-[#1e2233] flex items-center justify-between text-xs text-neutral-400">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span className="font-mono text-[11px] text-emerald-400 font-semibold">Real-time Savoria POS & Menu Sync</span>
+            <span className="font-mono text-[11px] text-emerald-400 font-semibold">Real-time {brandName} POS & Menu Sync</span>
           </div>
 
           <button
@@ -378,10 +381,10 @@ export const TableQrModal: React.FC<TableQrModalProps> = ({
           /* Single Printable Stand Badge */
           <div style={{ pageBreakInside: 'avoid', border: '3px solid #000', borderRadius: '16px', padding: '24px', textAlign: 'center', width: '280px', margin: '20px auto', fontFamily: 'serif' }}>
             <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 4px 0', textTransform: 'uppercase', letterSpacing: '2px' }}>
-              SAVORIA RESTAURANT
+              {brandName}
             </h2>
             <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '14px', color: '#555' }}>
-              Shohona Raqamli Menyu
+              Raqamli Stol Menyusi
             </div>
 
             <div style={{ fontSize: '15px', fontWeight: 'bold', padding: '4px 10px', border: '1px solid #000', borderRadius: '8px', display: 'inline-block', marginBottom: '16px' }}>
@@ -411,10 +414,10 @@ export const TableQrModal: React.FC<TableQrModalProps> = ({
             {allTables.map(t => (
               <div key={t.id} style={{ pageBreakInside: 'avoid', border: '2px solid #000', borderRadius: '14px', padding: '16px', textAlign: 'center', fontFamily: 'serif' }}>
                 <h3 style={{ fontSize: '15px', fontWeight: 'bold', margin: '0 0 2px 0', textTransform: 'uppercase' }}>
-                  SAVORIA RESTAURANT
+                  {brandName}
                 </h3>
                 <div style={{ fontSize: '9px', color: '#666', marginBottom: '8px' }}>
-                  Shohona Raqamli Menyu
+                  Raqamli Stol Menyusi
                 </div>
 
                 <div style={{ fontSize: '13px', fontWeight: 'bold', padding: '3px 8px', border: '1px solid #000', borderRadius: '6px', display: 'inline-block', marginBottom: '10px' }}>

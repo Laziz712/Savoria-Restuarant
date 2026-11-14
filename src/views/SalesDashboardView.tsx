@@ -68,7 +68,7 @@ interface SalesDashboardData {
 }
 
 export const SalesDashboardView: React.FC = () => {
-  const { orders, formatUZS, mongoStatus, isRealtimeConnected } = useRestaurant();
+  const { orders, formatUZS, mongoStatus, isRealtimeConnected, tenantSlug } = useRestaurant();
 
   const [period, setPeriod] = useState<'kunlik' | 'oylik'>('kunlik');
   const [metricView, setMetricView] = useState<'daromad' | 'buyurtmalar' | 'ikkalasi'>('daromad');
@@ -79,7 +79,10 @@ export const SalesDashboardView: React.FC = () => {
   const fetchSalesData = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/analytics/sales-dashboard');
+      const slug = tenantSlug || 'demo';
+      const res = await fetch(`/api/analytics/sales-dashboard?tenantId=${encodeURIComponent(slug)}`, {
+        headers: { 'X-Tenant-Id': slug }
+      });
       const data = await res.json();
       if (data && data.success) {
         setDashboardData(data);
@@ -94,7 +97,7 @@ export const SalesDashboardView: React.FC = () => {
 
   useEffect(() => {
     fetchSalesData();
-  }, [orders.length]); // Auto-refresh when new orders arrive via real-time SSE
+  }, [orders.length, tenantSlug]); // Auto-refresh when new orders arrive or tenant changes
 
   // Custom Dark Glass Tooltip for Recharts
   const CustomTooltip = ({ active, payload, label }: any) => {

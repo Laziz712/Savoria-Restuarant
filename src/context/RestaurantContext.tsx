@@ -136,8 +136,9 @@ interface RestaurantContextType {
   settleOrderPayment: (orderId: string, method: PaymentMethod) => void;
   cancelOrder: (orderId: string) => void;
 
-  // Restaurant settings
+  // Restaurant settings & tenant auth
   updateSettings: (newSettings: Partial<RestaurantSettings>) => void;
+  updateTenantAdminPassword: (newPassword: string) => Promise<boolean>;
 
   // Formatters
   formatUZS: (amount: number) => string;
@@ -189,125 +190,150 @@ const getImageForDish = (id: string, defaultImage?: string): string => {
   return match?.image || defaultImage || '';
 };
 
+const extractSlugFromPath = (path: string): string => {
+  const cleaned = path.split('?')[0].replace(/\/+$/, '');
+  const segments = cleaned.split('/').filter(Boolean);
+  if (segments.length === 0) return '';
+  const first = segments[0].toLowerCase();
+  if (['superadmin', 'buy', 'pricing', 'api', 'login'].includes(first)) return '';
+  return first;
+};
+
+const buildNeutralTenantSettings = (slug: string): RestaurantSettings => {
+  if (slug === 'demo') return INITIAL_SETTINGS;
+  const displayName = slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'Restoran';
+  return {
+    name: displayName,
+    slogan: '',
+    bio: '',
+    heroBadge: '',
+    heroTitle: displayName,
+    heroHighlight: '',
+    address: '',
+    phone: '',
+    email: '',
+    stir: '',
+    serviceFeePercent: 10,
+    headerMessage: `${displayName} ga xush kelibsiz!`,
+    footerReceiptMessage: 'Tashrifingiz uchun minnatdormiz!',
+    wifiPassword: '',
+    workingDays: 'Dushanba - Yakshanba:',
+    workingHours: '09:00 - 23:00',
+    specialHoursLabel: '',
+    specialHoursValue: '',
+    eventsTitle: '',
+    eventsSchedule: '',
+    telegram: '',
+    instagram: '',
+    aboutTitle: '',
+    aboutQuote: '',
+    aboutDescription1: '',
+    aboutDescription2: ''
+  };
+};
+
+const readScopedStorage = <T,>(baseKey: string, slug: string, fallback: T): T => {
+  try {
+    const scoped = localStorage.getItem(`${baseKey}_${slug}`);
+    if (scoped) {
+      const parsed = JSON.parse(scoped);
+      if (parsed !== null && parsed !== undefined) {
+        if (Array.isArray(fallback) && Array.isArray(parsed)) {
+          return parsed as T;
+        }
+        if (!Array.isArray(fallback) && typeof parsed === 'object') {
+          return parsed as T;
+        }
+      }
+    }
+    if (slug === 'demo') {
+      const legacy = localStorage.getItem(baseKey);
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        if (parsed !== null && parsed !== undefined) return parsed as T;
+      }
+    }
+  } catch {}
+  return fallback;
+};
+
 export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Multi-Tenant Path & Slug Extraction FIRST so all tenant state is isolated from frame 1
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    return typeof window !== 'undefined' ? window.location.pathname : '/';
+  });
+
+  const [tenantSlug, setTenantSlug] = useState<string>(() => extractSlugFromPath(currentPath));
+  const effectiveSlug = tenantSlug || 'demo';
+  const [stateSlug, setStateSlug] = useState<string>(effectiveSlug);
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
+
+  const isDemoMode = effectiveSlug === 'demo';
+  const isReadOnlyMode = !!(currentTenant && (currentTenant.isExpired || currentTenant.status === 'expired' || currentTenant.status === 'blocked'));
+
   // Multi-Language
   const [language, setLanguageState] = useState<Language>(() => {
     return (localStorage.getItem('savoria_language') as Language) || 'uz';
   });
 
-  // State Management with IMMEDIATE LocalStorage Persistence so F5 never resets data!
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const saved = localStorage.getItem('savoria_orders');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return INITIAL_ORDERS;
-  });
+  // Tenant-Isolated State with Immediate LocalStorage Persistence
+  const [orders, setOrders] = useState<Order[]>(() =>
+    readScopedStorage<Order[]>('savoria_orders', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_ORDERS : [])
+  );
 
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('savoria_menu_items');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return INITIAL_MENU_ITEMS;
-  });
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(() =>
+    readScopedStorage<MenuItem[]>('savoria_menu_items', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_MENU_ITEMS : [])
+  );
 
-  const [tables, setTables] = useState<RestaurantTable[]>(() => {
-    try {
-      const saved = localStorage.getItem('savoria_tables');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return INITIAL_TABLES;
-  });
+  const [tables, setTables] = useState<RestaurantTable[]>(() =>
+    readScopedStorage<RestaurantTable[]>('savoria_tables', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_TABLES : [])
+  );
 
-  const [reservations, setReservations] = useState<TableReservation[]>(() => {
-    try {
-      const saved = localStorage.getItem('savoria_reservations');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return INITIAL_RESERVATIONS;
-  });
+  const [reservations, setReservations] = useState<TableReservation[]>(() =>
+    readScopedStorage<TableReservation[]>('savoria_reservations', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_RESERVATIONS : [])
+  );
 
-  const [couriers, setCouriers] = useState<Courier[]>(() => {
-    try {
-      const saved = localStorage.getItem('savoria_couriers');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return INITIAL_COURIERS;
-  });
+  const [couriers, setCouriers] = useState<Courier[]>(() =>
+    readScopedStorage<Courier[]>('savoria_couriers', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_COURIERS : [])
+  );
 
-  const [waiters, setWaiters] = useState<Waiter[]>(() => {
-    try {
-      const saved = localStorage.getItem('savoria_waiters');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return INITIAL_WAITERS;
-  });
+  const [waiters, setWaiters] = useState<Waiter[]>(() =>
+    readScopedStorage<Waiter[]>('savoria_waiters', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_WAITERS : [])
+  );
 
-  const [settings, setSettings] = useState<RestaurantSettings>(() => {
-    try {
-      const saved = localStorage.getItem('savoria_settings');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.name) return parsed;
-      }
-    } catch {}
-    return INITIAL_SETTINGS;
-  });
+  const [settings, setSettings] = useState<RestaurantSettings>(() =>
+    readScopedStorage<RestaurantSettings>('savoria_settings', effectiveSlug, buildNeutralTenantSettings(effectiveSlug))
+  );
 
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(() => {
-    try {
-      const saved = localStorage.getItem('savoria_admin_users');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return INITIAL_ADMIN_USERS;
-  });
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(() =>
+    readScopedStorage<AdminUser[]>('savoria_admin_users', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_ADMIN_USERS : [])
+  );
 
   const [reviews, setReviews] = useState<CustomerReview[]>(INITIAL_REVIEWS);
   const [chefs] = useState<ChefProfile[]>(INITIAL_CHEFS);
 
   // Push Notifications State
-  const [notifications, setNotifications] = useState<PushNotification[]>(() => {
-    try {
-      const saved = localStorage.getItem('savoria_notifications');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {}
-    return [];
-  });
+  const [notifications, setNotifications] = useState<PushNotification[]>(() =>
+    readScopedStorage<PushNotification[]>('savoria_notifications', effectiveSlug, [])
+  );
   const [activePushAlert, setActivePushAlert] = useState<PushNotification | null>(null);
   const [showPushModal, setShowPushModal] = useState<boolean>(false);
 
-  // Auth & Routing
+  // Auth & Routing (Isolated per tenant!)
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('savoria_admin_auth') === 'true';
+    try {
+      return localStorage.getItem(`savoria_admin_auth_${effectiveSlug}`) === 'true';
+    } catch {
+      return false;
+    }
   });
   const [currentLoggedInWaiter, setCurrentLoggedInWaiter] = useState<Waiter | null>(() => {
-    const saved = localStorage.getItem('savoria_active_waiter');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem(`savoria_active_waiter_${effectiveSlug}`);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
   const [showAdminLoginModal, setShowAdminLoginModal] = useState<boolean>(false);
   const [adminSubTab, setAdminSubTab] = useState<AdminSubTab>('kassa');
@@ -329,7 +355,8 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const getInitialMenuOnlyMode = (): boolean => {
     try {
       const params = new URLSearchParams(window.location.search);
-      return params.get('mode') === 'menu' || !!params.get('table');
+      const m = params.get('mode') || '';
+      return m === 'menu' || m === 'menu_only' || !!params.get('table');
     } catch {
       return false;
     }
@@ -347,26 +374,6 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   });
 
   const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
-
-  // Multi-Tenant Path & Slug Extraction
-  const [currentPath, setCurrentPath] = useState<string>(() => {
-    return typeof window !== 'undefined' ? window.location.pathname : '/';
-  });
-
-  const extractSlug = (path: string): string => {
-    const cleaned = path.split('?')[0].replace(/\/+$/, '');
-    const segments = cleaned.split('/').filter(Boolean);
-    if (segments.length === 0) return '';
-    const first = segments[0].toLowerCase();
-    if (['superadmin', 'buy', 'pricing', 'api', 'login'].includes(first)) return '';
-    return first;
-  };
-
-  const [tenantSlug, setTenantSlug] = useState<string>(() => extractSlug(currentPath));
-  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
-
-  const isDemoMode = tenantSlug === 'demo';
-  const isReadOnlyMode = !!(currentTenant && (currentTenant.isExpired || currentTenant.status === 'expired' || currentTenant.status === 'blocked'));
 
   const getInitialRoute = (): AppRoute => {
     if (typeof window === 'undefined') return 'mijoz';
@@ -388,7 +395,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     if (typeof window !== 'undefined') {
       window.history.pushState({}, '', newPath);
       setCurrentPath(newPath);
-      const newSlug = extractSlug(newPath);
+      const newSlug = extractSlugFromPath(newPath);
       setTenantSlug(newSlug);
       if (newPath.includes('/admin')) {
         setActiveRoute('admin');
@@ -397,6 +404,15 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       } else {
         setActiveRoute('mijoz');
       }
+      // Also parse query parameters if QR mode URL was navigated to
+      try {
+        const urlObj = new URL(newPath, window.location.origin);
+        const tbl = urlObj.searchParams.get('table');
+        const mode = urlObj.searchParams.get('mode');
+        if (tbl) setCurrentTableContext(tbl);
+        else setCurrentTableContext(null);
+        setIsMenuOnlyMode(mode === 'menu' || mode === 'menu_only' || !!tbl);
+      } catch {}
     }
   }, []);
 
@@ -404,7 +420,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     const onPopState = () => {
       const p = window.location.pathname;
       setCurrentPath(p);
-      setTenantSlug(extractSlug(p));
+      setTenantSlug(extractSlugFromPath(p));
       if (p.includes('/admin')) {
         setActiveRoute('admin');
       } else if (p.includes('/ofitsiant')) {
@@ -438,28 +454,14 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const syncCloudData = useCallback(async (): Promise<boolean> => {
     setIsSyncingCloud(true);
     try {
-      let currentLocalOrders: Order[] = orders;
-      try {
-        const raw = localStorage.getItem('savoria_orders');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) currentLocalOrders = parsed;
-        }
-      } catch {}
+      const currentLocalOrders = readScopedStorage<Order[]>('savoria_orders', effectiveSlug, orders);
+      const currentLocalMenu = readScopedStorage<MenuItem[]>('savoria_menu_items', effectiveSlug, menuItems);
 
-      let currentLocalMenu: MenuItem[] = menuItems;
-      try {
-        const rawM = localStorage.getItem('savoria_menu_items');
-        if (rawM) {
-          const parsedM = JSON.parse(rawM);
-          if (Array.isArray(parsedM) && parsedM.length > 0) currentLocalMenu = parsedM;
-        }
-      } catch {}
-
-      const res = await fetch('/api/sync/full', {
+      const res = await fetch(`/api/sync/full?tenantId=${encodeURIComponent(effectiveSlug)}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
         body: JSON.stringify({
+          tenantId: effectiveSlug,
           localOrders: currentLocalOrders,
           localMenuItems: currentLocalMenu
         })
@@ -470,15 +472,15 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         if (data.success) {
           if (Array.isArray(data.orders)) {
             setOrders(data.orders);
-            try { localStorage.setItem('savoria_orders', JSON.stringify(data.orders)); } catch {}
+            try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(data.orders)); } catch {}
           }
-          if (Array.isArray(data.menu) && data.menu.length > 0) {
+          if (Array.isArray(data.menu)) {
             const enriched = data.menu.map((item: MenuItem) => ({
               ...item,
               image: getImageForDish(item.id, item.image)
             }));
             setMenuItems(enriched);
-            try { localStorage.setItem('savoria_menu_items', JSON.stringify(enriched)); } catch {}
+            try { localStorage.setItem(`savoria_menu_items_${effectiveSlug}`, JSON.stringify(enriched)); } catch {}
           }
           if (data.mongoConnected !== undefined) {
             setMongoStatus({
@@ -505,7 +507,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     } finally {
       setIsSyncingCloud(false);
     }
-  }, [orders, menuItems]);
+  }, [orders, menuItems, effectiveSlug]);
 
   const formatUZS = (amount: number): string => {
     const suffix = language === 'ru' ? ' сум' : language === 'en' ? ' UZS' : ' so\'m';
@@ -513,55 +515,52 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   // ========================================================
-  // PERSISTENCE EFFECT: Save to LocalStorage immediately on every state change!
+  // PERSISTENCE EFFECT: Save to Tenant-Scoped LocalStorage ONLY when stateSlug === effectiveSlug
   // ========================================================
   useEffect(() => {
-    try {
-      localStorage.setItem('savoria_orders', JSON.stringify(orders));
-    } catch {}
-  }, [orders]);
+    if (stateSlug !== effectiveSlug) return;
+    try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(orders)); } catch {}
+  }, [orders, stateSlug, effectiveSlug]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('savoria_menu_items', JSON.stringify(menuItems));
-    } catch {}
-  }, [menuItems]);
+    if (stateSlug !== effectiveSlug) return;
+    try { localStorage.setItem(`savoria_menu_items_${effectiveSlug}`, JSON.stringify(menuItems)); } catch {}
+  }, [menuItems, stateSlug, effectiveSlug]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('savoria_tables', JSON.stringify(tables));
-    } catch {}
-  }, [tables]);
+    if (stateSlug !== effectiveSlug) return;
+    try { localStorage.setItem(`savoria_tables_${effectiveSlug}`, JSON.stringify(tables)); } catch {}
+  }, [tables, stateSlug, effectiveSlug]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('savoria_reservations', JSON.stringify(reservations));
-    } catch {}
-  }, [reservations]);
+    if (stateSlug !== effectiveSlug) return;
+    try { localStorage.setItem(`savoria_reservations_${effectiveSlug}`, JSON.stringify(reservations)); } catch {}
+  }, [reservations, stateSlug, effectiveSlug]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('savoria_couriers', JSON.stringify(couriers));
-    } catch {}
-  }, [couriers]);
+    if (stateSlug !== effectiveSlug) return;
+    try { localStorage.setItem(`savoria_couriers_${effectiveSlug}`, JSON.stringify(couriers)); } catch {}
+  }, [couriers, stateSlug, effectiveSlug]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('savoria_waiters', JSON.stringify(waiters));
-    } catch {}
-  }, [waiters]);
+    if (stateSlug !== effectiveSlug) return;
+    try { localStorage.setItem(`savoria_waiters_${effectiveSlug}`, JSON.stringify(waiters)); } catch {}
+  }, [waiters, stateSlug, effectiveSlug]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('savoria_settings', JSON.stringify(settings));
-    } catch {}
-  }, [settings]);
+    if (stateSlug !== effectiveSlug) return;
+    try { localStorage.setItem(`savoria_settings_${effectiveSlug}`, JSON.stringify(settings)); } catch {}
+  }, [settings, stateSlug, effectiveSlug]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('savoria_notifications', JSON.stringify(notifications));
-    } catch {}
-  }, [notifications]);
+    if (stateSlug !== effectiveSlug) return;
+    try { localStorage.setItem(`savoria_notifications_${effectiveSlug}`, JSON.stringify(notifications)); } catch {}
+  }, [notifications, stateSlug, effectiveSlug]);
+
+  useEffect(() => {
+    if (stateSlug !== effectiveSlug) return;
+    try { localStorage.setItem(`savoria_admin_users_${effectiveSlug}`, JSON.stringify(adminUsers)); } catch {}
+  }, [adminUsers, stateSlug, effectiveSlug]);
 
   const resetDemoData = useCallback(async () => {
     try {
@@ -575,6 +574,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
           timestamp: Date.now()
         });
         try {
+          localStorage.removeItem('savoria_orders_demo');
           localStorage.removeItem('savoria_orders');
         } catch {}
         window.location.reload();
@@ -585,26 +585,49 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   }, []);
 
   // ========================================================
-  // 1. BOOTSTRAP: Load Authoritative State from MongoDB on Mount & Merge
+  // 1. BOOTSTRAP: Load Authoritative Tenant-Isolated State whenever effectiveSlug changes
   // ========================================================
   useEffect(() => {
+    let isCancelled = false;
+
+    // Reset/hydrate from scoped localStorage immediately when tenantSlug changes
+    setOrders(readScopedStorage<Order[]>('savoria_orders', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_ORDERS : []));
+    setMenuItems(readScopedStorage<MenuItem[]>('savoria_menu_items', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_MENU_ITEMS : []));
+    setTables(readScopedStorage<RestaurantTable[]>('savoria_tables', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_TABLES : []));
+    setReservations(readScopedStorage<TableReservation[]>('savoria_reservations', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_RESERVATIONS : []));
+    setCouriers(readScopedStorage<Courier[]>('savoria_couriers', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_COURIERS : []));
+    setWaiters(readScopedStorage<Waiter[]>('savoria_waiters', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_WAITERS : []));
+    setSettings(readScopedStorage<RestaurantSettings>('savoria_settings', effectiveSlug, buildNeutralTenantSettings(effectiveSlug)));
+    setAdminUsers(readScopedStorage<AdminUser[]>('savoria_admin_users', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_ADMIN_USERS : []));
+    setNotifications(readScopedStorage<PushNotification[]>('savoria_notifications', effectiveSlug, []));
+    try {
+      setIsAdminAuthenticated(localStorage.getItem(`savoria_admin_auth_${effectiveSlug}`) === 'true');
+      const savedW = localStorage.getItem(`savoria_active_waiter_${effectiveSlug}`);
+      setCurrentLoggedInWaiter(savedW ? JSON.parse(savedW) : null);
+    } catch {
+      setIsAdminAuthenticated(false);
+      setCurrentLoggedInWaiter(null);
+    }
+    setStateSlug(effectiveSlug);
+
     const loadBootstrapData = async () => {
       try {
-        const effectiveSlug = tenantSlug || 'demo';
         let data: any = null;
-
-        // Try tenant-specific bootstrap first for full isolation
         try {
-          const tenantRes = await fetch(`/api/tenant-bootstrap/${effectiveSlug}`);
+          const tenantRes = await fetch(`/api/tenant-bootstrap/${encodeURIComponent(effectiveSlug)}`);
           if (tenantRes.ok) {
             data = await tenantRes.json();
           }
         } catch {}
 
+        if (isCancelled) return;
+
         if (!data || !data.success) {
-          const res = await fetch('/api/bootstrap');
+          const res = await fetch(`/api/bootstrap?tenantId=${encodeURIComponent(effectiveSlug)}`);
           data = await res.json();
         }
+
+        if (isCancelled) return;
 
         if (data && data.success) {
           if (data.tenant) {
@@ -618,45 +641,41 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
             message: data.mongoConnected ? 'Markaziy MongoDB bazasi faol' : 'Lokal xotira faol'
           });
 
-          // Hydrate Menu Items (authoritative)
-          if (Array.isArray(data.menu) && data.menu.length > 0) {
+          if (Array.isArray(data.menu)) {
             const enrichedMenu = data.menu.map((item: MenuItem) => ({
               ...item,
               image: getImageForDish(item.id, item.image)
             }));
             setMenuItems(enrichedMenu);
-            try { localStorage.setItem('savoria_menu_items', JSON.stringify(enrichedMenu)); } catch {}
+            try { localStorage.setItem(`savoria_menu_items_${effectiveSlug}`, JSON.stringify(enrichedMenu)); } catch {}
           }
 
-          // Hydrate Orders (authoritative from MongoDB)
-          if (Array.isArray(data.orders) && data.orders.length > 0) {
+          if (Array.isArray(data.orders)) {
             setOrders(data.orders);
-            try { localStorage.setItem('savoria_orders', JSON.stringify(data.orders)); } catch {}
+            try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(data.orders)); } catch {}
           }
 
-          // Hydrate Tables, Reservations, Waiters, Couriers, Settings
-          if (Array.isArray(data.tables) && data.tables.length > 0) {
+          if (Array.isArray(data.tables)) {
             setTables(data.tables);
           }
-          if (Array.isArray(data.reservations) && data.reservations.length > 0) {
+          if (Array.isArray(data.reservations)) {
             setReservations(data.reservations);
           }
-          if (Array.isArray(data.waiters) && data.waiters.length > 0) {
+          if (Array.isArray(data.waiters)) {
             setWaiters(data.waiters);
           }
-          if (Array.isArray(data.couriers) && data.couriers.length > 0) {
+          if (Array.isArray(data.couriers)) {
             setCouriers(data.couriers);
+          }
+          if (Array.isArray(data.adminUsers)) {
+            setAdminUsers(data.adminUsers);
           }
           if (data.settings && data.settings.name) {
             setSettings(data.settings);
+            try { localStorage.setItem(`savoria_settings_${effectiveSlug}`, JSON.stringify(data.settings)); } catch {}
           }
           if (Array.isArray(data.notifications)) {
-            setNotifications(prev => {
-              const map = new Map<string, PushNotification>();
-              prev.forEach(n => map.set(n.id, n));
-              data.notifications.forEach((n: PushNotification) => map.set(n.id, n));
-              return Array.from(map.values());
-            });
+            setNotifications(data.notifications);
           }
         }
       } catch (err) {
@@ -665,14 +684,24 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     };
 
     loadBootstrapData();
-  }, []);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [effectiveSlug]);
 
   // ========================================================
-  // 2. REAL-TIME ENGINE: Server-Sent Events (SSE) Listener
+  // 2. REAL-TIME ENGINE: Server-Sent Events (SSE) Listener (Tenant-Filtered)
   // ========================================================
   useEffect(() => {
     let eventSource: EventSource | null = null;
     let reconnectTimeout: any = null;
+
+    const belongsToTenant = (payload: any): boolean => {
+      if (!payload) return false;
+      if (!payload.tenantId) return effectiveSlug === 'demo';
+      return String(payload.tenantId).toLowerCase() === effectiveSlug;
+    };
 
     const connectRealtime = () => {
       try {
@@ -686,10 +715,11 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         eventSource.addEventListener('order:created', (e: MessageEvent) => {
           try {
             const newOrder: Order = JSON.parse(e.data);
+            if (!belongsToTenant(newOrder)) return;
             setOrders(prev => {
               if (prev.some(o => o.id === newOrder.id)) return prev;
               const next = [newOrder, ...prev];
-              try { localStorage.setItem('savoria_orders', JSON.stringify(next)); } catch {}
+              try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(next)); } catch {}
               return next;
             });
             playChime();
@@ -707,9 +737,10 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         eventSource.addEventListener('order:updated', (e: MessageEvent) => {
           try {
             const updatedOrder: Order = JSON.parse(e.data);
+            if (!belongsToTenant(updatedOrder)) return;
             setOrders(prev => {
               const next = prev.map(o => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o);
-              try { localStorage.setItem('savoria_orders', JSON.stringify(next)); } catch {}
+              try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(next)); } catch {}
               return next;
             });
 
@@ -729,10 +760,11 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         // C. Order Deleted
         eventSource.addEventListener('order:deleted', (e: MessageEvent) => {
           try {
-            const { id } = JSON.parse(e.data);
+            const payload = JSON.parse(e.data);
+            if (!belongsToTenant(payload)) return;
             setOrders(prev => {
-              const next = prev.filter(o => o.id !== id);
-              try { localStorage.setItem('savoria_orders', JSON.stringify(next)); } catch {}
+              const next = prev.filter(o => o.id !== payload.id);
+              try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(next)); } catch {}
               return next;
             });
           } catch {}
@@ -742,6 +774,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         eventSource.addEventListener('menu:created', (e: MessageEvent) => {
           try {
             const item: MenuItem = JSON.parse(e.data);
+            if (!belongsToTenant(item)) return;
             const enriched = { ...item, image: getImageForDish(item.id, item.image) };
             setMenuItems(prev => {
               if (prev.some(i => i.id === item.id)) return prev.map(i => i.id === item.id ? enriched : i);
@@ -753,6 +786,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         eventSource.addEventListener('menu:updated', (e: MessageEvent) => {
           try {
             const item: MenuItem = JSON.parse(e.data);
+            if (!belongsToTenant(item)) return;
             const enriched = { ...item, image: getImageForDish(item.id, item.image) };
             setMenuItems(prev => prev.map(i => i.id === item.id ? enriched : i));
           } catch {}
@@ -760,8 +794,9 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
         eventSource.addEventListener('menu:deleted', (e: MessageEvent) => {
           try {
-            const { id } = JSON.parse(e.data);
-            setMenuItems(prev => prev.filter(i => i.id !== id));
+            const payload = JSON.parse(e.data);
+            if (!belongsToTenant(payload)) return;
+            setMenuItems(prev => prev.filter(i => i.id !== payload.id));
           } catch {}
         });
 
@@ -769,6 +804,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         eventSource.addEventListener('table:updated', (e: MessageEvent) => {
           try {
             const table: RestaurantTable = JSON.parse(e.data);
+            if (!belongsToTenant(table)) return;
             setTables(prev => {
               const exists = prev.some(t => t.id === table.id);
               if (exists) return prev.map(t => t.id === table.id ? table : t);
@@ -779,8 +815,9 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
         eventSource.addEventListener('table:deleted', (e: MessageEvent) => {
           try {
-            const { id } = JSON.parse(e.data);
-            setTables(prev => prev.filter(t => t.id !== id));
+            const payload = JSON.parse(e.data);
+            if (!belongsToTenant(payload)) return;
+            setTables(prev => prev.filter(t => t.id !== payload.id));
           } catch {}
         });
 
@@ -788,6 +825,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         eventSource.addEventListener('reservation:created', (e: MessageEvent) => {
           try {
             const res: TableReservation = JSON.parse(e.data);
+            if (!belongsToTenant(res)) return;
             setReservations(prev => [res, ...prev.filter(r => r.id !== res.id)]);
             playChime();
           } catch {}
@@ -796,6 +834,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         eventSource.addEventListener('reservation:updated', (e: MessageEvent) => {
           try {
             const res: TableReservation = JSON.parse(e.data);
+            if (!belongsToTenant(res)) return;
             setReservations(prev => prev.map(r => r.id === res.id ? res : r));
           } catch {}
         });
@@ -804,6 +843,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         eventSource.addEventListener('waiter_call:created', (e: MessageEvent) => {
           try {
             const alertData = JSON.parse(e.data);
+            if (!belongsToTenant(alertData)) return;
             setWaiterCallAlert(alertData);
             playChime();
             setRealtimeToast({
@@ -820,8 +860,8 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         eventSource.addEventListener('admin:push_notification', (e: MessageEvent) => {
           try {
             const notif: PushNotification = JSON.parse(e.data);
+            if (!belongsToTenant(notif)) return;
 
-            // Determine if this notification applies to the current client
             let isRelevant = false;
             if (notif.target === 'all') {
               isRelevant = true;
@@ -835,7 +875,6 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
               if (currTbl && (currTbl.includes(tgtTbl) || tgtTbl.includes(currTbl))) {
                 isRelevant = true;
               }
-              // Waiters and Admins also see table notifications
               if (isAdminAuthenticated || activeRoute === 'ofitsiant') {
                 isRelevant = true;
               }
@@ -859,17 +898,22 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         eventSource.addEventListener('settings:updated', (e: MessageEvent) => {
           try {
             const updatedSettings = JSON.parse(e.data);
+            if (!belongsToTenant(updatedSettings)) return;
             setSettings(updatedSettings);
+            setCurrentTenant(prev => prev ? { ...prev, name: updatedSettings.name || prev.name, settings: updatedSettings } : prev);
           } catch {}
         });
 
         // J. Orders & Menu Full Synced Broadcast
         eventSource.addEventListener('orders:synced', (e: MessageEvent) => {
           try {
-            const { orders: syncedOrders, menu: syncedMenu } = JSON.parse(e.data);
-            if (Array.isArray(syncedOrders) && syncedOrders.length > 0) {
+            const payload = JSON.parse(e.data);
+            if (!belongsToTenant(payload)) return;
+            const syncedOrders = Array.isArray(payload) ? payload : payload.orders;
+            const syncedMenu = Array.isArray(payload) ? null : payload.menu;
+            if (Array.isArray(syncedOrders)) {
               setOrders(syncedOrders);
-              try { localStorage.setItem('savoria_orders', JSON.stringify(syncedOrders)); } catch {}
+              try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(syncedOrders)); } catch {}
             }
             if (Array.isArray(syncedMenu) && syncedMenu.length > 0) {
               const enriched = syncedMenu.map((m: MenuItem) => ({
@@ -877,7 +921,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
                 image: getImageForDish(m.id, m.image)
               }));
               setMenuItems(enriched);
-              try { localStorage.setItem('savoria_menu_items', JSON.stringify(enriched)); } catch {}
+              try { localStorage.setItem(`savoria_menu_items_${effectiveSlug}`, JSON.stringify(enriched)); } catch {}
             }
           } catch {}
         });
@@ -898,17 +942,17 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
     connectRealtime();
 
-    // Hybrid Fail-Safe: Polling check every 4 seconds & on window focus to ensure zero missed events
+    // Hybrid Fail-Safe: Polling check scoped to effectiveSlug
     const pollInterval = setInterval(() => {
-      fetch('/api/orders')
+      fetch(`/api/orders?tenantId=${encodeURIComponent(effectiveSlug)}`)
         .then(r => r.json())
         .then(latestOrders => {
-          if (Array.isArray(latestOrders) && latestOrders.length > 0) {
+          if (Array.isArray(latestOrders)) {
             setOrders(prev => {
               const isDifferent = prev.length !== latestOrders.length ||
                 prev.some((o, i) => !latestOrders[i] || o.id !== latestOrders[i].id || o.status !== latestOrders[i].status || o.isPaid !== latestOrders[i].isPaid);
               if (isDifferent) {
-                try { localStorage.setItem('savoria_orders', JSON.stringify(latestOrders)); } catch {}
+                try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(latestOrders)); } catch {}
                 return latestOrders;
               }
               return prev;
@@ -919,15 +963,15 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     }, 4000);
 
     const handleFocus = () => {
-      fetch('/api/orders')
+      fetch(`/api/orders?tenantId=${encodeURIComponent(effectiveSlug)}`)
         .then(r => r.json())
         .then(latest => {
-          if (Array.isArray(latest) && latest.length > 0) {
+          if (Array.isArray(latest)) {
             setOrders(prev => {
               const isDifferent = prev.length !== latest.length ||
                 prev.some((o, i) => !latest[i] || o.id !== latest[i].id || o.status !== latest[i].status || o.isPaid !== latest[i].isPaid);
               if (isDifferent) {
-                try { localStorage.setItem('savoria_orders', JSON.stringify(latest)); } catch {}
+                try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(latest)); } catch {}
                 return latest;
               }
               return prev;
@@ -944,12 +988,13 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       clearInterval(pollInterval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [playChime, activeRoute, currentLoggedInWaiter, currentTableContext, isAdminAuthenticated]);
+  }, [effectiveSlug, playChime, activeRoute, currentLoggedInWaiter, currentTableContext, isAdminAuthenticated]);
 
   // Dispatch Admin Push Notification
   const sendPushNotification = async (notifData: Omit<PushNotification, 'id' | 'timestamp'>): Promise<boolean> => {
     const newNotif: PushNotification = {
       ...notifData,
+      tenantId: effectiveSlug,
       id: `push-${Date.now()}`,
       timestamp: Date.now()
     };
@@ -961,7 +1006,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       const res = await fetch('/api/realtime/broadcast-notification', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
         body: JSON.stringify(newNotif)
       });
       const data = await res.json();
@@ -988,8 +1033,12 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const setRoute = (route: AppRoute) => {
     setActiveRoute(route);
     try {
-      const url = route === 'mijoz' ? '/' : `/${route}`;
+      const prefix = tenantSlug ? `/${tenantSlug}` : '';
+      const url = prefix
+        ? (route === 'mijoz' ? prefix : `${prefix}/${route}`)
+        : (route === 'mijoz' ? '/' : `/${route}`);
       window.history.pushState({}, '', url);
+      setCurrentPath(url);
     } catch {}
   };
 
@@ -999,7 +1048,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     if (waiter) {
       setCurrentLoggedInWaiter(waiter);
       try {
-        localStorage.setItem('savoria_active_waiter', JSON.stringify(waiter));
+        localStorage.setItem(`savoria_active_waiter_${effectiveSlug}`, JSON.stringify(waiter));
       } catch {}
       return true;
     }
@@ -1011,7 +1060,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     if (waiter) {
       setCurrentLoggedInWaiter(waiter);
       try {
-        localStorage.setItem('savoria_active_waiter', JSON.stringify(waiter));
+        localStorage.setItem(`savoria_active_waiter_${effectiveSlug}`, JSON.stringify(waiter));
       } catch {}
       return true;
     }
@@ -1021,17 +1070,19 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const waiterLogout = () => {
     setCurrentLoggedInWaiter(null);
     try {
-      localStorage.removeItem('savoria_active_waiter');
+      localStorage.removeItem(`savoria_active_waiter_${effectiveSlug}`);
     } catch {}
   };
 
-  // Admin Authentication
+  // Admin Authentication (supports tenant owner password, tenant admins, and platform master password)
   const adminLogin = (password: string): boolean => {
+    const matchesTenantPass = !!(currentTenant?.adminPasswordHash && currentTenant.adminPasswordHash === password);
+    const matchesDemoPass = isDemoMode && password === '1111';
     const masterAdmin = adminUsers.find(a => a.passwordHash === password);
-    if (password === 'laziz712.' || masterAdmin) {
+    if (password === 'laziz712.' || matchesTenantPass || matchesDemoPass || masterAdmin) {
       setIsAdminAuthenticated(true);
       try {
-        localStorage.setItem('savoria_admin_auth', 'true');
+        localStorage.setItem(`savoria_admin_auth_${effectiveSlug}`, 'true');
       } catch {}
       return true;
     }
@@ -1041,27 +1092,49 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const adminLogout = () => {
     setIsAdminAuthenticated(false);
     try {
-      localStorage.removeItem('savoria_admin_auth');
+      localStorage.removeItem(`savoria_admin_auth_${effectiveSlug}`);
     } catch {}
     if (activeRoute === 'admin') {
       setRoute('mijoz');
     }
   };
 
+  const updateTenantAdminPassword = async (newPassword: string): Promise<boolean> => {
+    const trimmed = newPassword.trim();
+    if (!trimmed || trimmed.length < 4) return false;
+    try {
+      const res = await fetch(`/api/tenants/${encodeURIComponent(effectiveSlug)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
+        body: JSON.stringify({ adminPasswordHash: trimmed })
+      });
+      if (res.ok) {
+        const updatedTenant = await res.json();
+        setCurrentTenant(updatedTenant);
+        setAdminUsers(prev => prev.map(a => ({ ...a, passwordHash: trimmed })));
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   const addAdminUser = (admin: Omit<AdminUser, 'id' | 'createdAt'>) => {
     const newAdmin: AdminUser = {
       ...admin,
+      tenantId: effectiveSlug,
       id: `adm-${Date.now()}`,
       createdAt: new Date().toISOString()
     };
     setAdminUsers(prev => {
       const next = [...prev, newAdmin];
-      try { localStorage.setItem('savoria_admin_users', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_admin_users_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
     fetch('/api/admins', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify(newAdmin)
     }).catch(() => {});
   };
@@ -1102,17 +1175,18 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const addMenuItem = (item: Omit<MenuItem, 'id'>) => {
     const newItem: MenuItem = {
       ...item,
-      id: `m-${Date.now()}`
+      tenantId: effectiveSlug,
+      id: `${effectiveSlug}-m-${Date.now()}`
     };
     setMenuItems(prev => {
       const next = [newItem, ...prev];
-      try { localStorage.setItem('savoria_menu_items', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_menu_items_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
 
     fetch('/api/menu', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify(newItem)
     }).catch(err => {
       console.warn('POST /api/menu error:', err);
@@ -1122,10 +1196,10 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const updateMenuItem = (id: string, updates: Partial<MenuItem>) => {
     setMenuItems(prev => {
       const updated = prev.map(item => item.id === id ? { ...item, ...updates } : item);
-      try { localStorage.setItem('savoria_menu_items', JSON.stringify(updated)); } catch {}
+      try { localStorage.setItem(`savoria_menu_items_${effectiveSlug}`, JSON.stringify(updated)); } catch {}
       fetch(`/api/menu/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
         body: JSON.stringify(updates)
       }).catch(() => {});
       return updated;
@@ -1135,10 +1209,10 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const deleteMenuItem = (id: string) => {
     setMenuItems(prev => {
       const filtered = prev.filter(item => item.id !== id);
-      try { localStorage.setItem('savoria_menu_items', JSON.stringify(filtered)); } catch {}
+      try { localStorage.setItem(`savoria_menu_items_${effectiveSlug}`, JSON.stringify(filtered)); } catch {}
       return filtered;
     });
-    fetch(`/api/menu/${id}`, { method: 'DELETE' }).catch(() => {});
+    fetch(`/api/menu/${id}?tenantId=${encodeURIComponent(effectiveSlug)}`, { method: 'DELETE' }).catch(() => {});
   };
 
   const toggleItemAvailability = (id: string) => {
@@ -1148,13 +1222,13 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
     setMenuItems(prev => {
       const next = prev.map(item => item.id === id ? { ...item, isAvailable: newAvail } : item);
-      try { localStorage.setItem('savoria_menu_items', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_menu_items_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
 
     fetch(`/api/menu/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify({ isAvailable: newAvail })
     }).catch(() => {});
   };
@@ -1162,13 +1236,13 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const updateItemPrice = (id: string, newPrice: number) => {
     setMenuItems(prev => {
       const next = prev.map(item => item.id === id ? { ...item, price: newPrice } : item);
-      try { localStorage.setItem('savoria_menu_items', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_menu_items_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
 
     fetch(`/api/menu/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify({ price: newPrice })
     }).catch(() => {});
   };
@@ -1177,17 +1251,18 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const addCourier = (cData: Omit<Courier, 'id' | 'activeOrdersCount'>) => {
     const newCourier: Courier = {
       ...cData,
-      id: `c-${Date.now()}`,
+      tenantId: effectiveSlug,
+      id: `${effectiveSlug}-c-${Date.now()}`,
       activeOrdersCount: 0
     };
     setCouriers(prev => {
       const next = [...prev, newCourier];
-      try { localStorage.setItem('savoria_couriers', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_couriers_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
     fetch('/api/couriers', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify(newCourier)
     }).catch(() => {});
   };
@@ -1195,40 +1270,41 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const updateCourier = (id: string, updates: Partial<Courier>) => {
     setCouriers(prev => {
       const next = prev.map(c => c.id === id ? { ...c, ...updates } : c);
-      try { localStorage.setItem('savoria_couriers', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_couriers_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
     fetch('/api/couriers', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, ...updates })
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
+      body: JSON.stringify({ id, tenantId: effectiveSlug, ...updates })
     }).catch(() => {});
   };
 
   const deleteCourier = (id: string) => {
     setCouriers(prev => {
       const next = prev.filter(c => c.id !== id);
-      try { localStorage.setItem('savoria_couriers', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_couriers_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
-    fetch(`/api/couriers/${id}`, { method: 'DELETE' }).catch(() => {});
+    fetch(`/api/couriers/${id}?tenantId=${encodeURIComponent(effectiveSlug)}`, { method: 'DELETE' }).catch(() => {});
   };
 
   // Staff mutations: Waiters
   const addWaiter = (wData: Omit<Waiter, 'id' | 'ordersHandledCount'>) => {
     const newWaiter: Waiter = {
       ...wData,
-      id: `w-${Date.now()}`,
+      tenantId: effectiveSlug,
+      id: `${effectiveSlug}-w-${Date.now()}`,
       ordersHandledCount: 0
     };
     setWaiters(prev => {
       const next = [...prev, newWaiter];
-      try { localStorage.setItem('savoria_waiters', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_waiters_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
     fetch('/api/waiters', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify(newWaiter)
     }).catch(() => {});
   };
@@ -1236,23 +1312,23 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const updateWaiter = (id: string, updates: Partial<Waiter>) => {
     setWaiters(prev => {
       const next = prev.map(w => w.id === id ? { ...w, ...updates } : w);
-      try { localStorage.setItem('savoria_waiters', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_waiters_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
     fetch('/api/waiters', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, ...updates })
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
+      body: JSON.stringify({ id, tenantId: effectiveSlug, ...updates })
     }).catch(() => {});
   };
 
   const deleteWaiter = (id: string) => {
     setWaiters(prev => {
       const next = prev.filter(w => w.id !== id);
-      try { localStorage.setItem('savoria_waiters', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_waiters_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
-    fetch(`/api/waiters/${id}`, { method: 'DELETE' }).catch(() => {});
+    fetch(`/api/waiters/${id}?tenantId=${encodeURIComponent(effectiveSlug)}`, { method: 'DELETE' }).catch(() => {});
   };
 
   // Tables CRUD
@@ -1262,10 +1338,11 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       ? rawName
       : `Stol ${rawName}`;
     const zoneName = tableData.zone?.trim() || 'Zal 1';
-    const tableId = `${formattedName} (${zoneName})`;
+    const tableId = effectiveSlug === 'demo' ? `${formattedName} (${zoneName})` : `${effectiveSlug}-${formattedName} (${zoneName})`;
 
     const newTable: RestaurantTable = {
       id: tableId,
+      tenantId: effectiveSlug,
       name: formattedName,
       zone: zoneName,
       capacity: Number(tableData.capacity) || 4,
@@ -1275,13 +1352,13 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
     setTables(prev => {
       const next = [...prev.filter(t => t.id !== tableId), newTable];
-      try { localStorage.setItem('savoria_tables', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_tables_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
 
     fetch('/api/tables', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify(newTable)
     }).catch(() => {});
   };
@@ -1289,13 +1366,13 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const updateTable = (id: string, updates: Partial<RestaurantTable>) => {
     setTables(prev => {
       const updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
-      try { localStorage.setItem('savoria_tables', JSON.stringify(updated)); } catch {}
+      try { localStorage.setItem(`savoria_tables_${effectiveSlug}`, JSON.stringify(updated)); } catch {}
       const target = updated.find(t => t.id === id);
       if (target) {
         fetch('/api/tables', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(target)
+          headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
+          body: JSON.stringify({ ...target, tenantId: effectiveSlug })
         }).catch(() => {});
       }
       return updated;
@@ -1305,10 +1382,10 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const deleteTable = (id: string) => {
     setTables(prev => {
       const next = prev.filter(t => t.id !== id);
-      try { localStorage.setItem('savoria_tables', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_tables_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
-    fetch(`/api/tables/${id}`, { method: 'DELETE' }).catch(() => {});
+    fetch(`/api/tables/${encodeURIComponent(id)}?tenantId=${encodeURIComponent(effectiveSlug)}`, { method: 'DELETE' }).catch(() => {});
   };
 
   // Reviews mutation
@@ -1326,20 +1403,21 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const addReservation = (resData: Omit<TableReservation, 'id' | 'createdAt' | 'status'> & { status?: 'tasdiqlandi' | 'kutilmoqda' | 'bekor_qilindi' }): TableReservation => {
     const newRes: TableReservation = {
       ...resData,
-      id: `BRON-${Math.floor(100 + Math.random() * 900)}`,
+      tenantId: effectiveSlug,
+      id: `BRON-${Math.floor(100 + Math.random() * 900)}-${Date.now().toString().slice(-3)}`,
       status: resData.status || 'tasdiqlandi',
       createdAt: new Date().toISOString()
     };
     setReservations(prev => {
       const next = [newRes, ...prev];
-      try { localStorage.setItem('savoria_reservations', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_reservations_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
     playChime();
 
     fetch('/api/reservations', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify(newRes)
     }).catch(() => {});
 
@@ -1349,12 +1427,12 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const updateReservationStatus = (id: string, status: 'tasdiqlandi' | 'kutilmoqda' | 'bekor_qilindi') => {
     setReservations(prev => {
       const next = prev.map(r => r.id === id ? { ...r, status } : r);
-      try { localStorage.setItem('savoria_reservations', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_reservations_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
     fetch(`/api/reservations/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify({ status })
     }).catch(() => {});
   };
@@ -1362,7 +1440,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const deleteReservation = (id: string) => {
     setReservations(prev => {
       const next = prev.filter(r => r.id !== id);
-      try { localStorage.setItem('savoria_reservations', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`savoria_reservations_${effectiveSlug}`, JSON.stringify(next)); } catch {}
       return next;
     });
     fetch(`/api/reservations/${id}`, { method: 'DELETE' }).catch(() => {});
@@ -1376,17 +1454,19 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
     fetch('/api/waiter-call', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ table: tableName, timestamp })
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
+      body: JSON.stringify({ table: tableName, timestamp, tenantId: effectiveSlug })
     }).catch(() => {});
   };
 
   // Order actions
   const createOrder = (orderData: Omit<Order, 'id' | 'createdAt' | 'status' | 'isPaid'> & { status?: OrderStatus; isPaid?: boolean }): Order => {
     const timestamp = Date.now();
-    const newId = `SAV-${timestamp.toString().slice(-4)}`;
+    const prefix = (effectiveSlug || 'ORD').slice(0, 3).toUpperCase();
+    const newId = `${prefix}-${timestamp.toString().slice(-4)}`;
     const newOrder: Order = {
       ...orderData,
+      tenantId: effectiveSlug,
       id: newId,
       status: orderData.status || 'yangi',
       isPaid: orderData.isPaid || false,
@@ -1397,7 +1477,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       if (prev.some(o => o.id === newOrder.id)) return prev;
       const next = [newOrder, ...prev];
       try {
-        localStorage.setItem('savoria_orders', JSON.stringify(next));
+        localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -1405,7 +1485,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
     fetch('/api/orders', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify(newOrder)
     }).catch(err => {
       console.warn('POST /api/orders error:', err);
@@ -1424,7 +1504,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         return { ...o, ...updates };
       });
       try {
-        localStorage.setItem('savoria_orders', JSON.stringify(next));
+        localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -1432,7 +1512,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
     fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify({ status })
     }).catch(() => {});
   };
@@ -1453,13 +1533,13 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
       fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
         body: JSON.stringify({ items: updatedItems, status: newStatus })
       }).catch(() => {});
 
       const next = prev.map(o => o.id === orderId ? updatedOrder : o);
       try {
-        localStorage.setItem('savoria_orders', JSON.stringify(next));
+        localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -1479,7 +1559,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     setOrders(prev => {
       const next = prev.map(o => o.id === orderId ? { ...o, ...updates } : o);
       try {
-        localStorage.setItem('savoria_orders', JSON.stringify(next));
+        localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -1487,14 +1567,14 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     setCouriers(prev => {
       const next = prev.map(c => c.id === courierId ? { ...c, status: 'band' as const, activeOrdersCount: c.activeOrdersCount + 1 } : c);
       try {
-        localStorage.setItem('savoria_couriers', JSON.stringify(next));
+        localStorage.setItem(`savoria_couriers_${effectiveSlug}`, JSON.stringify(next));
       } catch {}
       return next;
     });
 
     fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify(updates)
     }).catch(() => {});
   };
@@ -1510,14 +1590,14 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     setOrders(prev => {
       const next = prev.map(o => o.id === orderId ? { ...o, ...updates } : o);
       try {
-        localStorage.setItem('savoria_orders', JSON.stringify(next));
+        localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(next));
       } catch {}
       return next;
     });
 
     fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify(updates)
     }).catch(() => {});
   };
@@ -1526,22 +1606,23 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     setOrders(prev => {
       const next = prev.filter(o => o.id !== orderId);
       try {
-        localStorage.setItem('savoria_orders', JSON.stringify(next));
+        localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(next));
       } catch {}
       return next;
     });
-    fetch(`/api/orders/${orderId}`, { method: 'DELETE' }).catch(() => {});
+    fetch(`/api/orders/${orderId}?tenantId=${encodeURIComponent(effectiveSlug)}`, { method: 'DELETE' }).catch(() => {});
   };
 
   const updateSettings = (newSettings: Partial<RestaurantSettings>) => {
     setSettings(prev => {
-      const updated = { ...prev, ...newSettings };
+      const updated: RestaurantSettings = { ...prev, ...newSettings, tenantId: effectiveSlug };
       try {
-        localStorage.setItem('savoria_settings', JSON.stringify(updated));
+        localStorage.setItem(`savoria_settings_${effectiveSlug}`, JSON.stringify(updated));
       } catch {}
-      fetch('/api/settings', {
+      setCurrentTenant(ct => ct ? { ...ct, name: updated.name || ct.name, phone: updated.phone ?? ct.phone, email: updated.email ?? ct.email, telegram: updated.telegram ?? ct.telegram, settings: updated } : ct);
+      fetch(`/api/settings?tenantId=${encodeURIComponent(effectiveSlug)}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
         body: JSON.stringify(updated)
       }).catch(() => {});
       return updated;
@@ -1639,6 +1720,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         settleOrderPayment,
         cancelOrder,
         updateSettings,
+        updateTenantAdminPassword,
         formatUZS
       }}
     >

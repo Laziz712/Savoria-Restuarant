@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { MenuItem, ItemCategory } from '../types';
+import { AdminSettingsView } from './AdminSettingsView';
 import { 
-  Plus, Edit2, Trash2, Check, X, Image as ImageIcon, 
-  Settings, DollarSign, Clock, ShieldCheck, Upload, Sparkles, AlertCircle
+  Plus, Edit2, Trash2, Check, X, 
+  ShieldCheck, Upload
 } from 'lucide-react';
 import wagyuImg from '../assets/images/savoria_wagyu_steak_1791475866836.jpg';
 import plovImg from '../assets/images/savoria_plov_special_1791475881101.jpg';
@@ -13,7 +14,7 @@ import burrataImg from '../assets/images/savoria_gourmet_salad_1791475898828.jpg
 export const AdminCatalogView: React.FC = () => {
   const { 
     menuItems, addMenuItem, updateMenuItem, deleteMenuItem, 
-    toggleItemAvailability, updateItemPrice, settings, updateSettings, formatUZS 
+    toggleItemAvailability, updateItemPrice, formatUZS 
   } = useRestaurant();
 
   const [activeTab, setActiveTab] = useState<'menyu' | 'sozlamalar'>('menyu');
@@ -38,15 +39,6 @@ export const AdminCatalogView: React.FC = () => {
   // Inline Price Editing State
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [tempPriceValue, setTempPriceValue] = useState<number>(0);
-
-  // Restaurant Settings Form
-  const [settingsName, setSettingsName] = useState(settings.name);
-  const [settingsSlogan, setSettingsSlogan] = useState(settings.slogan);
-  const [settingsAddress, setSettingsAddress] = useState(settings.address);
-  const [settingsPhone, setSettingsPhone] = useState(settings.phone);
-  const [settingsStir, setSettingsStir] = useState(settings.stir);
-  const [settingsServiceFee, setSettingsServiceFee] = useState(settings.serviceFeePercent);
-  const [settingsFooter, setSettingsFooter] = useState(settings.footerReceiptMessage);
 
   const presetImages = [
     { label: 'Wagyu Steyk', src: wagyuImg },
@@ -168,20 +160,6 @@ export const AdminCatalogView: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleSaveSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateSettings({
-      name: settingsName,
-      slogan: settingsSlogan,
-      address: settingsAddress,
-      phone: settingsPhone,
-      stir: settingsStir,
-      serviceFeePercent: Number(settingsServiceFee),
-      footerReceiptMessage: settingsFooter
-    });
-    alert('Restoran sozlamalari saqlandi!');
   };
 
   const filteredItems = menuItems.filter(item => 
@@ -417,91 +395,7 @@ export const AdminCatalogView: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* Restaurant Settings Form */
-        <div className="max-w-3xl rounded-xl bg-[#12141f] border border-[#23273a] p-6 shadow-xl">
-          <h2 className="font-serif font-bold text-base text-white mb-4">
-            RESTORAN VA CHEK MA'LUMOTLARI
-          </h2>
-          <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-neutral-400 font-medium block mb-1">Restoran Nomi</label>
-                <input
-                  type="text"
-                  value={settingsName}
-                  onChange={e => setSettingsName(e.target.value)}
-                  className="w-full bg-[#0a0b10] border border-[#2a2e41] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#d4af37]"
-                />
-              </div>
-              <div>
-                <label className="text-neutral-400 font-medium block mb-1">Shior / Slogan</label>
-                <input
-                  type="text"
-                  value={settingsSlogan}
-                  onChange={e => setSettingsSlogan(e.target.value)}
-                  className="w-full bg-[#0a0b10] border border-[#2a2e41] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#d4af37]"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-neutral-400 font-medium block mb-1">Manzil</label>
-              <input
-                type="text"
-                value={settingsAddress}
-                onChange={e => setSettingsAddress(e.target.value)}
-                className="w-full bg-[#0a0b10] border border-[#2a2e41] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#d4af37]"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="text-neutral-400 font-medium block mb-1">Telefon raqam</label>
-                <input
-                  type="text"
-                  value={settingsPhone}
-                  onChange={e => setSettingsPhone(e.target.value)}
-                  className="w-full bg-[#0a0b10] border border-[#2a2e41] rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-[#d4af37]"
-                />
-              </div>
-              <div>
-                <label className="text-neutral-400 font-medium block mb-1">STIR (INN)</label>
-                <input
-                  type="text"
-                  value={settingsStir}
-                  onChange={e => setSettingsStir(e.target.value)}
-                  className="w-full bg-[#0a0b10] border border-[#2a2e41] rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-[#d4af37]"
-                />
-              </div>
-              <div>
-                <label className="text-neutral-400 font-medium block mb-1">Xizmat haqi foizi (%)</label>
-                <input
-                  type="number"
-                  value={settingsServiceFee}
-                  onChange={e => setSettingsServiceFee(Number(e.target.value))}
-                  className="w-full bg-[#0a0b10] border border-[#2a2e41] rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-[#d4af37]"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-neutral-400 font-medium block mb-1">Chek pastidagi minnatdorlik matni</label>
-              <input
-                type="text"
-                value={settingsFooter}
-                onChange={e => setSettingsFooter(e.target.value)}
-                className="w-full bg-[#0a0b10] border border-[#2a2e41] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#d4af37]"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="mt-2 px-5 py-2.5 rounded-lg bg-[#d4af37] text-neutral-950 font-bold text-xs uppercase tracking-wider hover:bg-[#e6c14c] transition-colors"
-            >
-              Sozlamalarni Saqlash
-            </button>
-          </form>
-        </div>
+        <AdminSettingsView />
       )}
 
       {/* Modal: Add or Edit Menu Item */}

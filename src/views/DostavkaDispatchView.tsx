@@ -9,7 +9,7 @@ import {
 export const DostavkaDispatchView: React.FC = () => {
   const { 
     orders, couriers, assignCourier, updateOrderStatus, 
-    openReceiptModal, formatUZS 
+    openReceiptModal, formatUZS, settings, currentTenant 
   } = useRestaurant();
 
   const [filterStatus, setFilterStatus] = useState<'barchasi' | 'kutilmoqda' | 'yolda' | 'yetkazildi'>('barchasi');
@@ -46,7 +46,7 @@ export const DostavkaDispatchView: React.FC = () => {
                 DOSTAVKA LOGISTIKASI & KURYERLAR
               </h1>
               <p className="text-xs text-neutral-400 font-mono">
-                Toshkent bo'ylab ekspress yetkazib berish nazorati
+                {settings.name || currentTenant?.name || 'Restoran'} ekspress yetkazib berish nazorati
               </p>
             </div>
           </div>
@@ -272,13 +272,13 @@ export const DostavkaDispatchView: React.FC = () => {
               {/* Grid map lines */}
               <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2438_1px,transparent_1px),linear-gradient(to_bottom,#1f2438_1px,transparent_1px)] bg-[size:24px_24px] opacity-40"></div>
               
-              {/* Savoria HQ Pin */}
+              {/* Restaurant HQ Pin */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
                 <div className="w-4 h-4 rounded-full bg-[#d4af37] border-2 border-white shadow-[0_0_12px_#d4af37] flex items-center justify-center text-[8px] font-bold text-black">
-                  S
+                  {(settings.name || currentTenant?.name || 'R')[0].toUpperCase()}
                 </div>
                 <span className="text-[9px] font-mono text-[#d4af37] font-bold mt-1 bg-black/70 px-1 rounded">
-                  Savoria HQ
+                  {settings.name || currentTenant?.name || 'Restoran'} HQ
                 </span>
               </div>
 

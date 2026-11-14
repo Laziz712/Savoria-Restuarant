@@ -85,11 +85,11 @@ export const Navbar: React.FC = () => {
           {/* Left: Brand + Table Badge */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="w-8 h-8 rounded-lg border border-[#d4af37]/50 bg-gradient-to-br from-[#2a2415] to-[#12131a] flex items-center justify-center text-[#d4af37] font-serif font-bold text-sm shadow-[0_0_12px_rgba(212,175,55,0.25)] shrink-0">
-              S
+              {(currentTenant?.name || settings?.name || 'R')[0].toUpperCase()}
             </div>
             <div className="min-w-0">
               <span className="font-serif tracking-wider font-bold text-xs sm:text-base text-white block truncate">
-                SAVORIA RESTAURANT
+                {currentTenant?.name || settings?.name || 'Restoran'}
               </span>
               <span className="text-[10px] uppercase font-mono text-[#d4af37] tracking-widest hidden sm:block">
                 Raqamli Stol Menyusi
@@ -147,7 +147,7 @@ export const Navbar: React.FC = () => {
                 setIsMenuOnlyMode(false);
                 setCurrentTableContext(null);
                 try {
-                  window.history.pushState({}, '', '/');
+                  window.history.pushState({}, '', tenantSlug ? `/${tenantSlug}` : '/');
                 } catch {
                   // Ignore
                 }
@@ -173,11 +173,11 @@ export const Navbar: React.FC = () => {
             className="text-left group flex items-center gap-2 focus:outline-none shrink-0"
           >
             <div className="w-8 h-8 rounded-lg border border-[#d4af37]/50 bg-gradient-to-br from-[#2a2415] to-[#12131a] flex items-center justify-center text-[#d4af37] font-serif font-bold text-sm shadow-[0_0_12px_rgba(212,175,55,0.25)]">
-              {(currentTenant?.name || settings?.name || 'Savoria')[0].toUpperCase()}
+              {(currentTenant?.name || settings?.name || 'R')[0].toUpperCase()}
             </div>
             <div className="flex flex-col">
               <span className="font-serif tracking-wider font-bold text-xs sm:text-base text-white group-hover:text-[#d4af37] transition-colors whitespace-nowrap">
-                {currentTenant?.name || settings?.name || 'SAVORIA RESTAURANT'}
+                {settings?.name || currentTenant?.name || 'Restoran'}
               </span>
               {isDemoMode && (
                 <span className="text-[9px] text-[#d4af37] font-mono tracking-wider">
@@ -213,14 +213,16 @@ export const Navbar: React.FC = () => {
               <span>{t('nav_waiter')}</span>
             </button>
 
-            <button
-              onClick={() => navigateTo('/')}
-              title="Savoria SaaS platformasiga o'tish"
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-neutral-400 hover:text-amber-300 hover:bg-white/5 transition-all whitespace-nowrap"
-            >
-              <Globe className="w-3 h-3" />
-              <span className="hidden lg:inline">SaaS Bosh Sahifa</span>
-            </button>
+            {isDemoMode && (
+              <button
+                onClick={() => navigateTo('/')}
+                title="Savoria SaaS platformasiga o'tish"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-neutral-400 hover:text-amber-300 hover:bg-white/5 transition-all whitespace-nowrap"
+              >
+                <Globe className="w-3 h-3" />
+                <span className="hidden lg:inline">SaaS Bosh Sahifa</span>
+              </button>
+            )}
           </nav>
         </div>
 
@@ -323,14 +325,14 @@ export const Navbar: React.FC = () => {
             <div className="p-4 border-b border-[#202434] flex items-center justify-between bg-[#10121c]">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg border border-[#d4af37]/50 bg-gradient-to-br from-[#2a2415] to-[#12131a] flex items-center justify-center text-[#d4af37] font-serif font-bold text-sm shadow-[0_0_12px_rgba(212,175,55,0.25)]">
-                  S
+                  {(settings?.name || currentTenant?.name || 'R')[0].toUpperCase()}
                 </div>
                 <div>
                   <div className="font-serif font-bold text-white text-xs tracking-wider">
-                    SAVORIA RESTAURANT
+                    {settings?.name || currentTenant?.name || 'Restoran'}
                   </div>
                   <div className="text-[10px] text-[#d4af37] tracking-widest font-mono uppercase">
-                    Premium Gastro & POS
+                    {settings?.slogan || 'Restoran & POS Tizimi'}
                   </div>
                 </div>
               </div>
@@ -635,34 +637,40 @@ export const Navbar: React.FC = () => {
             {/* Drawer Footer with Contacts */}
             <div className="p-4 border-t border-[#1e2230] bg-[#090a10] text-[11px] text-neutral-400 space-y-2">
               <div className="font-serif text-center font-bold text-white text-xs tracking-wider">
-                SAVORIA RESTAURANT
+                {settings?.name || currentTenant?.name || 'Restoran'}
               </div>
-              <div className="flex items-center justify-center gap-4 text-xs font-mono pt-1 text-neutral-500">
-                <a 
-                  href="https://t.me/lazizshavkatov712" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="hover:text-[#d4af37] transition-colors"
-                >
-                  Telegram
-                </a>
-                <span>·</span>
-                <a 
-                  href="https://instagram.com/shavkatovv.o07" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="hover:text-[#d4af37] transition-colors"
-                >
-                  Instagram
-                </a>
-                <span>·</span>
-                <a 
-                  href="mailto:lazizshavkatov712@gmail.com" 
-                  className="hover:text-[#d4af37] transition-colors"
-                >
-                  Email
-                </a>
-              </div>
+              {(settings?.telegram || settings?.instagram || settings?.email) && (
+                <div className="flex items-center justify-center gap-3 flex-wrap text-xs font-mono pt-1 text-neutral-500">
+                  {settings?.telegram && (
+                    <a
+                      href={settings.telegram.startsWith('http') ? settings.telegram : `https://t.me/${settings.telegram.replace(/^@/, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-[#d4af37] transition-colors"
+                    >
+                      Telegram
+                    </a>
+                  )}
+                  {settings?.instagram && (
+                    <a
+                      href={settings.instagram.startsWith('http') ? settings.instagram : `https://instagram.com/${settings.instagram.replace(/^@/, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-[#d4af37] transition-colors"
+                    >
+                      Instagram
+                    </a>
+                  )}
+                  {settings?.email && (
+                    <a
+                      href={`mailto:${settings.email}`}
+                      className="hover:text-[#d4af37] transition-colors"
+                    >
+                      Email
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

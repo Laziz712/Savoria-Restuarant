@@ -11,6 +11,7 @@ export type AdminRole = 'superadmin' | 'menejer' | 'kassir';
 
 export interface AdminUser {
   id: string;
+  tenantId?: string;
   name: string;
   username: string;
   passwordHash: string;
@@ -35,6 +36,7 @@ export type ItemCategory =
 
 export interface MenuItem {
   id: string;
+  tenantId?: string;
   name: string;
   category: ItemCategory;
   price: number; // in UZS
@@ -77,6 +79,7 @@ export type PaymentMethod = 'naqd' | 'uzcard_humo' | 'payme_click' | 'visa';
 
 export interface Order {
   id: string; // e.g. #SAV-1082
+  tenantId?: string;
   type: OrderType;
   status: OrderStatus;
   items: OrderItem[];
@@ -105,6 +108,7 @@ export interface Order {
 
 export interface Courier {
   id: string;
+  tenantId?: string;
   name: string;
   phone: string;
   vehicle: 'skuter' | 'avto' | 'velosiped';
@@ -115,6 +119,7 @@ export interface Courier {
 
 export interface Waiter {
   id: string;
+  tenantId?: string;
   name: string;
   phone: string;
   assignedZone: string;
@@ -127,6 +132,7 @@ export interface Waiter {
 
 export interface RestaurantTable {
   id: string; // e.g. 'Stol #1 (Zal 1)'
+  tenantId?: string;
   name: string; // e.g. 'Stol 1'
   zone: string; // e.g. 'Zal 1', 'Zal 2', 'VIP', 'Terrasa', 'Bar'
   capacity: number; // e.g. 4
@@ -135,15 +141,33 @@ export interface RestaurantTable {
 }
 
 export interface RestaurantSettings {
+  tenantId?: string;
   name: string;
   slogan: string;
+  bio?: string;
+  heroBadge?: string;
+  heroTitle?: string;
+  heroHighlight?: string;
   address: string;
   phone: string;
+  email?: string;
   stir: string; // STIR / INN
   serviceFeePercent: number; // default 10%
   headerMessage: string;
   footerReceiptMessage: string;
   wifiPassword?: string;
+  workingDays?: string;
+  workingHours?: string;
+  specialHoursLabel?: string;
+  specialHoursValue?: string;
+  eventsTitle?: string;
+  eventsSchedule?: string;
+  telegram?: string;
+  instagram?: string;
+  aboutTitle?: string;
+  aboutQuote?: string;
+  aboutDescription1?: string;
+  aboutDescription2?: string;
 }
 
 export interface CustomerReview {
@@ -159,6 +183,7 @@ export interface CustomerReview {
 
 export interface TableReservation {
   id: string;
+  tenantId?: string;
   guestName: string;
   guestPhone: string;
   date: string;
@@ -184,6 +209,7 @@ export interface ChefProfile {
 
 export interface PushNotification {
   id: string;
+  tenantId?: string;
   title: string;
   message: string;
   target: 'all' | 'waiters' | 'customers' | 'table';
