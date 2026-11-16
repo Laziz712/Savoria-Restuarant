@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { 
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, 
@@ -11,6 +11,7 @@ import {
   CreditCard, Smartphone, CheckCircle2, ChevronRight, Layers,
   Utensils, Bike, Sparkles
 } from 'lucide-react';
+import { getTodayTashkentKey, getTashkentDateKey, getTashkentMonthKey } from '../utils/dateUtils';
 
 interface SalesDashboardData {
   kpis: {
@@ -68,7 +69,7 @@ interface SalesDashboardData {
 }
 
 export const SalesDashboardView: React.FC = () => {
-  const { orders, formatUZS, mongoStatus, isRealtimeConnected, tenantSlug } = useRestaurant();
+  const { orders, formatUZS, isRealtimeConnected, tenantSlug } = useRestaurant();
 
   const [period, setPeriod] = useState<'kunlik' | 'oylik'>('kunlik');
   const [metricView, setMetricView] = useState<'daromad' | 'buyurtmalar' | 'ikkalasi'>('daromad');
@@ -76,7 +77,20 @@ export const SalesDashboardView: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<SalesDashboardData | null>(null);
   const [lastRefreshedTime, setLastRefreshedTime] = useState<string>('');
 
-  const fetchSalesData = async () => {
+  // Signature tracks both new orders and newly paid/settled orders
+  const paidOrderSignature = useMemo(() => {
+    let paidSum = 0;
+    let paidCount = 0;
+    for (const o of orders) {
+      if (o.isPaid || o.status === 'yopildi') {
+        paidCount += 1;
+        paidSum += Number(o.finalTotal) || 0;
+      }
+    }
+    return `${orders.length}:${paidCount}:${paidSum}`;
+  }, [orders]);
+
+  const fetchSalesData = useCallback(async () => {
     setIsLoading(true);
     try {
       const slug = tenantSlug || 'demo';
@@ -93,11 +107,16 @@ export const SalesDashboardView: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [tenantSlug]);
 
   useEffect(() => {
     fetchSalesData();
-  }, [orders.length, tenantSlug]); // Auto-refresh when new orders arrive or tenant changes
+  }, [fetchSalesData, paidOrderSignature]);
+
+  useEffect(() => {
+    const timer = setInterval(fetchSalesData, 30000);
+    return () => clearInterval(timer);
+  }, [fetchSalesData]);
 
   // Custom Dark Glass Tooltip for Recharts
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -130,17 +149,34 @@ export const SalesDashboardView: React.FC = () => {
     return null;
   };
 
-  const kpis = dashboardData?.kpis || {
-    totalRevenue: 63005800,
-    todayRevenue: 4850000,
-    thisWeekRevenue: 32400000,
-    thisMonthRevenue: 54600000,
-    totalOrdersCount: 521,
-    todayOrdersCount: 38,
-    avgCheck: 142000,
-    growthPercentage: 18.4,
-    profitMarginRate: 42
-  };
+  const fallbackKpis = useMemo(() => {
+    const todayKey = getTodayTashkentKey();
+    const monthKey = getTashkentMonthKey(Date.now());
+    const sevenDaysAgoKey = getTashkentDateKey(Date.now() - 6 * 24 * 60 * 60 * 1000);
+    const paid = orders.filter(o => o.isPaid || o.status === 'yopildi');
+    const totalRevenue = paid.reduce((s, o) => s + (Number(o.finalTotal) || 0), 0);
+    const todayPaid = paid.filter(o => getTashkentDateKey(o.createdAt || o.updatedAt) === todayKey);
+    const todayRevenue = todayPaid.reduce((s, o) => s + (Number(o.finalTotal) || 0), 0);
+    const thisWeekRevenue = paid
+      .filter(o => getTashkentDateKey(o.createdAt || o.updatedAt) >= sevenDaysAgoKey)
+      .reduce((s, o) => s + (Number(o.finalTotal) || 0), 0);
+    const thisMonthRevenue = paid
+      .filter(o => getTashkentMonthKey(o.createdAt || o.updatedAt) === monthKey)
+      .reduce((s, o) => s + (Number(o.finalTotal) || 0), 0);
+    return {
+      totalRevenue,
+      todayRevenue,
+      thisWeekRevenue,
+      thisMonthRevenue,
+      totalOrdersCount: orders.length,
+      todayOrdersCount: todayPaid.length,
+      avgCheck: paid.length > 0 ? Math.round(totalRevenue / paid.length) : 0,
+      growthPercentage: 0,
+      profitMarginRate: 40
+    };
+  }, [orders]);
+
+  const kpis = dashboardData?.kpis || fallbackKpis;
 
   const dailyTrends = dashboardData?.dailyTrends || [];
   const monthlyTrends = dashboardData?.monthlyTrends || [];
@@ -176,7 +212,7 @@ export const SalesDashboardView: React.FC = () => {
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>{isRealtimeConnected ? 'Jonli Real-Time' : 'MongoDB Atlas'}</span>
+                  <span>{isRealtimeConnected ? 'Jonli Real-Time' : "Ma'lumotlar bazasi faol"}</span>
                 </span>
               </div>
               <p className="text-xs text-neutral-400 truncate mt-0.5">

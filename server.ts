@@ -339,6 +339,26 @@ const PresenceSessionSchema = new mongoose.Schema({
   lastSeenAt: { type: Number, default: Date.now, index: true }
 }, { timestamps: true });
 
+const DailyReportSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  tenantId: { type: String, default: 'demo', index: true },
+  dateKey: { type: String, required: true, index: true }, // YYYY-MM-DD (Asia/Tashkent UTC+5)
+  totalRevenue: { type: Number, default: 0 },
+  ordersCount: { type: Number, default: 0 },
+  paidOrdersCount: { type: Number, default: 0 },
+  avgCheck: { type: Number, default: 0 },
+  hallRevenue: { type: Number, default: 0 },
+  deliveryRevenue: { type: Number, default: 0 },
+  takeawayRevenue: { type: Number, default: 0 },
+  cashRevenue: { type: Number, default: 0 },
+  cardRevenue: { type: Number, default: 0 },
+  onlineRevenue: { type: Number, default: 0 },
+  otherRevenue: { type: Number, default: 0 },
+  topItems: { type: Array, default: [] },
+  closedByZReport: { type: Boolean, default: false },
+  closedAt: { type: String }
+}, { strict: false, timestamps: true });
+
 const MenuItemModel = mongoose.model('MenuItem', MenuItemSchema);
 const OrderModel = mongoose.model('Order', OrderSchema);
 const TableModel = mongoose.model('RestaurantTable', TableSchema);
@@ -352,6 +372,7 @@ const TenantModel = mongoose.model('Tenant', TenantSchema);
 const SubscriptionOrderModel = mongoose.model('SubscriptionOrder', SubscriptionOrderSchema);
 const PlatformConfigModel = mongoose.model('PlatformConfig', PlatformConfigSchema);
 const PresenceSessionModel = mongoose.model('PresenceSession', PresenceSessionSchema);
+const DailyReportModel = mongoose.model('DailyReport', DailyReportSchema);
 
 const DEFAULT_MENU_ITEMS = [
   {
@@ -691,8 +712,146 @@ const memoryStore = {
     cardHolder: 'SOHIBA SHOMURATOVA',
     telegramSupport: '@lazizshavkatov712'
   } as any,
-  presenceSessions: [] as any[]
+  presenceSessions: [] as any[],
+  dailyReports: [] as any[]
 };
+
+const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+function toEpochMsServer(val: any): number {
+  if (!val) return 0;
+  if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+  if (val instanceof Date) return Number.isNaN(val.getTime()) ? 0 : val.getTime();
+  const parsed = Date.parse(String(val));
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function toIsoSafeServer(val: any): string {
+  const ms = toEpochMsServer(val);
+  return ms > 0 ? new Date(ms).toISOString() : new Date().toISOString();
+}
+
+function getTashkentDateKeyServer(val: any = Date.now()): string {
+  const ms = toEpochMsServer(val) || Date.now();
+  return new Date(ms + TASHKENT_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+function getTashkentHourServer(val: any): number {
+  const ms = toEpochMsServer(val);
+  if (!ms) return 12;
+  return new Date(ms + TASHKENT_OFFSET_MS).getUTCHours();
+}
+
+function normalizeOrderRecord(o: any) {
+  if (!o) return o;
+  return {
+    ...o,
+    createdAt: toIsoSafeServer(o.createdAt || o.updatedAt || Date.now()),
+    readyAt: o.readyAt ? toIsoSafeServer(o.readyAt) : undefined,
+    deliveredAt: o.deliveredAt ? toIsoSafeServer(o.deliveredAt) : undefined
+  };
+}
+
+function buildDailyReportMapFromOrders(tenantId: string, orders: any[]) {
+  const dayMap = new Map<string, any>();
+  for (const ord of orders || []) {
+    const dk = getTashkentDateKeyServer(ord.createdAt || ord.updatedAt || Date.now());
+    if (!dayMap.has(dk)) {
+      dayMap.set(dk, {
+        id: `${tenantId}::${dk}`,
+        tenantId,
+        dateKey: dk,
+        totalRevenue: 0,
+        ordersCount: 0,
+        paidOrdersCount: 0,
+        avgCheck: 0,
+        hallRevenue: 0,
+        deliveryRevenue: 0,
+        takeawayRevenue: 0,
+        cashRevenue: 0,
+        cardRevenue: 0,
+        onlineRevenue: 0,
+        otherRevenue: 0,
+        itemMap: new Map<string, { name: string; quantity: number; revenue: number }>()
+      });
+    }
+    const bucket = dayMap.get(dk)!;
+    bucket.ordersCount += 1;
+    const isPaid = !!(ord.isPaid || ord.status === 'yopildi');
+    if (isPaid) {
+      const amt = Number(ord.finalTotal) || 0;
+      bucket.paidOrdersCount += 1;
+      bucket.totalRevenue += amt;
+      if (ord.type === 'dostavka') bucket.deliveryRevenue += amt;
+      else if (ord.type === 'olib_ketish') bucket.takeawayRevenue += amt;
+      else bucket.hallRevenue += amt;
+
+      if (ord.paymentMethod === 'naqd') bucket.cashRevenue += amt;
+      else if (ord.paymentMethod === 'uzcard_humo') bucket.cardRevenue += amt;
+      else if (ord.paymentMethod === 'payme_click') bucket.onlineRevenue += amt;
+      else bucket.otherRevenue += amt;
+    }
+    if (Array.isArray(ord.items)) {
+      for (const it of ord.items) {
+        const key = String(it.name || it.itemId || 'Taom');
+        const qty = Number(it.quantity) || 1;
+        const rev = (Number(it.price) || 0) * qty;
+        const cur = bucket.itemMap.get(key) || { name: key, quantity: 0, revenue: 0 };
+        cur.quantity += qty;
+        cur.revenue += rev;
+        bucket.itemMap.set(key, cur);
+      }
+    }
+  }
+
+  const summaries: any[] = [];
+  for (const [, b] of dayMap) {
+    const topItems = Array.from(b.itemMap.values())
+      .sort((a: any, c: any) => c.revenue - a.revenue)
+      .slice(0, 7);
+    const avgCheck = b.paidOrdersCount > 0 ? Math.round(b.totalRevenue / b.paidOrdersCount) : 0;
+    const { itemMap: _drop, ...clean } = b;
+    summaries.push({ ...clean, avgCheck, topItems });
+  }
+  return summaries;
+}
+
+async function syncDailyReportsForTenant(tenantId: string, orders: any[]) {
+  const summaries = buildDailyReportMapFromOrders(tenantId, orders);
+  if (isMongoConnected) {
+    for (const s of summaries) {
+      await DailyReportModel.findOneAndUpdate(
+        { id: s.id },
+        {
+          $set: {
+            tenantId: s.tenantId,
+            dateKey: s.dateKey,
+            totalRevenue: s.totalRevenue,
+            ordersCount: s.ordersCount,
+            paidOrdersCount: s.paidOrdersCount,
+            avgCheck: s.avgCheck,
+            hallRevenue: s.hallRevenue,
+            deliveryRevenue: s.deliveryRevenue,
+            takeawayRevenue: s.takeawayRevenue,
+            cashRevenue: s.cashRevenue,
+            cardRevenue: s.cardRevenue,
+            onlineRevenue: s.onlineRevenue,
+            otherRevenue: s.otherRevenue,
+            topItems: s.topItems
+          }
+        },
+        { upsert: true }
+      ).catch(() => {});
+    }
+  } else {
+    for (const s of summaries) {
+      const idx = memoryStore.dailyReports.findIndex((d: any) => d.id === s.id);
+      if (idx >= 0) memoryStore.dailyReports[idx] = { ...memoryStore.dailyReports[idx], ...s };
+      else memoryStore.dailyReports.push(s);
+    }
+  }
+  return summaries;
+}
 
 async function seedDefaultsIfEmpty() {
   if (hasSeededInProcess) return;
@@ -2032,7 +2191,7 @@ app.get('/api/tenant-bootstrap/:slug', async (req, res) => {
       tenant: computedTenant,
       mongoConnected: isMongoConnected,
       menu,
-      orders,
+      orders: (orders || []).map(normalizeOrderRecord),
       tables,
       reservations,
       waiters,
@@ -2040,7 +2199,8 @@ app.get('/api/tenant-bootstrap/:slug', async (req, res) => {
       adminUsers,
       settings: mergedSettings,
       notifications,
-      serverTime: new Date().toISOString()
+      serverTime: new Date().toISOString(),
+      serverDateKey: getTashkentDateKeyServer()
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2052,9 +2212,12 @@ function getTenantId(req: express.Request): string {
   return String(raw).toLowerCase().trim() || 'demo';
 }
 
-function stripMongoInternalFields(obj: any): any {
+function stripMongoInternalFields(obj: any, preserveCreatedAt = false): any {
   if (!obj || typeof obj !== 'object') return {};
   const { _id, __v, createdAt, updatedAt, ...rest } = obj;
+  if (preserveCreatedAt && createdAt) {
+    return { ...rest, createdAt: toIsoSafeServer(createdAt) };
+  }
   return rest;
 }
 
@@ -2097,14 +2260,15 @@ app.get('/api/bootstrap', async (req, res) => {
       tenantId,
       mongoConnected: isMongoConnected,
       menu,
-      orders,
+      orders: (orders || []).map(normalizeOrderRecord),
       tables,
       reservations,
       waiters,
       couriers,
       settings,
       notifications,
-      serverTime: new Date().toISOString()
+      serverTime: new Date().toISOString(),
+      serverDateKey: getTashkentDateKeyServer()
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2199,11 +2363,13 @@ app.delete('/api/menu/:id', async (req, res) => {
 app.get('/api/orders', async (req, res) => {
   try {
     const tenantId = getTenantId(req);
+    res.setHeader('X-Db-Connected', isMongoConnected ? 'true' : 'false');
+    res.setHeader('X-Server-Date', getTashkentDateKeyServer());
     if (isMongoConnected) {
       const orders = await OrderModel.find({ tenantId }).sort({ createdAt: -1 }).lean();
-      return res.json(orders);
+      return res.json(orders.map(normalizeOrderRecord));
     }
-    res.json(memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId));
+    res.json(memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId).map(normalizeOrderRecord));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -2212,7 +2378,11 @@ app.get('/api/orders', async (req, res) => {
 app.post('/api/orders', async (req, res) => {
   try {
     const tenantId = getTenantId(req);
-    const orderData = { ...stripMongoInternalFields(req.body), tenantId };
+    const orderData = {
+      ...stripMongoInternalFields(req.body, true),
+      tenantId,
+      createdAt: toIsoSafeServer(req.body?.createdAt || Date.now())
+    };
     let saved = orderData;
 
     if (isMongoConnected) {
@@ -2221,14 +2391,18 @@ app.post('/api/orders', async (req, res) => {
         { $set: orderData },
         { upsert: true, new: true }
       ).lean();
+      const tenantOrders = await OrderModel.find({ tenantId }).lean();
+      syncDailyReportsForTenant(tenantId, tenantOrders).catch(() => {});
     } else {
       const idx = memoryStore.orders.findIndex(o => o.id === orderData.id);
       if (idx >= 0) memoryStore.orders[idx] = orderData;
       else memoryStore.orders.unshift(orderData);
+      syncDailyReportsForTenant(tenantId, memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId)).catch(() => {});
     }
 
-    broadcastRealtimeEvent('order:created', saved);
-    res.json(saved);
+    const normalized = normalizeOrderRecord(saved);
+    broadcastRealtimeEvent('order:created', normalized);
+    res.json(normalized);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -2238,21 +2412,28 @@ app.patch('/api/orders/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const updates = stripMongoInternalFields(req.body);
-    let updated = null;
+    let updated: any = null;
 
     if (isMongoConnected) {
       updated = await OrderModel.findOneAndUpdate({ id }, { $set: updates }, { new: true }).lean();
+      if (updated?.tenantId) {
+        const tenantOrders = await OrderModel.find({ tenantId: updated.tenantId }).lean();
+        syncDailyReportsForTenant(updated.tenantId, tenantOrders).catch(() => {});
+      }
     } else {
       const idx = memoryStore.orders.findIndex(o => o.id === id);
       if (idx >= 0) {
         memoryStore.orders[idx] = { ...memoryStore.orders[idx], ...updates };
         updated = memoryStore.orders[idx];
+        const tId = updated?.tenantId || 'demo';
+        syncDailyReportsForTenant(tId, memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tId)).catch(() => {});
       }
     }
 
     if (updated) {
-      broadcastRealtimeEvent('order:updated', updated);
-      return res.json(updated);
+      const normalized = normalizeOrderRecord(updated);
+      broadcastRealtimeEvent('order:updated', normalized);
+      return res.json(normalized);
     }
     res.status(404).json({ error: 'Order not found' });
   } catch (err: any) {
@@ -2682,80 +2863,214 @@ app.get('/api/analytics', async (req, res) => {
   }
 });
 
-// 11b. Sales Dashboard Aggregated Analytics (For Recharts Visualizations)
+// 11b. Daily Permanent Reports Archive & Z-Report Close (24-hour cycle, Tashkent UTC+5)
+app.get('/api/reports/daily-history', async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const orders = isMongoConnected
+      ? await OrderModel.find({ tenantId }).lean()
+      : memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId);
+
+    // Ensure every day with orders is persisted permanently in DailyReportModel
+    await syncDailyReportsForTenant(tenantId, orders);
+
+    const archived = isMongoConnected
+      ? await DailyReportModel.find({ tenantId }).sort({ dateKey: -1 }).lean()
+      : memoryStore.dailyReports
+          .filter((d: any) => d.tenantId === tenantId)
+          .sort((a: any, b: any) => String(b.dateKey).localeCompare(String(a.dateKey)));
+
+    res.json({
+      success: true,
+      tenantId,
+      mongoConnected: isMongoConnected,
+      serverDateKey: getTashkentDateKeyServer(),
+      history: archived
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Kunlik arxiv xatosi' });
+  }
+});
+
+app.post('/api/reports/close-day', async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const targetDateKey = String(req.body?.dateKey || getTashkentDateKeyServer());
+    const orders = isMongoConnected
+      ? await OrderModel.find({ tenantId }).lean()
+      : memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId);
+
+    await syncDailyReportsForTenant(tenantId, orders);
+
+    const id = `${tenantId}::${targetDateKey}`;
+    const closedAt = new Date().toISOString();
+    let record: any = null;
+
+    if (isMongoConnected) {
+      record = await DailyReportModel.findOneAndUpdate(
+        { id },
+        {
+          $set: { closedByZReport: true, closedAt },
+          $setOnInsert: { id, tenantId, dateKey: targetDateKey }
+        },
+        { upsert: true, new: true }
+      ).lean();
+    } else {
+      const idx = memoryStore.dailyReports.findIndex((d: any) => d.id === id);
+      if (idx >= 0) {
+        memoryStore.dailyReports[idx] = { ...memoryStore.dailyReports[idx], closedByZReport: true, closedAt };
+        record = memoryStore.dailyReports[idx];
+      } else {
+        record = { id, tenantId, dateKey: targetDateKey, totalRevenue: 0, ordersCount: 0, paidOrdersCount: 0, closedByZReport: true, closedAt };
+        memoryStore.dailyReports.push(record);
+      }
+    }
+
+    res.json({ success: true, record, serverDateKey: getTashkentDateKeyServer() });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Z-Xisobot saqlashda xatolik' });
+  }
+});
+
+// 11c. Sales Dashboard Aggregated Analytics (For Recharts Visualizations - Consistent across all devices)
 app.get('/api/analytics/sales-dashboard', async (req, res) => {
   try {
     const tenantId = getTenantId(req);
     let orders: any[] = [];
     let menu: any[] = [];
+    let archivedDays: any[] = [];
     if (isMongoConnected) {
-      const [o, m] = await Promise.all([
+      const [o, m, arch] = await Promise.all([
         OrderModel.find({ tenantId }).lean(),
-        MenuItemModel.find({ tenantId }).lean()
+        MenuItemModel.find({ tenantId }).lean(),
+        DailyReportModel.find({ tenantId }).lean()
       ]);
       orders = o;
       menu = m;
+      archivedDays = arch;
     } else {
       orders = memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId);
       menu = memoryStore.menu.filter((m: any) => (m.tenantId || 'demo') === tenantId);
+      archivedDays = memoryStore.dailyReports.filter((d: any) => d.tenantId === tenantId);
     }
 
+    // Keep DailyReportModel up-to-date in background
+    syncDailyReportsForTenant(tenantId, orders).catch(() => {});
+
     const paidOrders = orders.filter(o => o.isPaid || o.status === 'yopildi');
-    const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.finalTotal || 0), 0);
+    const orderTotalRevenue = paidOrders.reduce((sum, o) => sum + (Number(o.finalTotal) || 0), 0);
     const totalOrdersCount = orders.length;
-    const avgCheck = paidOrders.length > 0 ? Math.round(totalRevenue / paidOrders.length) : 0;
+    const avgCheck = paidOrders.length > 0 ? Math.round(orderTotalRevenue / paidOrders.length) : 0;
 
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
+    const nowMs = Date.now();
+    const todayStr = getTashkentDateKeyServer(nowMs);
+    const currentMonthKey = todayStr.slice(0, 7);
+    const yesterdayStr = getTashkentDateKeyServer(nowMs - 24 * 60 * 60 * 1000);
+    const sevenDaysAgoKey = getTashkentDateKeyServer(nowMs - 6 * 24 * 60 * 60 * 1000);
 
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Merge live orders by Tashkent date with archived reports (keeping max per day so history never vanishes)
+    const archivedByDay = new Map<string, any>();
+    for (const arch of archivedDays) {
+      if (arch?.dateKey) archivedByDay.set(arch.dateKey, arch);
+    }
 
-    const todayPaid = paidOrders.filter(o => (o.createdAt || '').slice(0, 10) === todayStr);
-    const thisWeekPaid = paidOrders.filter(o => new Date(o.createdAt || 0) >= oneWeekAgo);
-    const thisMonthPaid = paidOrders.filter(o => new Date(o.createdAt || 0) >= startOfMonth);
+    const liveDailyByKey = new Map<string, { revenue: number; ordersCount: number; paidCount: number; zal: number; dostavka: number }>();
+    for (const ord of orders) {
+      const dk = getTashkentDateKeyServer(ord.createdAt || ord.updatedAt || nowMs);
+      const cur = liveDailyByKey.get(dk) || { revenue: 0, ordersCount: 0, paidCount: 0, zal: 0, dostavka: 0 };
+      cur.ordersCount += 1;
+      if (ord.isPaid || ord.status === 'yopildi') {
+        const amt = Number(ord.finalTotal) || 0;
+        cur.paidCount += 1;
+        cur.revenue += amt;
+        if (ord.type === 'dostavka') cur.dostavka += amt;
+        else cur.zal += amt;
+      }
+      liveDailyByKey.set(dk, cur);
+    }
 
-    const todayRevenue = todayPaid.reduce((sum, o) => sum + (o.finalTotal || 0), 0);
-    const thisWeekRevenue = thisWeekPaid.reduce((sum, o) => sum + (o.finalTotal || 0), 0);
-    const thisMonthRevenue = thisMonthPaid.reduce((sum, o) => sum + (o.finalTotal || 0), 0);
+    const todayPaid = paidOrders.filter(o => getTashkentDateKeyServer(o.createdAt || o.updatedAt) === todayStr);
+    const yesterdayPaid = paidOrders.filter(o => getTashkentDateKeyServer(o.createdAt || o.updatedAt) === yesterdayStr);
+    const thisWeekPaid = paidOrders.filter(o => getTashkentDateKeyServer(o.createdAt || o.updatedAt) >= sevenDaysAgoKey);
+    const thisMonthPaid = paidOrders.filter(o => getTashkentDateKeyServer(o.createdAt || o.updatedAt).slice(0, 7) === currentMonthKey);
+
+    const todayRevenue = todayPaid.reduce((sum, o) => sum + (Number(o.finalTotal) || 0), 0);
+    const yesterdayRevenue = Math.max(
+      yesterdayPaid.reduce((sum, o) => sum + (Number(o.finalTotal) || 0), 0),
+      Number(archivedByDay.get(yesterdayStr)?.totalRevenue) || 0
+    );
+    const thisWeekRevenue = thisWeekPaid.reduce((sum, o) => sum + (Number(o.finalTotal) || 0), 0);
+    const thisMonthRevenue = thisMonthPaid.reduce((sum, o) => sum + (Number(o.finalTotal) || 0), 0);
+
+    // Ensure archived-only historical revenue isn't lost even if orders list were trimmed
+    let extraArchivedRevenue = 0;
+    let extraArchivedOrders = 0;
+    for (const [dk, arch] of archivedByDay) {
+      if (!liveDailyByKey.has(dk)) {
+        extraArchivedRevenue += Number(arch.totalRevenue) || 0;
+        extraArchivedOrders += Number(arch.ordersCount) || 0;
+      }
+    }
+    const effectiveTotalRevenue = orderTotalRevenue + extraArchivedRevenue;
+    const effectiveTotalOrders = totalOrdersCount + extraArchivedOrders;
 
     const monthNamesUz = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
     const dailyMap = new Map<string, { date: string; fullDate: string; daromad: number; buyurtmalar: number; zal: number; dostavka: number; avgCheck: number }>();
 
     for (let i = 9; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      const iso = d.toISOString().slice(0, 10);
-      const label = `${d.getDate()}-${monthNamesUz[d.getMonth()]}`;
-      const baselineOrders = tenantId === 'demo' ? Math.floor(18 + Math.sin(i * 1.5) * 8 + (d.getDay() === 0 || d.getDay() === 6 ? 12 : 0)) : 0;
-      const baselineRevenue = baselineOrders * 125000;
+      const shifted = new Date(nowMs - i * 24 * 60 * 60 * 1000 + TASHKENT_OFFSET_MS);
+      const iso = shifted.toISOString().slice(0, 10);
+      const label = `${shifted.getUTCDate()}-${monthNamesUz[shifted.getUTCMonth()]}`;
+      const arch = archivedByDay.get(iso);
+      const live = liveDailyByKey.get(iso);
+
+      let daromad = live ? live.revenue : Number(arch?.totalRevenue) || 0;
+      let buyurtmalar = live ? live.ordersCount : Number(arch?.ordersCount) || 0;
+      let zal = live ? live.zal : Number(arch?.hallRevenue) || 0;
+      let dostavka = live ? live.dostavka : Number(arch?.deliveryRevenue) || 0;
+
+      if (tenantId === 'demo' && daromad === 0 && buyurtmalar === 0) {
+        const baselineOrders = Math.floor(18 + ((i * 7) % 11));
+        const baselineRevenue = baselineOrders * 125000;
+        daromad = baselineRevenue;
+        buyurtmalar = baselineOrders;
+        zal = Math.round(baselineRevenue * 0.72);
+        dostavka = Math.round(baselineRevenue * 0.28);
+      }
+
       dailyMap.set(iso, {
         date: label,
         fullDate: iso,
-        daromad: baselineRevenue,
-        buyurtmalar: baselineOrders,
-        zal: Math.round(baselineRevenue * 0.72),
-        dostavka: Math.round(baselineRevenue * 0.28),
-        avgCheck: baselineOrders > 0 ? 125000 : 0
+        daromad,
+        buyurtmalar,
+        zal,
+        dostavka,
+        avgCheck: buyurtmalar > 0 ? Math.round(daromad / buyurtmalar) : 0
       });
-    }
-
-    for (const ord of paidOrders) {
-      const iso = (ord.createdAt || '').slice(0, 10);
-      if (dailyMap.has(iso)) {
-        const item = dailyMap.get(iso)!;
-        item.daromad += (ord.finalTotal || 0);
-        item.buyurtmalar += 1;
-        if (ord.type === 'dostavka') {
-          item.dostavka += (ord.finalTotal || 0);
-        } else {
-          item.zal += (ord.finalTotal || 0);
-        }
-        item.avgCheck = Math.round(item.daromad / Math.max(1, item.buyurtmalar));
-      }
     }
     const dailyTrends = Array.from(dailyMap.values());
 
+    // Aggregate real monthly breakdown from orders + archives
+    const monthTotalsMap = new Map<string, { daromad: number; buyurtmalar: number; zal: number; dostavka: number }>();
+    const addMonthStat = (mk: string, daromad: number, buyurtmalar: number, zal: number, dostavka: number) => {
+      const cur = monthTotalsMap.get(mk) || { daromad: 0, buyurtmalar: 0, zal: 0, dostavka: 0 };
+      cur.daromad += daromad;
+      cur.buyurtmalar += buyurtmalar;
+      cur.zal += zal;
+      cur.dostavka += dostavka;
+      monthTotalsMap.set(mk, cur);
+    };
+    for (const [dk, live] of liveDailyByKey) {
+      addMonthStat(dk.slice(0, 7), live.revenue, live.ordersCount, live.zal, live.dostavka);
+    }
+    for (const [dk, arch] of archivedByDay) {
+      if (!liveDailyByKey.has(dk)) {
+        addMonthStat(dk.slice(0, 7), Number(arch.totalRevenue) || 0, Number(arch.ordersCount) || 0, Number(arch.hallRevenue) || 0, Number(arch.deliveryRevenue) || 0);
+      }
+    }
+
     const isDemo = tenantId === 'demo';
+    const currentTashkentDate = new Date(nowMs + TASHKENT_OFFSET_MS);
     const monthlyTrends = isDemo
       ? [
           { month: 'May', daromad: 38500000, buyurtmalar: 310, zal: 27500000, dostavka: 11000000, sofFoyda: 16170000 },
@@ -2763,16 +3078,26 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
           { month: 'Iyul', daromad: 46800000, buyurtmalar: 390, zal: 33200000, dostavka: 13600000, sofFoyda: 19656000 },
           { month: 'Avgust', daromad: 51200000, buyurtmalar: 420, zal: 36800000, dostavka: 14400000, sofFoyda: 21504000 },
           { month: 'Sentabr', daromad: 47900000, buyurtmalar: 388, zal: 34100000, dostavka: 13800000, sofFoyda: 20118000 },
-          { month: 'Oktabr', daromad: 54600000 + Math.round(totalRevenue * 0.6), buyurtmalar: 452 + orders.length, zal: 39200000, dostavka: 15400000, sofFoyda: 22932000 },
-          { month: 'Noyabr', daromad: Math.max(12800000, totalRevenue), buyurtmalar: Math.max(94, orders.length), zal: Math.round(Math.max(12800000, totalRevenue) * 0.74), dostavka: Math.round(Math.max(12800000, totalRevenue) * 0.26), sofFoyda: Math.round(Math.max(12800000, totalRevenue) * 0.42) }
+          { month: 'Oktabr', daromad: 54600000 + Math.round(effectiveTotalRevenue * 0.6), buyurtmalar: 452 + effectiveTotalOrders, zal: 39200000, dostavka: 15400000, sofFoyda: 22932000 },
+          { month: 'Noyabr', daromad: Math.max(12800000, effectiveTotalRevenue), buyurtmalar: Math.max(94, effectiveTotalOrders), zal: Math.round(Math.max(12800000, effectiveTotalRevenue) * 0.74), dostavka: Math.round(Math.max(12800000, effectiveTotalRevenue) * 0.26), sofFoyda: Math.round(Math.max(12800000, effectiveTotalRevenue) * 0.42) }
         ]
-      : [
-          { month: monthNamesUz[now.getMonth()], daromad: totalRevenue, buyurtmalar: orders.length, zal: paidOrders.filter(o => o.type === 'zal').reduce((s, o) => s + (o.finalTotal || 0), 0), dostavka: paidOrders.filter(o => o.type === 'dostavka').reduce((s, o) => s + (o.finalTotal || 0), 0), sofFoyda: Math.round(totalRevenue * 0.4) }
-        ];
+      : Array.from({ length: 6 }, (_, idx) => {
+          const d = new Date(Date.UTC(currentTashkentDate.getUTCFullYear(), currentTashkentDate.getUTCMonth() - (5 - idx), 1));
+          const mk = d.toISOString().slice(0, 7);
+          const stat = monthTotalsMap.get(mk) || { daromad: 0, buyurtmalar: 0, zal: 0, dostavka: 0 };
+          return {
+            month: monthNamesUz[d.getUTCMonth()],
+            daromad: stat.daromad,
+            buyurtmalar: stat.buyurtmalar,
+            zal: stat.zal,
+            dostavka: stat.dostavka,
+            sofFoyda: Math.round(stat.daromad * 0.4)
+          };
+        });
 
-    const zalSum = paidOrders.filter(o => o.type === 'zal').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 38400000 : 0);
-    const dostavkaSum = paidOrders.filter(o => o.type === 'dostavka').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 14200000 : 0);
-    const olibKetishSum = paidOrders.filter(o => o.type === 'olib_ketish').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 4800000 : 0);
+    const zalSum = paidOrders.filter(o => o.type === 'zal').reduce((s, o) => s + (Number(o.finalTotal) || 0), 0) + (isDemo ? 38400000 : 0);
+    const dostavkaSum = paidOrders.filter(o => o.type === 'dostavka').reduce((s, o) => s + (Number(o.finalTotal) || 0), 0) + (isDemo ? 14200000 : 0);
+    const olibKetishSum = paidOrders.filter(o => o.type === 'olib_ketish').reduce((s, o) => s + (Number(o.finalTotal) || 0), 0) + (isDemo ? 4800000 : 0);
     const grandChannelsTotal = Math.max(1, zalSum + dostavkaSum + olibKetishSum);
 
     const channelDistribution = [
@@ -2781,9 +3106,9 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
       { name: 'Olib ketish (Takeaway)', value: olibKetishSum, count: paidOrders.filter(o => o.type === 'olib_ketish').length + (isDemo ? 48 : 0), percentage: Math.round((olibKetishSum / grandChannelsTotal) * 100), color: '#10b981' }
     ];
 
-    const cardSum = paidOrders.filter(o => o.paymentMethod === 'uzcard_humo').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 29400000 : 0);
-    const onlineSum = paidOrders.filter(o => o.paymentMethod === 'payme_click').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 18200000 : 0);
-    const cashSum = paidOrders.filter(o => o.paymentMethod === 'naqd').reduce((s, o) => s + (o.finalTotal || 0), 0) + (isDemo ? 9800000 : 0);
+    const cardSum = paidOrders.filter(o => o.paymentMethod === 'uzcard_humo').reduce((s, o) => s + (Number(o.finalTotal) || 0), 0) + (isDemo ? 29400000 : 0);
+    const onlineSum = paidOrders.filter(o => o.paymentMethod === 'payme_click').reduce((s, o) => s + (Number(o.finalTotal) || 0), 0) + (isDemo ? 18200000 : 0);
+    const cashSum = paidOrders.filter(o => o.paymentMethod === 'naqd').reduce((s, o) => s + (Number(o.finalTotal) || 0), 0) + (isDemo ? 9800000 : 0);
     const grandPayTotal = Math.max(1, cardSum + onlineSum + cashSum);
 
     const paymentDistribution = [
@@ -2792,23 +3117,41 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
       { name: 'Naqd Pul', value: cashSum, percentage: Math.round((cashSum / grandPayTotal) * 100), color: '#f59e0b' }
     ];
 
-    const hourlyTrends = isDemo
-      ? [
-          { hour: '11:00', tushum: 850000, buyurtmalar: 7 },
-          { hour: '12:00', tushum: 2450000, buyurtmalar: 19 },
-          { hour: '13:00', tushum: 4890000, buyurtmalar: 36 },
-          { hour: '14:00', tushum: 3120000, buyurtmalar: 24 },
-          { hour: '15:00', tushum: 1450000, buyurtmalar: 11 },
-          { hour: '16:00', tushum: 1100000, buyurtmalar: 9 },
-          { hour: '17:00', tushum: 1950000, buyurtmalar: 15 },
-          { hour: '18:00', tushum: 4200000, buyurtmalar: 31 },
-          { hour: '19:00', tushum: 7650000, buyurtmalar: 58 },
-          { hour: '20:00', tushum: 8900000, buyurtmalar: 64 },
-          { hour: '21:00', tushum: 6450000, buyurtmalar: 45 },
-          { hour: '22:00', tushum: 3200000, buyurtmalar: 22 },
-          { hour: '23:00', tushum: 1250000, buyurtmalar: 9 }
-        ]
-      : ['11:00', '13:00', '15:00', '17:00', '19:00', '21:00', '23:00'].map(h => ({ hour: h, tushum: 0, buyurtmalar: 0 }));
+    // Real hourly distribution across all tenants (Tashkent UTC+5 hours)
+    const hourBuckets = new Map<number, { tushum: number; buyurtmalar: number }>();
+    for (let h = 9; h <= 23; h++) hourBuckets.set(h, { tushum: 0, buyurtmalar: 0 });
+    for (const ord of paidOrders) {
+      const hr = Math.max(9, Math.min(23, getTashkentHourServer(ord.createdAt || ord.updatedAt || nowMs)));
+      const b = hourBuckets.get(hr)!;
+      b.tushum += Number(ord.finalTotal) || 0;
+      b.buyurtmalar += 1;
+    }
+
+    const demoBaselineHours: Record<number, { tushum: number; buyurtmalar: number }> = {
+      11: { tushum: 850000, buyurtmalar: 7 },
+      12: { tushum: 2450000, buyurtmalar: 19 },
+      13: { tushum: 4890000, buyurtmalar: 36 },
+      14: { tushum: 3120000, buyurtmalar: 24 },
+      15: { tushum: 1450000, buyurtmalar: 11 },
+      16: { tushum: 1100000, buyurtmalar: 9 },
+      17: { tushum: 1950000, buyurtmalar: 15 },
+      18: { tushum: 4200000, buyurtmalar: 31 },
+      19: { tushum: 7650000, buyurtmalar: 58 },
+      20: { tushum: 8900000, buyurtmalar: 64 },
+      21: { tushum: 6450000, buyurtmalar: 45 },
+      22: { tushum: 3200000, buyurtmalar: 22 },
+      23: { tushum: 1250000, buyurtmalar: 9 }
+    };
+
+    const hourlyTrends = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map(h => {
+      const real = hourBuckets.get(h) || { tushum: 0, buyurtmalar: 0 };
+      const base = isDemo ? (demoBaselineHours[h] || { tushum: 0, buyurtmalar: 0 }) : { tushum: 0, buyurtmalar: 0 };
+      return {
+        hour: `${String(h).padStart(2, '0')}:00`,
+        tushum: real.tushum + base.tushum,
+        buyurtmalar: real.buyurtmalar + base.buyurtmalar
+      };
+    });
 
     const itemMap = new Map<string, { name: string; category: string; quantity: number; revenue: number }>();
     for (const ord of paidOrders) {
@@ -2819,8 +3162,8 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
             itemMap.set(key, { name: key, category: it.station || 'oshxona', quantity: 0, revenue: 0 });
           }
           const rec = itemMap.get(key)!;
-          rec.quantity += (it.quantity || 1);
-          rec.revenue += ((it.price || 0) * (it.quantity || 1));
+          rec.quantity += (Number(it.quantity) || 1);
+          rec.revenue += ((Number(it.price) || 0) * (Number(it.quantity) || 1));
         }
       }
     }
@@ -2851,19 +3194,25 @@ app.get('/api/analytics/sales-dashboard', async (req, res) => {
         })
     ).sort((a, b) => b.revenue - a.revenue);
 
+    const growthPercentage = yesterdayRevenue > 0
+      ? Math.round(((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 1000) / 10
+      : (isDemo ? 18.4 : 0);
+
     res.json({
       success: true,
       tenantId,
+      mongoConnected: isMongoConnected,
+      serverDateKey: todayStr,
       timestamp: new Date().toISOString(),
       kpis: {
-        totalRevenue: totalRevenue + (isDemo ? 57400000 : 0),
+        totalRevenue: effectiveTotalRevenue + (isDemo ? 57400000 : 0),
         todayRevenue: todayRevenue > 0 ? todayRevenue : (isDemo ? 4850000 : 0),
         thisWeekRevenue: thisWeekRevenue > 0 ? thisWeekRevenue : (isDemo ? 32400000 : 0),
         thisMonthRevenue: thisMonthRevenue > 0 ? thisMonthRevenue : (isDemo ? 54600000 : 0),
-        totalOrdersCount: totalOrdersCount + (isDemo ? 512 : 0),
+        totalOrdersCount: effectiveTotalOrders + (isDemo ? 512 : 0),
         todayOrdersCount: todayPaid.length > 0 ? todayPaid.length : (isDemo ? 38 : 0),
         avgCheck: avgCheck > 0 ? avgCheck : (isDemo ? 142000 : 0),
-        growthPercentage: 18.4,
+        growthPercentage,
         profitMarginRate: 42
       },
       dailyTrends,
@@ -2889,7 +3238,7 @@ app.post('/api/sync-all', async (req, res) => {
       if (Array.isArray(orders) && orders.length > 0) {
         for (const o of orders) {
           if (!o || !o.id) continue;
-          await OrderModel.findOneAndUpdate({ id: o.id }, { $set: { ...stripMongoInternalFields(o), tenantId } }, { upsert: true });
+          await OrderModel.findOneAndUpdate({ id: o.id }, { $set: { ...stripMongoInternalFields(o, true), tenantId } }, { upsert: true });
           syncedCount++;
         }
       }
@@ -2936,11 +3285,14 @@ app.post('/api/sync-all', async (req, res) => {
         await TenantModel.findOneAndUpdate({ slug: tenantId }, { $set: { settings: cleanS } });
       }
 
+      const tenantOrders = await OrderModel.find({ tenantId }).lean();
+      await syncDailyReportsForTenant(tenantId, tenantOrders);
+
       return res.json({ 
         success: true, 
         mongoConnected: true, 
         syncedCount, 
-        message: "Ma'lumotlar MongoDB Atlas markaziy bazasiga sinxronizatsiya qilindi" 
+        message: "Ma'lumotlar markaziy bazaga sinxronizatsiya qilindi" 
       });
     }
 
@@ -2962,7 +3314,7 @@ app.post('/api/sync/full', async (req, res) => {
       if (Array.isArray(localOrders) && localOrders.length > 0) {
         for (const o of localOrders) {
           if (!o || !o.id) continue;
-          await OrderModel.findOneAndUpdate({ id: o.id }, { $set: { ...stripMongoInternalFields(o), tenantId } }, { upsert: true, new: true });
+          await OrderModel.findOneAndUpdate({ id: o.id }, { $set: { ...stripMongoInternalFields(o, true), tenantId } }, { upsert: true, new: true });
         }
       }
 
@@ -2973,19 +3325,20 @@ app.post('/api/sync/full', async (req, res) => {
         }
       }
 
-      syncedOrders = await OrderModel.find({ tenantId }).sort({ createdAt: -1 }).lean();
+      syncedOrders = (await OrderModel.find({ tenantId }).sort({ createdAt: -1 }).lean()).map(normalizeOrderRecord);
       syncedMenu = await MenuItemModel.find({ tenantId }).lean();
+      await syncDailyReportsForTenant(tenantId, syncedOrders);
     } else {
       if (Array.isArray(localOrders)) {
         localOrders.forEach((lo: any) => {
           if (!lo || !lo.id) return;
-          const itemWithTenant = { ...lo, tenantId };
+          const itemWithTenant = normalizeOrderRecord({ ...lo, tenantId });
           const idx = memoryStore.orders.findIndex(o => o.id === lo.id);
           if (idx >= 0) memoryStore.orders[idx] = itemWithTenant;
           else memoryStore.orders.unshift(itemWithTenant);
         });
       }
-      syncedOrders = memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId);
+      syncedOrders = memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId).map(normalizeOrderRecord);
       syncedMenu = memoryStore.menu.filter((m: any) => (m.tenantId || 'demo') === tenantId);
     }
 

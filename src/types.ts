@@ -101,6 +101,7 @@ export interface Order {
   isPaid: boolean;
   paymentMethod?: PaymentMethod;
   createdAt: string; // ISO string
+  updatedAt?: string; // ISO string
   readyAt?: string;
   deliveredAt?: string;
   fiscalReceiptNumber?: string;

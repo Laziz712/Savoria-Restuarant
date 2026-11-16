@@ -4,7 +4,7 @@ import {
   Search, RefreshCw, Key, Ban, Settings, Activity, Server,
   ExternalLink, Copy, Check, AlertTriangle, ArrowLeft, LogOut,
   Plus, Image as ImageIcon, Globe, Smartphone, Laptop, Lock,
-  Store, BarChart3, UserCheck, UtensilsCrossed, Bike, Phone
+  Store, BarChart3, UserCheck, UtensilsCrossed, Bike, Phone, PhoneCall
 } from 'lucide-react';
 import { Tenant, SubscriptionOrder, PlatformPricingConfig } from '../types';
 
@@ -161,6 +161,10 @@ export const SuperadminDashboardView: React.FC<SuperadminDashboardViewProps> = (
 
   // Format helpers
   const formatUZS = (val: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(val || 0)) + " so'm";
+  const toTelHref = (phone?: string) => {
+    const cleaned = String(phone || '').replace(/[^\d+]/g, '');
+    return cleaned.length >= 7 ? `tel:${cleaned}` : '';
+  };
   const formatRelativeTime = (tsOrIso: number | string) => {
     const ms = typeof tsOrIso === 'number' ? tsOrIso : new Date(tsOrIso).getTime();
     if (!ms || Number.isNaN(ms)) return '—';
@@ -854,7 +858,17 @@ export const SuperadminDashboardView: React.FC<SuperadminDashboardViewProps> = (
                         </div>
                         <div className="flex justify-between gap-2">
                           <span className="text-neutral-400">Telefon:</span>
-                          <span className="font-mono">{order.phone}</span>
+                          {toTelHref(order.phone) ? (
+                            <a
+                              href={toTelHref(order.phone)}
+                              className="font-mono text-emerald-400 hover:text-emerald-300 hover:underline inline-flex items-center gap-1"
+                            >
+                              <PhoneCall className="w-3 h-3" />
+                              <span>{order.phone}</span>
+                            </a>
+                          ) : (
+                            <span className="font-mono">{order.phone}</span>
+                          )}
                         </div>
                         <div className="flex justify-between gap-2">
                           <span className="text-neutral-400">Telegram:</span>
@@ -984,7 +998,17 @@ export const SuperadminDashboardView: React.FC<SuperadminDashboardViewProps> = (
                       <div>
                         <span className="text-[10px] text-neutral-400 block">Egasi & Tel</span>
                         <span className="font-medium text-white truncate block">{tenant.ownerName}</span>
-                        <span className="font-mono text-[11px] text-neutral-300">{tenant.phone}</span>
+                        {toTelHref(tenant.phone) ? (
+                          <a
+                            href={toTelHref(tenant.phone)}
+                            className="font-mono text-[11px] text-emerald-400 hover:underline inline-flex items-center gap-1 mt-0.5"
+                          >
+                            <PhoneCall className="w-3 h-3" />
+                            <span>{tenant.phone}</span>
+                          </a>
+                        ) : (
+                          <span className="font-mono text-[11px] text-neutral-300">{tenant.phone}</span>
+                        )}
                       </div>
                       <div className="text-right">
                         <span className="text-[10px] text-neutral-400 block">Qolgan / Buyurtma</span>
@@ -998,6 +1022,16 @@ export const SuperadminDashboardView: React.FC<SuperadminDashboardViewProps> = (
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {toTelHref(tenant.phone) && (
+                        <a
+                          href={toTelHref(tenant.phone)}
+                          className="py-2 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5"
+                          title={`Qo'ng'iroq qilish: ${tenant.phone}`}
+                        >
+                          <PhoneCall className="w-3.5 h-3.5" />
+                          <span>Qo'ng'iroq</span>
+                        </a>
+                      )}
                       <button
                         onClick={() => setExtendingTenant(tenant)}
                         className="flex-1 py-2 px-3 rounded-xl bg-[#1a1e2f] text-amber-300 border border-[#2f3754] text-xs font-semibold"
@@ -1080,7 +1114,18 @@ export const SuperadminDashboardView: React.FC<SuperadminDashboardViewProps> = (
 
                           <td className="p-3.5">
                             <div className="font-medium text-white">{tenant.ownerName}</div>
-                            <div className="text-neutral-400 font-mono text-[11px]">{tenant.phone}</div>
+                            {toTelHref(tenant.phone) ? (
+                              <a
+                                href={toTelHref(tenant.phone)}
+                                className="text-emerald-400 hover:text-emerald-300 hover:underline font-mono text-[11px] inline-flex items-center gap-1 mt-0.5"
+                                title={`Telefon qilish: ${tenant.phone}`}
+                              >
+                                <PhoneCall className="w-3 h-3" />
+                                <span>{tenant.phone}</span>
+                              </a>
+                            ) : (
+                              <div className="text-neutral-400 font-mono text-[11px]">{tenant.phone}</div>
+                            )}
                           </td>
 
                           <td className="p-3.5 font-mono">
@@ -1121,6 +1166,17 @@ export const SuperadminDashboardView: React.FC<SuperadminDashboardViewProps> = (
 
                           <td className="p-3.5 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              {toTelHref(tenant.phone) && (
+                                <a
+                                  href={toTelHref(tenant.phone)}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold inline-flex items-center gap-1 transition-colors"
+                                  title={`Telefon qilish: ${tenant.phone}`}
+                                >
+                                  <PhoneCall className="w-3.5 h-3.5" />
+                                  <span>Telefon</span>
+                                </a>
+                              )}
+
                               <button
                                 onClick={() => setExtendingTenant(tenant)}
                                 className="px-2.5 py-1 rounded-lg bg-[#1a1e2f] hover:bg-[#252b44] text-amber-300 border border-[#2f3754] text-[11px] font-semibold transition-colors cursor-pointer"
@@ -1317,10 +1373,17 @@ export const SuperadminDashboardView: React.FC<SuperadminDashboardViewProps> = (
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-xs font-mono text-neutral-300 pt-1 border-t border-white/5">
-                        <span className="flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-neutral-500" />
-                          <span>{u.phone || '—'}</span>
-                        </span>
+                        {toTelHref(u.phone) ? (
+                          <a href={toTelHref(u.phone)} className="flex items-center gap-1 text-emerald-400 hover:underline">
+                            <PhoneCall className="w-3 h-3" />
+                            <span>{u.phone}</span>
+                          </a>
+                        ) : (
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-neutral-500" />
+                            <span>{u.phone || '—'}</span>
+                          </span>
+                        )}
                         <span className="text-emerald-400 font-bold tabular-nums">
                           {u.totalSpent > 0 ? formatUZS(u.totalSpent) : u.ordersCount > 0 ? `${u.ordersCount} buyurtma` : u.status}
                         </span>
@@ -1363,7 +1426,14 @@ export const SuperadminDashboardView: React.FC<SuperadminDashboardViewProps> = (
                               <div className="text-[10px] font-mono text-[#d4af37]">/{u.tenantSlug}</div>
                             </td>
                             <td className="p-3.5 font-mono">
-                              <div className="text-neutral-200">{u.phone || '—'}</div>
+                              {toTelHref(u.phone) ? (
+                                <a href={toTelHref(u.phone)} className="text-emerald-400 hover:underline inline-flex items-center gap-1">
+                                  <PhoneCall className="w-3 h-3" />
+                                  <span>{u.phone}</span>
+                                </a>
+                              ) : (
+                                <div className="text-neutral-200">{u.phone || '—'}</div>
+                              )}
                               {u.telegram && <div className="text-[10px] text-sky-400">{u.telegram}</div>}
                             </td>
                             <td className="p-3.5">
@@ -1405,7 +1475,7 @@ export const SuperadminDashboardView: React.FC<SuperadminDashboardViewProps> = (
                   <Server className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div className="text-lg font-bold font-mono text-emerald-400">
-                  {overview?.systemHealth?.mongoConnected ? 'MongoDB Atlas Faol' : 'Lokal Rejim'}
+                  {overview?.systemHealth?.mongoConnected ? "Ma'lumotlar bazasi faol" : 'Lokal Rejim'}
                 </div>
                 <div className="text-[11px] text-neutral-500 font-mono">
                   Muhit: {overview?.systemHealth?.environment || 'Production'}

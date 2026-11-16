@@ -228,16 +228,18 @@ export const Navbar: React.FC = () => {
 
         {/* Right Side: Desktop Controls & Mobile Burger Button */}
         <div className="flex items-center gap-2">
-          {/* Live Real-Time MongoDB Status Indicator */}
-          <div 
-            title={mongoStatus.connected ? 'MongoDB Atlas va Real-Time SSE jonli ulanishi faol' : 'Lokal xotira faol'}
-            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#11131c] border border-[#23273a] text-[11px] font-mono shadow-sm"
-          >
-            <span className={`w-2 h-2 rounded-full ${isRealtimeConnected || mongoStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            <span className={isRealtimeConnected || mongoStatus.connected ? 'text-emerald-400 font-semibold' : 'text-amber-400'}>
-              {isRealtimeConnected ? 'Jonli Baza (SSE)' : mongoStatus.connected ? 'MongoDB Faol' : 'Sinxron'}
-            </span>
-          </div>
+          {/* Database Status Indicator (Strictly Admin Panel only, never on main customer/demo screen) */}
+          {activeRoute === 'admin' && isAdminAuthenticated && (
+            <div 
+              title={mongoStatus.connected ? "Markaziy ma'lumotlar bazasi faol" : 'Lokal xotira faol'}
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#11131c] border border-[#23273a] text-[11px] font-mono shadow-sm"
+            >
+              <span className={`w-2 h-2 rounded-full ${isRealtimeConnected || mongoStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              <span className={isRealtimeConnected || mongoStatus.connected ? 'text-emerald-400 font-semibold' : 'text-amber-400'}>
+                {isRealtimeConnected || mongoStatus.connected ? "Ma'lumotlar bazasi faol" : 'Sinxron'}
+              </span>
+            </div>
+          )}
 
           {/* Quick Language Switcher on all devices */}
           <LanguageSwitcher />

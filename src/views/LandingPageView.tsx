@@ -10,11 +10,13 @@ import { PlatformPricingConfig } from '../types';
 
 interface LandingPageViewProps {
   onOpenDemo: (subRoute?: string) => void;
+  onOpenSuperadmin?: () => void;
   initialBuyModalOpen?: boolean;
 }
 
 export const LandingPageView: React.FC<LandingPageViewProps> = ({
   onOpenDemo,
+  onOpenSuperadmin,
   initialBuyModalOpen = false
 }) => {
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(initialBuyModalOpen);
@@ -669,7 +671,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-xs">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs">
             <a
               href="https://t.me/lazizshavkatov712"
               target="_blank"
@@ -681,6 +683,16 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
             </a>
 
             <button
+              type="button"
+              onClick={() => (onOpenSuperadmin ? onOpenSuperadmin() : window.location.assign('/superadmin'))}
+              className="px-4 py-2 rounded-xl bg-[#141724] hover:bg-[#1e2338] text-neutral-200 border border-[#2b3149] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-[#d4af37]" />
+              <span>Admin</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => handleOpenBuy(12)}
               className="px-4 py-2 rounded-xl bg-[#d4af37] text-neutral-950 font-bold hover:brightness-110 transition-all cursor-pointer"
             >

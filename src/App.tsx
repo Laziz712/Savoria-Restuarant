@@ -47,6 +47,7 @@ const AppContent: React.FC = () => {
     return (
       <LandingPageView 
         onOpenDemo={(sub) => navigateTo(sub ? `/demo/${sub}` : '/demo')} 
+        onOpenSuperadmin={() => navigateTo('/superadmin')}
       />
     );
   }
@@ -56,6 +57,7 @@ const AppContent: React.FC = () => {
     return (
       <LandingPageView 
         onOpenDemo={(sub) => navigateTo(sub ? `/demo/${sub}` : '/demo')} 
+        onOpenSuperadmin={() => navigateTo('/superadmin')}
         initialBuyModalOpen={true} 
       />
     );

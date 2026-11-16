@@ -6,6 +6,7 @@ import {
   CreditCard, Banknote, CheckCircle2, AlertCircle, Eye, 
   Filter, ArrowDownUp, RefreshCw, FileText, ChevronRight, User, Utensils
 } from 'lucide-react';
+import { getTodayTashkentKey, getTashkentDateKey, toEpochMs, formatTashkentDateTime } from '../utils/dateUtils';
 
 export const ReceiptsHistoryView: React.FC = () => {
   const { orders, openReceiptModal, formatUZS, settings, waiters, tables } = useRestaurant();
@@ -16,8 +17,8 @@ export const ReceiptsHistoryView: React.FC = () => {
   const [paymentFilter, setPaymentFilter] = useState<'barchasi' | 'naqd' | 'uzcard_humo' | 'payme_click'>('barchasi');
   const [sortBy, setSortBy] = useState<'yangi' | 'qadimgi' | 'katta_summa' | 'kichik_summa'>('yangi');
 
-  // Today Date String for matching (YYYY-MM-DD)
-  const todayStr = new Date().toISOString().slice(0, 10);
+  // Today Date String in Asia/Tashkent (YYYY-MM-DD)
+  const todayStr = getTodayTashkentKey();
 
   // Filtered and Sorted Receipts
   const filteredReceipts = useMemo(() => {
@@ -43,7 +44,7 @@ export const ReceiptsHistoryView: React.FC = () => {
       } else if (activeFilter === 'ochiq') {
         if (order.isPaid || order.status === 'yopildi') return false;
       } else if (activeFilter === 'bugun') {
-        const orderDate = (order.createdAt || '').slice(0, 10);
+        const orderDate = getTashkentDateKey(order.createdAt || order.updatedAt);
         if (orderDate !== todayStr) return false;
       } else if (activeFilter === 'dostavka') {
         if (order.type !== 'dostavka') return false;
@@ -57,10 +58,10 @@ export const ReceiptsHistoryView: React.FC = () => {
       return true;
     }).sort((a, b) => {
       if (sortBy === 'yangi') {
-        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        return toEpochMs(b.createdAt || b.updatedAt) - toEpochMs(a.createdAt || a.updatedAt);
       }
       if (sortBy === 'qadimgi') {
-        return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        return toEpochMs(a.createdAt || a.updatedAt) - toEpochMs(b.createdAt || b.updatedAt);
       }
       if (sortBy === 'katta_summa') {
         return (b.finalTotal || 0) - (a.finalTotal || 0);
@@ -75,7 +76,7 @@ export const ReceiptsHistoryView: React.FC = () => {
   // Summary Metrics
   const stats = useMemo(() => {
     const totalReceipts = orders.length;
-    const todayOrders = orders.filter(o => (o.createdAt || '').slice(0, 10) === todayStr);
+    const todayOrders = orders.filter(o => getTashkentDateKey(o.createdAt || o.updatedAt) === todayStr);
     const paidOrders = orders.filter(o => o.isPaid || o.status === 'yopildi');
     const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.finalTotal || 0), 0);
     const todayRevenue = todayOrders
@@ -95,19 +96,7 @@ export const ReceiptsHistoryView: React.FC = () => {
   }, [orders, todayStr]);
 
   const formatDateTime = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleString('uz-UZ', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return dateStr;
-    }
+    return formatTashkentDateTime(dateStr);
   };
 
   const getPaymentLabel = (method?: PaymentMethod) => {

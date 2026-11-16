@@ -368,9 +368,9 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const [mongoStatus, setMongoStatus] = useState<MongoStatus>({
     connected: false,
-    cluster: 'MongoDB Atlas',
+    cluster: 'Bulutli Baza',
     database: 'savoria',
-    message: 'Markaziy bazaga ulanmoqda...'
+    message: "Ma'lumotlar bazasiga ulanmoqda..."
   });
 
   const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
@@ -485,9 +485,9 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
           if (data.mongoConnected !== undefined) {
             setMongoStatus({
               connected: !!data.mongoConnected,
-              cluster: 'MongoDB Atlas',
+              cluster: 'Bulutli Baza',
               database: 'savoria',
-              message: data.mongoConnected ? 'Markaziy MongoDB bazasi faol' : 'Lokal xotira faol'
+              message: data.mongoConnected ? "Ma'lumotlar bazasi faol" : 'Lokal xotira faol'
             });
           }
           setRealtimeToast({
@@ -636,9 +636,9 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
           setMongoStatus({
             connected: !!data.mongoConnected,
-            cluster: 'MongoDB Atlas',
+            cluster: 'Bulutli Baza',
             database: 'savoria',
-            message: data.mongoConnected ? 'Markaziy MongoDB bazasi faol' : 'Lokal xotira faol'
+            message: data.mongoConnected ? "Ma'lumotlar bazasi faol" : 'Lokal xotira faol'
           });
 
           if (Array.isArray(data.menu)) {
@@ -650,7 +650,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
             try { localStorage.setItem(`savoria_menu_items_${effectiveSlug}`, JSON.stringify(enrichedMenu)); } catch {}
           }
 
-          if (Array.isArray(data.orders)) {
+          if (Array.isArray(data.orders) && (data.mongoConnected || data.orders.length > 0)) {
             setOrders(data.orders);
             try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(data.orders)); } catch {}
           }
@@ -942,44 +942,79 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
     connectRealtime();
 
-    // Hybrid Fail-Safe: Polling check scoped to effectiveSlug
-    const pollInterval = setInterval(() => {
-      fetch(`/api/orders?tenantId=${encodeURIComponent(effectiveSlug)}`)
-        .then(r => r.json())
-        .then(latestOrders => {
-          if (Array.isArray(latestOrders)) {
-            setOrders(prev => {
-              const isDifferent = prev.length !== latestOrders.length ||
-                prev.some((o, i) => !latestOrders[i] || o.id !== latestOrders[i].id || o.status !== latestOrders[i].status || o.isPaid !== latestOrders[i].isPaid);
-              if (isDifferent) {
-                try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(latestOrders)); } catch {}
-                return latestOrders;
-              }
-              return prev;
-            });
-          }
-        })
-        .catch(() => {});
-    }, 4000);
+    const syncLatestOrders = async () => {
+      try {
+        // Flush any offline-queued orders up to central DB first
+        const pendingKey = `savoria_pending_orders_${effectiveSlug}`;
+        let pendingQueue: Order[] = [];
+        try {
+          const rawP = localStorage.getItem(pendingKey);
+          pendingQueue = rawP ? JSON.parse(rawP) : [];
+        } catch {
+          pendingQueue = [];
+        }
 
-    const handleFocus = () => {
-      fetch(`/api/orders?tenantId=${encodeURIComponent(effectiveSlug)}`)
-        .then(r => r.json())
-        .then(latest => {
-          if (Array.isArray(latest)) {
-            setOrders(prev => {
-              const isDifferent = prev.length !== latest.length ||
-                prev.some((o, i) => !latest[i] || o.id !== latest[i].id || o.status !== latest[i].status || o.isPaid !== latest[i].isPaid);
-              if (isDifferent) {
-                try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(latest)); } catch {}
-                return latest;
-              }
-              return prev;
-            });
+        if (Array.isArray(pendingQueue) && pendingQueue.length > 0) {
+          const stillPending: Order[] = [];
+          for (const pOrder of pendingQueue) {
+            try {
+              const pRes = await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
+                body: JSON.stringify(pOrder)
+              });
+              if (!pRes.ok) stillPending.push(pOrder);
+            } catch {
+              stillPending.push(pOrder);
+            }
           }
-        })
-        .catch(() => {});
+          try {
+            if (stillPending.length > 0) localStorage.setItem(pendingKey, JSON.stringify(stillPending));
+            else localStorage.removeItem(pendingKey);
+          } catch {}
+        }
+
+        const r = await fetch(`/api/orders?tenantId=${encodeURIComponent(effectiveSlug)}`);
+        if (!r.ok) return;
+        const dbConnected = r.headers.get('X-Db-Connected') !== 'false';
+        const latestOrders = await r.json();
+        if (!Array.isArray(latestOrders)) return;
+
+        setOrders(prev => {
+          // Do not overwrite local orders with empty array if DB is momentarily in fallback mode
+          if (!dbConnected && latestOrders.length === 0 && prev.length > 0) {
+            return prev;
+          }
+          // Merge any still-pending local orders so they never disappear
+          let remainingPending: Order[] = [];
+          try {
+            const rawP2 = localStorage.getItem(pendingKey);
+            remainingPending = rawP2 ? JSON.parse(rawP2) : [];
+          } catch {
+            remainingPending = [];
+          }
+          const latestIds = new Set(latestOrders.map((o: Order) => o.id));
+          const merged = [
+            ...remainingPending.filter(p => !latestIds.has(p.id)),
+            ...latestOrders
+          ];
+
+          const isDifferent = prev.length !== merged.length ||
+            prev.some((o, i) => !merged[i] || o.id !== merged[i].id || o.status !== merged[i].status || o.isPaid !== merged[i].isPaid || o.finalTotal !== merged[i].finalTotal);
+          if (isDifferent) {
+            try { localStorage.setItem(`savoria_orders_${effectiveSlug}`, JSON.stringify(merged)); } catch {}
+            return merged;
+          }
+          return prev;
+        });
+      } catch {
+        // Ignore transient network errors
+      }
     };
+
+    // Hybrid Fail-Safe: Polling check scoped to effectiveSlug
+    const pollInterval = setInterval(syncLatestOrders, 4000);
+    const handleFocus = () => { syncLatestOrders(); };
     window.addEventListener('focus', handleFocus);
 
     return () => {
@@ -1521,14 +1556,15 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   const createOrder = (orderData: Omit<Order, 'id' | 'createdAt' | 'status' | 'isPaid'> & { status?: OrderStatus; isPaid?: boolean }): Order => {
     const timestamp = Date.now();
     const prefix = (effectiveSlug || 'ORD').slice(0, 3).toUpperCase();
-    const newId = `${prefix}-${timestamp.toString().slice(-4)}`;
+    const uniqueSuffix = `${timestamp.toString(36).toUpperCase().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
+    const newId = `${prefix}-${uniqueSuffix}`;
     const newOrder: Order = {
       ...orderData,
       tenantId: effectiveSlug,
       id: newId,
       status: orderData.status || 'yangi',
       isPaid: orderData.isPaid || false,
-      createdAt: new Date().toISOString()
+      createdAt: new Date(timestamp).toISOString()
     };
 
     setOrders(prev => {
@@ -1541,13 +1577,29 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     });
     playChime();
 
+    const queuePendingOrder = () => {
+      try {
+        const pendingKey = `savoria_pending_orders_${effectiveSlug}`;
+        const raw = localStorage.getItem(pendingKey);
+        const list: Order[] = raw ? JSON.parse(raw) : [];
+        if (!list.some(o => o.id === newOrder.id)) {
+          localStorage.setItem(pendingKey, JSON.stringify([newOrder, ...list]));
+        }
+      } catch {}
+    };
+
     fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': effectiveSlug },
       body: JSON.stringify(newOrder)
-    }).catch(err => {
-      console.warn('POST /api/orders error:', err);
-    });
+    })
+      .then(res => {
+        if (!res.ok) queuePendingOrder();
+      })
+      .catch(err => {
+        console.warn('POST /api/orders error (queued for retry):', err);
+        queuePendingOrder();
+      });
 
     return newOrder;
   };
