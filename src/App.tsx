@@ -94,7 +94,50 @@ const AppContent: React.FC = () => {
       <div className="flex-1 min-w-0 w-full pb-20 md:pb-0">
         {activeRoute === 'mijoz' && <CustomerMenuView />}
         {activeRoute === 'ofitsiant' && <WaiterOrderView />}
-        {activeRoute === 'admin' && <AdminHubView />}
+        {activeRoute === 'admin' && (
+          isAdminAuthenticated ? (
+            <AdminHubView />
+          ) : (
+            <div className="min-h-[70vh] flex items-center justify-center p-4">
+              <div className="w-full max-w-md rounded-3xl bg-[#10121c] border border-[#d4af37]/40 p-6 sm:p-8 text-center shadow-2xl space-y-5">
+                <div className="w-14 h-14 rounded-2xl bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#d4af37] flex items-center justify-center mx-auto">
+                  <Lock className="w-7 h-7" />
+                </div>
+                <div className="space-y-1.5">
+                  <h2 className="font-serif font-bold text-xl text-white">
+                    {isDemoMode ? 'DEMO ADMIN PANEL' : `${settings.name || currentTenant?.name || 'Restoran'} Admin Panel`}
+                  </h2>
+                  <p className="text-xs text-neutral-400">
+                    Kassa (POS), Oshxona, Stollar va Hisobotlarni ochish uchun admin parolini kiriting.
+                  </p>
+                </div>
+
+                {isDemoMode && (
+                  <div className="p-3 rounded-xl bg-[#1a160c] border border-[#d4af37]/40 text-xs font-mono text-amber-200">
+                    Demo Admin Paroli: <b className="text-[#d4af37] text-sm">admin123</b>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminLoginModal(true)}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#e6c14c] text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-lg hover:brightness-110 transition-all cursor-pointer"
+                  >
+                    Admin Panelga Kirish
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRoute('mijoz')}
+                    className="w-full py-2.5 rounded-xl bg-[#161926] hover:bg-[#1f2436] text-neutral-300 border border-[#282d42] text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    Menyuga Qaytish
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        )}
       </div>
 
       {/* Mobile Sticky Bottom Navigation Bar (Phone-friendly touch controls) */}

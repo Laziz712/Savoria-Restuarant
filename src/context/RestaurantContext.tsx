@@ -1170,7 +1170,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   // Admin Authentication (supports tenant owner password, tenant admins, and platform master password)
   const adminLogin = (password: string): boolean => {
     const matchesTenantPass = !!(currentTenant?.adminPasswordHash && currentTenant.adminPasswordHash === password);
-    const matchesDemoPass = isDemoMode && password === '1111';
+    const matchesDemoPass = isDemoMode && password === 'admin123';
     const masterAdmin = adminUsers.find(a => a.passwordHash === password);
     if (password === 'laziz712.' || matchesTenantPass || matchesDemoPass || masterAdmin) {
       setIsAdminAuthenticated(true);

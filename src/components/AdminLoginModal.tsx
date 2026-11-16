@@ -10,7 +10,7 @@ export const AdminLoginModal: React.FC = () => {
   const { 
     showAdminLoginModal, setShowAdminLoginModal, 
     adminLogin, waiterLogin, waiters, adminUsers,
-    setRoute, setAdminSubTab, settings, currentTenant, t 
+    setRoute, setAdminSubTab, settings, currentTenant, isDemoMode 
   } = useRestaurant();
 
   // Role: 'admin' | 'waiter' | 'cashier'
@@ -303,6 +303,29 @@ export const AdminLoginModal: React.FC = () => {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+
+            {isDemoMode && (
+              <div className="mt-2.5 p-2.5 rounded-xl bg-[#1a160c] border border-[#d4af37]/40 flex items-center justify-between gap-2 text-[11px]">
+                <div className="font-mono text-amber-200">
+                  {activeRole === 'waiter' ? (
+                    <>Demo PIN: <b className="text-white">1111</b> / <b className="text-white">2222</b></>
+                  ) : (
+                    <>Demo Admin Parol: <b className="text-[#d4af37]">admin123</b></>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const val = activeRole === 'waiter' ? '1111' : 'admin123';
+                    setPassword(val);
+                    if (errorMsg) setErrorMsg('');
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-[#d4af37]/20 hover:bg-[#d4af37]/30 text-[#d4af37] font-bold border border-[#d4af37]/40 transition-colors cursor-pointer shrink-0"
+                >
+                  Kiritish
+                </button>
+              </div>
+            )}
 
             {errorMsg && (
               <p className="text-rose-400 text-[11px] mt-1.5 font-mono flex items-center gap-1">

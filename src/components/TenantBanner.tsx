@@ -1,32 +1,54 @@
 import React from 'react';
 import { useRestaurant } from '../context/RestaurantContext';
-import { AlertTriangle, Sparkles, RefreshCw, ShoppingCart, Clock, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Sparkles, RefreshCw, ShoppingCart, Clock, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 export const TenantBanner: React.FC = () => {
-  const { currentTenant, isDemoMode, activeRoute, navigateTo, resetDemoData } = useRestaurant();
+  const {
+    currentTenant, isDemoMode, activeRoute, navigateTo, resetDemoData,
+    isAdminAuthenticated, setRoute, setShowAdminLoginModal
+  } = useRestaurant();
 
   if (isDemoMode) {
+    const handleOpenDemoAdmin = () => {
+      if (isAdminAuthenticated) {
+        setRoute('admin');
+        navigateTo('/demo/admin');
+      } else {
+        setShowAdminLoginModal(true);
+      }
+    };
+
     return (
       <aside aria-label="Demo holati" className="bg-gradient-to-r from-[#2a1d0d] via-[#1f160b] to-[#2a1d0d] border-b border-[#d4af37]/40 px-3 py-2 text-xs text-white">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse" />
             <span className="font-semibold text-[#d4af37] flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
               DEMO REJIMI:
             </span>
             <span className="text-neutral-300">
-              Barcha funksiyalar sinov uchun to'liq ochiq.
-              {activeRoute === 'admin' ? (
-                <span className="ml-1 text-amber-300 font-mono font-bold">(Tezkor PIN: 1111)</span>
-              ) : (
-                <span className="ml-1 text-neutral-400">Admin panelni ko'rish: /demo/admin</span>
-              )}
+              Barcha funksiyalar sinov uchun ochiq.
+            </span>
+            <span className="px-2 py-0.5 rounded bg-[#141009] border border-[#d4af37]/40 text-amber-300 font-mono font-bold">
+              Admin paroli: admin123
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {activeRoute !== 'admin' && (
+              <button
+                type="button"
+                onClick={handleOpenDemoAdmin}
+                className="px-2.5 py-1 rounded bg-[#1f2438] hover:bg-[#2a314d] border border-[#d4af37]/50 text-[#d4af37] hover:text-white font-bold transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Admin Panel</span>
+              </button>
+            )}
+
             <button
+              type="button"
               onClick={resetDemoData}
               title="Demo ma'lumotlarini asl toza holatiga qaytarish"
               className="px-2.5 py-1 rounded bg-[#16120c] hover:bg-[#231b11] border border-[#d4af37]/30 text-amber-300 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
@@ -36,6 +58,7 @@ export const TenantBanner: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => navigateTo('/buy')}
               className="px-3 py-1 rounded bg-gradient-to-r from-[#d4af37] to-[#e4be4a] text-neutral-950 font-bold hover:brightness-110 transition-all flex items-center gap-1 shadow-sm cursor-pointer"
             >

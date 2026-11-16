@@ -922,13 +922,23 @@ async function seedDefaultsIfEmpty() {
     const adminCount = await AdminUserModel.countDocuments();
     if (adminCount === 0) {
       await AdminUserModel.create({
-        id: 'adm-1',
+        id: 'adm-demo',
         tenantId: 'demo',
-        name: 'Laziz Shavkatov (Bosh Admin)',
-        username: 'laziz712',
-        passwordHash: 'laziz712.',
+        name: 'Demo Admin',
+        username: 'demo',
+        passwordHash: 'admin123',
         role: 'superadmin'
       });
+    } else {
+      await AdminUserModel.findOneAndUpdate(
+        { tenantId: 'demo', id: 'adm-1' },
+        { $set: { name: 'Demo Admin', username: 'demo', passwordHash: 'admin123' } }
+      ).catch(() => {});
+      await AdminUserModel.findOneAndUpdate(
+        { id: 'adm-demo' },
+        { $set: { id: 'adm-demo', tenantId: 'demo', name: 'Demo Admin', username: 'demo', passwordHash: 'admin123', role: 'superadmin' } },
+        { upsert: true }
+      ).catch(() => {});
     }
 
     // Seed Multi-Tenant Tenants if none exist
@@ -948,7 +958,7 @@ async function seedDefaultsIfEmpty() {
         endDate: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
         status: 'active',
         adminUsername: 'demo',
-        adminPasswordHash: '1111',
+        adminPasswordHash: 'admin123',
         settings: {
           name: 'SAVORIA RESTAURANT',
           slogan: 'Sharqona Mehmondo‘stlik & Yuksak Gastronomik San’at',
@@ -1044,6 +1054,11 @@ async function seedDefaultsIfEmpty() {
         { id: 'flora-table-2', tenantId: 'flora', name: 'Flora 2 (Terrasa)', zone: 'Terrasa', capacity: 2, isActive: true },
         { id: 'flora-table-3', tenantId: 'flora', name: 'Flora VIP', zone: 'VIP', capacity: 8, isActive: true }
       ]);
+    } else {
+      await TenantModel.updateOne(
+        { slug: 'demo' },
+        { $set: { adminUsername: 'demo', adminPasswordHash: 'admin123' } }
+      ).catch(() => {});
     }
 
     // Seed platform config if not exists
@@ -1599,6 +1614,11 @@ app.post('/api/demo/reset', async (req, res) => {
           { upsert: true }
         );
       }
+
+      await TenantModel.updateOne(
+        { slug: 'demo' },
+        { $set: { adminUsername: 'demo', adminPasswordHash: 'admin123' } }
+      ).catch(() => {});
     } else {
       memoryStore.orders = [];
       memoryStore.menu = [...DEFAULT_MENU_ITEMS];
@@ -2039,7 +2059,7 @@ app.get('/api/tenant-bootstrap/:slug', async (req, res) => {
       startDate: new Date().toISOString(),
       endDate: new Date(Date.now() + 365 * 86400000).toISOString(),
       adminUsername: 'demo',
-      adminPasswordHash: '1111'
+      adminPasswordHash: 'admin123'
     });
 
     let menu: any[] = [];
@@ -2112,9 +2132,9 @@ app.get('/api/tenant-bootstrap/:slug', async (req, res) => {
       adminUsers = [{
         id: `adm-${rawSlug}`,
         tenantId: rawSlug,
-        name: `${computedTenant.ownerName || computedTenant.name} (Admin)`,
+        name: rawSlug === 'demo' ? 'Demo Admin' : `${computedTenant.ownerName || computedTenant.name} (Admin)`,
         username: computedTenant.adminUsername || 'admin',
-        passwordHash: computedTenant.adminPasswordHash || '1111',
+        passwordHash: computedTenant.adminPasswordHash || (rawSlug === 'demo' ? 'admin123' : '1111'),
         role: 'superadmin',
         createdAt: computedTenant.createdAt || new Date().toISOString()
       }];

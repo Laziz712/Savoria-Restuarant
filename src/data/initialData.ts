@@ -390,10 +390,10 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
 
 export const INITIAL_ADMIN_USERS: AdminUser[] = [
   {
-    id: 'adm-1',
-    name: 'Bosh Menejer Laziz',
-    username: 'laziz712',
-    passwordHash: 'laziz712',
+    id: 'adm-demo',
+    name: 'Demo Admin',
+    username: 'demo',
+    passwordHash: 'admin123',
     role: 'superadmin',
     createdAt: new Date().toISOString()
   }

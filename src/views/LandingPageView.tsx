@@ -225,7 +225,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
           {/* Device Showcase Frame */}
           <div className="rounded-3xl border border-[#2b3148] bg-[#08090f] shadow-[0_20px_70px_rgba(0,0,0,0.8)] overflow-hidden">
             {/* Top Browser Bar */}
-            <div className="px-4 py-3 bg-[#111420] border-b border-[#212538] flex items-center justify-between">
+            <div className="px-4 py-3 bg-[#111420] border-b border-[#212538] flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-rose-500/80" />
                 <span className="w-3 h-3 rounded-full bg-amber-500/80" />
@@ -236,6 +236,9 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               </div>
 
               <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-lg bg-[#1a160c] border border-[#d4af37]/30 text-[11px] font-mono text-amber-300">
+                  Admin parol: <b className="text-white">admin123</b>
+                </span>
                 <button
                   onClick={() => onOpenDemo(activeDemoTab === 'mijoz' ? 'mijoz' : 'admin')}
                   className="px-3 py-1 rounded-lg bg-[#d4af37]/15 hover:bg-[#d4af37]/25 text-[#d4af37] border border-[#d4af37]/40 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -257,13 +260,22 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                   <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
                     Mehmonlar stol ustidagi QR kodni skaner qilganda ochiladigan chiroyli taomlar katalogi, fotosuratlar, qidiruv, stol xizmati va ofitsiant chaqiruvi tugmasi.
                   </p>
-                  <button
-                    onClick={() => onOpenDemo('mijoz')}
-                    className="px-6 py-3 rounded-xl bg-[#d4af37] text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-lg hover:brightness-110 transition-all cursor-pointer inline-flex items-center gap-2"
-                  >
-                    <span>Mijoz Menyusini Sinash</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      onClick={() => onOpenDemo('mijoz')}
+                      className="px-6 py-3 rounded-xl bg-[#d4af37] text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-lg hover:brightness-110 transition-all cursor-pointer inline-flex items-center gap-2"
+                    >
+                      <span>Mijoz Menyusini Sinash</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onOpenDemo('admin')}
+                      className="px-5 py-3 rounded-xl bg-[#171b2b] hover:bg-[#22283f] text-[#d4af37] border border-[#d4af37]/40 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer inline-flex items-center gap-2"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Admin Panel (Parol: admin123)</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -280,7 +292,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                     onClick={() => onOpenDemo('admin')}
                     className="px-6 py-3 rounded-xl bg-[#d4af37] text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-lg hover:brightness-110 transition-all cursor-pointer inline-flex items-center gap-2"
                   >
-                    <span>Kassani Sinash (PIN: 1111)</span>
+                    <span>Kassani Sinash (Parol: admin123)</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -299,7 +311,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                     onClick={() => onOpenDemo('admin')}
                     className="px-6 py-3 rounded-xl bg-[#d4af37] text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-lg hover:brightness-110 transition-all cursor-pointer inline-flex items-center gap-2"
                   >
-                    <span>Oshxona Monitorini Ko'rish</span>
+                    <span>Oshxona Monitorini Ko'rish (admin123)</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -318,7 +330,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                     onClick={() => onOpenDemo('admin')}
                     className="px-6 py-3 rounded-xl bg-[#d4af37] text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-lg hover:brightness-110 transition-all cursor-pointer inline-flex items-center gap-2"
                   >
-                    <span>Hisobotlarni Ko'rish</span>
+                    <span>Hisobotlarni Ko'rish (admin123)</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
