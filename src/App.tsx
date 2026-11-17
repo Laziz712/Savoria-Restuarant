@@ -19,7 +19,8 @@ import { LandingPageView } from './views/LandingPageView';
 import { SuperadminDashboardView } from './views/SuperadminDashboardView';
 import { TenantBanner } from './components/TenantBanner';
 import { 
-  ShoppingBag, UtensilsCrossed, ShieldCheck, Lock, Mail, Instagram, Bell
+  ShoppingBag, UtensilsCrossed, ShieldCheck, Lock, Mail, Instagram, Bell,
+  AlertTriangle, Home, Sparkles, PlusCircle
 } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -27,7 +28,8 @@ const AppContent: React.FC = () => {
     activeRoute, setRoute, isAdminAuthenticated, 
     setShowAdminLoginModal, orders, t,
     isMenuOnlyMode, currentTableContext, callWaiterFromTable,
-    currentPath, navigateTo, settings, currentTenant, tenantSlug, isDemoMode
+    currentPath, navigateTo, settings, currentTenant, tenantSlug, isDemoMode,
+    isTenantNotFound, isCheckingTenant
   } = useRestaurant();
 
   const [waiterCalledMob, setWaiterCalledMob] = React.useState(false);
@@ -41,9 +43,10 @@ const AppContent: React.FC = () => {
   };
 
   const pendingOrdersCount = orders.filter(o => o.status !== 'yopildi').length;
+  const normalizedPath = (currentPath || '/').split('?')[0].replace(/\/+$/, '') || '/';
 
   // 1. Landing Page (Root URL /)
-  if (currentPath === '/') {
+  if (normalizedPath === '/') {
     return (
       <LandingPageView 
         onOpenDemo={(sub) => navigateTo(sub ? `/demo/${sub}` : '/demo')} 
@@ -53,7 +56,7 @@ const AppContent: React.FC = () => {
   }
 
   // 2. Buy Modal opened on Landing Page (/buy)
-  if (currentPath === '/buy') {
+  if (normalizedPath === '/buy') {
     return (
       <LandingPageView 
         onOpenDemo={(sub) => navigateTo(sub ? `/demo/${sub}` : '/demo')} 
@@ -64,11 +67,85 @@ const AppContent: React.FC = () => {
   }
 
   // 3. Superadmin Control Center (/superadmin)
-  if (currentPath === '/superadmin' || currentPath.startsWith('/superadmin')) {
+  if (normalizedPath === '/superadmin') {
     return (
       <SuperadminDashboardView 
         onBackToHome={() => navigateTo('/')} 
       />
+    );
+  }
+
+  // 4. Tenant Verification Loader (prevents flashing fake data before DB check completes)
+  if (isCheckingTenant) {
+    return (
+      <div className="min-h-screen bg-[#08090f] text-[#eaeaea] flex items-center justify-center p-4 font-sans">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl border-2 border-[#d4af37]/30 border-t-[#d4af37] animate-spin mx-auto" />
+          <div className="space-y-1">
+            <p className="font-serif text-lg font-bold text-white tracking-wide">Yuklanmoqda...</p>
+            <p className="text-xs text-neutral-400 font-mono">Restoran ma'lumotlari tekshirilmoqda</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 5. 404 ERROR for unknown restaurant slugs or invalid paths
+  if (isTenantNotFound) {
+    return (
+      <div className="min-h-screen bg-[#07080d] text-[#eaeaea] flex items-center justify-center p-4 sm:p-6 font-sans selection:bg-[#d4af37]/30">
+        <div className="w-full max-w-lg rounded-3xl bg-[#0f111a] border border-rose-500/30 p-7 sm:p-10 text-center shadow-2xl space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="inline-block px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 font-mono font-bold text-xs tracking-widest uppercase">
+              404 ERROR
+            </div>
+            <h1 className="font-serif font-bold text-2xl sm:text-3xl text-white">
+              Restoran yoki sahifa topilmadi
+            </h1>
+            <p className="text-sm text-neutral-400 leading-relaxed">
+              Siz kiritgan manzil tizimda ro‘yxatdan o‘tmagan yoki mavjud emas. Faqat faol restoran sahifalari,{' '}
+              <span className="font-mono text-neutral-300">/demo</span> va{' '}
+              <span className="font-mono text-neutral-300">/superadmin</span> ishlaydi.
+            </p>
+          </div>
+
+          <div className="px-4 py-2.5 rounded-xl bg-[#090a10] border border-[#222638] text-xs font-mono text-rose-300 break-all">
+            {currentPath || '/'}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => navigateTo('/')}
+              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#e6c14c] text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-lg hover:brightness-110 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Home className="w-4 h-4" />
+              <span>Bosh Sahifa</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateTo('/demo')}
+              className="flex-1 py-3 px-4 rounded-xl bg-[#161926] hover:bg-[#1f2436] text-white border border-[#2a3048] text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-[#d4af37]" />
+              <span>Demoni Ko‘rish</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigateTo('/buy')}
+            className="w-full py-2.5 px-4 rounded-xl bg-transparent hover:bg-white/5 text-neutral-400 hover:text-[#d4af37] text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>O‘z restoraningiz uchun tizim ochmoqchimisiz?</span>
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -94,7 +171,7 @@ const AppContent: React.FC = () => {
       <div className="flex-1 min-w-0 w-full pb-20 md:pb-0">
         {activeRoute === 'mijoz' && <CustomerMenuView />}
         {activeRoute === 'ofitsiant' && <WaiterOrderView />}
-        {activeRoute === 'admin' && (
+        {['admin', 'kassa', 'oshxona', 'dostafka', 'xisobot'].includes(activeRoute) && (
           isAdminAuthenticated ? (
             <AdminHubView />
           ) : (

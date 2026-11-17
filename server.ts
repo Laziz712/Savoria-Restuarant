@@ -2037,7 +2037,11 @@ app.post('/api/superadmin/tenants/:slug/reset-password', async (req, res) => {
 // F. Tenant-Scoped Bootstrap (Loads isolated tenant data for customer menu & POS)
 app.get('/api/tenant-bootstrap/:slug', async (req, res) => {
   try {
-    const rawSlug = (req.params.slug || 'demo').toLowerCase().trim();
+    const rawSlug = (req.params.slug || '').toLowerCase().trim();
+    if (!rawSlug || !/^[a-z0-9-]+$/.test(rawSlug) || (rawSlug !== 'demo' && RESERVED_SLUGS.has(rawSlug))) {
+      return res.status(404).json({ success: false, notFound: true, message: "Restoran topilmadi" });
+    }
+
     let tenant: any = null;
 
     if (isMongoConnected) {
@@ -2245,6 +2249,18 @@ function stripMongoInternalFields(obj: any, preserveCreatedAt = false): any {
 app.get('/api/bootstrap', async (req, res) => {
   try {
     const tenantId = getTenantId(req);
+    if (tenantId !== 'demo') {
+      if (!/^[a-z0-9-]+$/.test(tenantId) || RESERVED_SLUGS.has(tenantId)) {
+        return res.status(404).json({ success: false, notFound: true, message: "Restoran topilmadi" });
+      }
+      const existingTenant = isMongoConnected
+        ? await TenantModel.findOne({ slug: tenantId }).lean()
+        : memoryStore.tenants.find((t: any) => t.slug === tenantId);
+      if (!existingTenant) {
+        return res.status(404).json({ success: false, notFound: true, message: "Restoran topilmadi" });
+      }
+    }
+
     let menu = memoryStore.menu.filter((m: any) => (m.tenantId || 'demo') === tenantId);
     let orders = memoryStore.orders.filter((o: any) => (o.tenantId || 'demo') === tenantId);
     let tables = memoryStore.tables.filter((t: any) => (t.tenantId || 'demo') === tenantId);

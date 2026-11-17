@@ -3,7 +3,8 @@ import {
   Sparkles, CheckCircle2, ShoppingBag, Utensils, UtensilsCrossed, 
   Bike, BarChart3, Receipt, Laptop, Smartphone, ShieldCheck, 
   ArrowRight, ExternalLink, ChevronDown, Check, Star, Users,
-  CreditCard, Send, Clock, Layers, Flame, Award, PhoneCall
+  CreditCard, Send, Clock, Layers, Flame, Award, PhoneCall,
+  Menu, X, ChevronRight
 } from 'lucide-react';
 import { SubscriptionCheckoutModal } from '../components/SubscriptionCheckoutModal';
 import { PlatformPricingConfig } from '../types';
@@ -23,6 +24,22 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   const [selectedPlanMonths, setSelectedPlanMonths] = useState<number>(12);
   const [activeDemoTab, setActiveDemoTab] = useState<'mijoz' | 'kassa' | 'oshxona' | 'xisobot'>('mijoz');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const [pricingConfig, setPricingConfig] = useState<PlatformPricingConfig>({
     monthlyBasePrice: 399000,
@@ -78,20 +95,20 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#07080d] text-[#eaeaea] font-sans selection:bg-[#d4af37]/30 selection:text-white">
+    <div className="min-h-screen bg-[#07080d] text-[#eaeaea] font-sans selection:bg-[#d4af37]/30 selection:text-white overflow-x-clip">
       {/* Top SaaS Header */}
       <header className="sticky top-0 z-40 bg-[#0a0c14]/95 backdrop-blur-md border-b border-[#1f2335]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#d4af37] via-[#b89428] to-[#6d5512] flex items-center justify-center text-neutral-950 font-serif font-bold text-xl shadow-[0_0_20px_rgba(212,175,55,0.35)]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#d4af37] via-[#b89428] to-[#6d5512] flex items-center justify-center text-neutral-950 font-serif font-bold text-base sm:text-xl shadow-[0_0_20px_rgba(212,175,55,0.35)] shrink-0">
               S
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-serif tracking-wider font-bold text-lg sm:text-xl text-white">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap">
+                <span className="font-serif tracking-wider font-bold text-sm sm:text-xl text-white whitespace-nowrap">
                   SAVORIA POS
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30 font-bold uppercase">
+                <span className="text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30 font-bold uppercase whitespace-nowrap shrink-0">
                   SaaS Platform
                 </span>
               </div>
@@ -109,23 +126,141 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
             <a href="#faq" className="hover:text-[#d4af37] transition-colors">FAQ</a>
           </nav>
 
-          <div className="flex items-center gap-2.5">
+          {/* Desktop Action Buttons */}
+          <div className="hidden md:flex items-center gap-2.5 shrink-0">
             <button
               onClick={() => onOpenDemo()}
-              className="px-3.5 py-2 rounded-xl bg-[#141724] hover:bg-[#1f2438] text-white border border-[#2b3149] text-xs font-bold transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-[#141724] hover:bg-[#1f2438] text-white border border-[#2b3149] text-xs font-bold transition-all cursor-pointer whitespace-nowrap"
             >
               Demoni Ko'rish
             </button>
 
             <button
               onClick={() => handleOpenBuy(12)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#e2bd44] to-[#d4af37] text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#e2bd44] to-[#d4af37] text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:brightness-110 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
             >
               Sotib Olish
             </button>
           </div>
+
+          {/* Mobile Burger Menu Button */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(prev => !prev)}
+            aria-label="Menyuni ochish"
+            className="md:hidden flex items-center justify-center p-2 rounded-xl bg-[#141624] hover:bg-[#1f2336] border border-[#d4af37]/40 text-[#d4af37] transition-all active:scale-95 shadow-[0_0_12px_rgba(212,175,55,0.15)] shrink-0 cursor-pointer"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-5 h-5 text-white" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
+          </button>
         </div>
       </header>
+
+      {/* Mobile Burger Menu Drawer */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 animate-fade-in">
+          {/* Backdrop */}
+          <div
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+          />
+
+          {/* Sliding Panel */}
+          <div className="absolute top-0 right-0 bottom-0 w-[85%] max-w-sm bg-[#0b0d15] border-l border-[#272b3c] shadow-2xl flex flex-col z-10 overflow-y-auto">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-[#1f2335] flex items-center justify-between bg-[#0f121d]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#d4af37] via-[#b89428] to-[#6d5512] flex items-center justify-center text-neutral-950 font-serif font-bold text-base shadow-[0_0_14px_rgba(212,175,55,0.3)] shrink-0">
+                  S
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-serif font-bold text-white text-sm tracking-wider whitespace-nowrap">
+                      SAVORIA POS
+                    </span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30 font-bold uppercase whitespace-nowrap">
+                      SaaS Platform
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-neutral-400 truncate">
+                    Bulutli Restoran POS Tizimi
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                aria-label="Menyuni yopish"
+                className="p-1.5 rounded-lg bg-[#181a28] border border-[#272b3c] text-neutral-400 hover:text-white shrink-0 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Primary CTA Buttons (Demo & Sotib Olish) */}
+            <div className="p-4 space-y-2.5 border-b border-[#1c2030]">
+              <div className="text-[10px] uppercase font-mono tracking-widest text-[#d4af37] font-bold px-1">
+                Tezkor Kirish
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onOpenDemo();
+                }}
+                className="w-full py-3.5 px-4 rounded-xl bg-[#141724] hover:bg-[#1f2438] text-white border border-[#2b3149] text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <ExternalLink className="w-4 h-4 text-[#d4af37]" />
+                <span>Demoni Ko'rish</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleOpenBuy(12);
+                }}
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#e2bd44] to-[#d4af37] text-neutral-950 font-bold text-sm uppercase tracking-wider shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Sotib Olish</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Section Links */}
+            <nav className="p-4 space-y-2 flex-1">
+              <div className="text-[10px] uppercase font-mono tracking-widest text-neutral-400 font-bold px-1 mb-2">
+                Bo‘limlar
+              </div>
+              {[
+                { href: '#imkoniyatlar', label: 'Imkoniyatlar' },
+                { href: '#demo', label: 'Jonli Demo' },
+                { href: '#narxlar', label: 'Narxlar' },
+                { href: '#qadamlar', label: 'Qanday Ishlaydi?' },
+                { href: '#faq', label: 'Ko‘p beriladigan savollar (FAQ)' },
+              ].map(link => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center justify-between p-3 rounded-xl bg-[#12141e] border border-[#222536] text-neutral-200 hover:text-[#d4af37] hover:border-[#d4af37]/40 text-xs font-semibold transition-all"
+                >
+                  <span>{link.label}</span>
+                  <ChevronRight className="w-4 h-4 opacity-50" />
+                </a>
+              ))}
+            </nav>
+
+            {/* Drawer Footer */}
+            <div className="p-4 border-t border-[#1c2030] bg-[#08090f] text-center text-[11px] text-neutral-400">
+              Restoran & Kafelar Uchun Bulutli POS Tizimi
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative pt-12 pb-20 overflow-hidden">

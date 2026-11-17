@@ -28,6 +28,8 @@ interface RestaurantContextType {
   tenantSlug: string;
   isDemoMode: boolean;
   isReadOnlyMode: boolean;
+  isTenantNotFound: boolean;
+  isCheckingTenant: boolean;
   navigateTo: (path: string) => void;
   resetDemoData: () => Promise<void>;
   currentPath: string;
@@ -190,13 +192,61 @@ const getImageForDish = (id: string, defaultImage?: string): string => {
   return match?.image || defaultImage || '';
 };
 
-const extractSlugFromPath = (path: string): string => {
-  const cleaned = path.split('?')[0].replace(/\/+$/, '');
+export type RouteKind = 'landing' | 'buy' | 'superadmin' | 'tenant' | 'not_found';
+
+const VALID_TENANT_SUBROUTES = new Set<AppRoute>([
+  'mijoz', 'admin', 'ofitsiant', 'kassa', 'oshxona', 'dostafka', 'xisobot'
+]);
+
+const RESERVED_PLATFORM_SLUGS = new Set([
+  'admin', 'superadmin', 'api', 'login', 'buy', 'pricing',
+  'settings', 'order', 'static', 'assets', 'favicon', 'manifest'
+]);
+
+interface ParsedRoute {
+  kind: RouteKind;
+  slug: string;
+  subRoute: AppRoute;
+}
+
+const parseRoutePath = (path: string): ParsedRoute => {
+  const cleaned = (path || '/').split('?')[0].replace(/\/+$/, '') || '/';
+  if (cleaned === '/') {
+    return { kind: 'landing', slug: '', subRoute: 'mijoz' };
+  }
   const segments = cleaned.split('/').filter(Boolean);
-  if (segments.length === 0) return '';
+  if (segments.length === 0) {
+    return { kind: 'landing', slug: '', subRoute: 'mijoz' };
+  }
+
   const first = segments[0].toLowerCase();
-  if (['superadmin', 'buy', 'pricing', 'api', 'login'].includes(first)) return '';
-  return first;
+
+  if (first === 'buy') {
+    if (segments.length === 1) return { kind: 'buy', slug: '', subRoute: 'mijoz' };
+    return { kind: 'not_found', slug: '', subRoute: 'mijoz' };
+  }
+
+  if (first === 'superadmin') {
+    if (segments.length === 1) return { kind: 'superadmin', slug: '', subRoute: 'mijoz' };
+    return { kind: 'not_found', slug: '', subRoute: 'mijoz' };
+  }
+
+  if (RESERVED_PLATFORM_SLUGS.has(first) || !/^[a-z0-9-]+$/.test(first)) {
+    return { kind: 'not_found', slug: '', subRoute: 'mijoz' };
+  }
+
+  if (segments.length === 1) {
+    return { kind: 'tenant', slug: first, subRoute: 'mijoz' };
+  }
+
+  if (segments.length === 2) {
+    const second = segments[1].toLowerCase() as AppRoute;
+    if (VALID_TENANT_SUBROUTES.has(second)) {
+      return { kind: 'tenant', slug: first, subRoute: second };
+    }
+  }
+
+  return { kind: 'not_found', slug: '', subRoute: 'mijoz' };
 };
 
 const buildNeutralTenantSettings = (slug: string): RestaurantSettings => {
@@ -263,12 +313,18 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     return typeof window !== 'undefined' ? window.location.pathname : '/';
   });
 
-  const [tenantSlug, setTenantSlug] = useState<string>(() => extractSlugFromPath(currentPath));
+  const initialParsedRoute = parseRoutePath(currentPath);
+  const [routeKind, setRouteKind] = useState<RouteKind>(initialParsedRoute.kind);
+  const [tenantSlug, setTenantSlug] = useState<string>(initialParsedRoute.slug);
   const effectiveSlug = tenantSlug || 'demo';
   const [stateSlug, setStateSlug] = useState<string>(effectiveSlug);
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
+  const [isTenantNotFound, setIsTenantNotFound] = useState<boolean>(initialParsedRoute.kind === 'not_found');
+  const [isCheckingTenant, setIsCheckingTenant] = useState<boolean>(
+    initialParsedRoute.kind === 'tenant' && initialParsedRoute.slug !== 'demo'
+  );
 
-  const isDemoMode = effectiveSlug === 'demo';
+  const isDemoMode = routeKind === 'tenant' && effectiveSlug === 'demo';
   const isReadOnlyMode = !!(currentTenant && (currentTenant.isExpired || currentTenant.status === 'expired' || currentTenant.status === 'blocked'));
 
   // Multi-Language
@@ -377,36 +433,46 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const getInitialRoute = (): AppRoute => {
     if (typeof window === 'undefined') return 'mijoz';
-    const path = window.location.pathname;
-    if (path.includes('admin')) return 'admin';
-    if (path.includes('kassa')) return 'kassa';
-    if (path.includes('oshxona')) return 'oshxona';
-    if (path.includes('dostafka')) return 'dostafka';
-    if (path.includes('xisobot')) return 'xisobot';
-    if (path.includes('ofitsiant')) return 'ofitsiant';
-    return 'mijoz';
+    return parseRoutePath(window.location.pathname).subRoute;
   };
 
   const [activeRoute, setActiveRoute] = useState<AppRoute>(getInitialRoute);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [activeReceiptOrder, setActiveReceiptOrder] = useState<Order | null>(null);
 
-  const navigateTo = useCallback((newPath: string) => {
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', newPath);
-      setCurrentPath(newPath);
-      const newSlug = extractSlugFromPath(newPath);
-      setTenantSlug(newSlug);
-      if (newPath.includes('/admin')) {
-        setActiveRoute('admin');
-      } else if (newPath.includes('/ofitsiant')) {
-        setActiveRoute('ofitsiant');
-      } else {
-        setActiveRoute('mijoz');
+  const applyPathUpdate = useCallback((pathToApply: string, checkParams: boolean) => {
+    const parsed = parseRoutePath(pathToApply);
+    setCurrentPath(pathToApply);
+
+    const switchedTenantOrRoute =
+      parsed.kind !== routeKind ||
+      parsed.slug !== tenantSlug ||
+      isTenantNotFound;
+
+    setRouteKind(parsed.kind);
+    setTenantSlug(parsed.slug);
+    setActiveRoute(parsed.subRoute);
+
+    if (parsed.kind === 'not_found') {
+      setIsTenantNotFound(true);
+      setIsCheckingTenant(false);
+      setCurrentTenant(null);
+    } else if (parsed.kind === 'tenant') {
+      setIsTenantNotFound(false);
+      if (parsed.slug !== 'demo' && switchedTenantOrRoute) {
+        setIsCheckingTenant(true);
+        setCurrentTenant(null);
+      } else if (parsed.slug === 'demo') {
+        setIsCheckingTenant(false);
       }
-      // Also parse query parameters if QR mode URL was navigated to
+    } else {
+      setIsTenantNotFound(false);
+      setIsCheckingTenant(false);
+    }
+
+    if (checkParams && typeof window !== 'undefined') {
       try {
-        const urlObj = new URL(newPath, window.location.origin);
+        const urlObj = new URL(pathToApply, window.location.origin);
         const tbl = urlObj.searchParams.get('table');
         const mode = urlObj.searchParams.get('mode');
         if (tbl) setCurrentTableContext(tbl);
@@ -414,24 +480,22 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         setIsMenuOnlyMode(mode === 'menu' || mode === 'menu_only' || !!tbl);
       } catch {}
     }
-  }, []);
+  }, [routeKind, tenantSlug, isTenantNotFound]);
+
+  const navigateTo = useCallback((newPath: string) => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', newPath);
+      applyPathUpdate(newPath, true);
+    }
+  }, [applyPathUpdate]);
 
   useEffect(() => {
     const onPopState = () => {
-      const p = window.location.pathname;
-      setCurrentPath(p);
-      setTenantSlug(extractSlugFromPath(p));
-      if (p.includes('/admin')) {
-        setActiveRoute('admin');
-      } else if (p.includes('/ofitsiant')) {
-        setActiveRoute('ofitsiant');
-      } else {
-        setActiveRoute('mijoz');
-      }
+      applyPathUpdate(window.location.pathname + window.location.search, true);
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, []);
+  }, [applyPathUpdate]);
 
   const dismissRealtimeToast = () => setRealtimeToast(null);
   const dismissWaiterCallAlert = () => setWaiterCallAlert(null);
@@ -588,17 +652,28 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   // 1. BOOTSTRAP: Load Authoritative Tenant-Isolated State whenever effectiveSlug changes
   // ========================================================
   useEffect(() => {
+    if (routeKind !== 'tenant') {
+      setIsCheckingTenant(false);
+      setIsTenantNotFound(routeKind === 'not_found');
+      return;
+    }
+
     let isCancelled = false;
+    const isDemoSlug = effectiveSlug === 'demo';
+    setIsTenantNotFound(false);
+    if (!isDemoSlug) {
+      setIsCheckingTenant(true);
+    }
 
     // Reset/hydrate from scoped localStorage immediately when tenantSlug changes
-    setOrders(readScopedStorage<Order[]>('savoria_orders', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_ORDERS : []));
-    setMenuItems(readScopedStorage<MenuItem[]>('savoria_menu_items', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_MENU_ITEMS : []));
-    setTables(readScopedStorage<RestaurantTable[]>('savoria_tables', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_TABLES : []));
-    setReservations(readScopedStorage<TableReservation[]>('savoria_reservations', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_RESERVATIONS : []));
-    setCouriers(readScopedStorage<Courier[]>('savoria_couriers', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_COURIERS : []));
-    setWaiters(readScopedStorage<Waiter[]>('savoria_waiters', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_WAITERS : []));
+    setOrders(readScopedStorage<Order[]>('savoria_orders', effectiveSlug, isDemoSlug ? INITIAL_ORDERS : []));
+    setMenuItems(readScopedStorage<MenuItem[]>('savoria_menu_items', effectiveSlug, isDemoSlug ? INITIAL_MENU_ITEMS : []));
+    setTables(readScopedStorage<RestaurantTable[]>('savoria_tables', effectiveSlug, isDemoSlug ? INITIAL_TABLES : []));
+    setReservations(readScopedStorage<TableReservation[]>('savoria_reservations', effectiveSlug, isDemoSlug ? INITIAL_RESERVATIONS : []));
+    setCouriers(readScopedStorage<Courier[]>('savoria_couriers', effectiveSlug, isDemoSlug ? INITIAL_COURIERS : []));
+    setWaiters(readScopedStorage<Waiter[]>('savoria_waiters', effectiveSlug, isDemoSlug ? INITIAL_WAITERS : []));
     setSettings(readScopedStorage<RestaurantSettings>('savoria_settings', effectiveSlug, buildNeutralTenantSettings(effectiveSlug)));
-    setAdminUsers(readScopedStorage<AdminUser[]>('savoria_admin_users', effectiveSlug, effectiveSlug === 'demo' ? INITIAL_ADMIN_USERS : []));
+    setAdminUsers(readScopedStorage<AdminUser[]>('savoria_admin_users', effectiveSlug, isDemoSlug ? INITIAL_ADMIN_USERS : []));
     setNotifications(readScopedStorage<PushNotification[]>('savoria_notifications', effectiveSlug, []));
     try {
       setIsAdminAuthenticated(localStorage.getItem(`savoria_admin_auth_${effectiveSlug}`) === 'true');
@@ -613,23 +688,44 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     const loadBootstrapData = async () => {
       try {
         let data: any = null;
+        let tenantHttpStatus = 0;
+
         try {
           const tenantRes = await fetch(`/api/tenant-bootstrap/${encodeURIComponent(effectiveSlug)}`);
-          if (tenantRes.ok) {
+          tenantHttpStatus = tenantRes.status;
+          try {
             data = await tenantRes.json();
+          } catch {
+            data = null;
           }
-        } catch {}
 
-        if (isCancelled) return;
+          if (isCancelled) return;
 
-        if (!data || !data.success) {
-          const res = await fetch(`/api/bootstrap?tenantId=${encodeURIComponent(effectiveSlug)}`);
-          data = await res.json();
+          if (tenantHttpStatus === 404 || data?.notFound) {
+            setCurrentTenant(null);
+            setIsTenantNotFound(true);
+            setIsCheckingTenant(false);
+            try { localStorage.removeItem(`savoria_tenant_verified_${effectiveSlug}`); } catch {}
+            return;
+          }
+        } catch {
+          if (isCancelled) return;
+        }
+
+        if ((!data || !data.success) && isDemoSlug) {
+          try {
+            const res = await fetch(`/api/bootstrap?tenantId=${encodeURIComponent(effectiveSlug)}`);
+            data = await res.json();
+          } catch {}
         }
 
         if (isCancelled) return;
 
         if (data && data.success) {
+          setIsTenantNotFound(false);
+          setIsCheckingTenant(false);
+          try { localStorage.setItem(`savoria_tenant_verified_${effectiveSlug}`, 'true'); } catch {}
+
           if (data.tenant) {
             setCurrentTenant(data.tenant);
           }
@@ -677,9 +773,20 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
           if (Array.isArray(data.notifications)) {
             setNotifications(data.notifications);
           }
+        } else {
+          // Non-demo slug failed to verify from server: treat as 404 unless previously verified offline
+          const previouslyVerified = !isDemoSlug && (() => {
+            try { return localStorage.getItem(`savoria_tenant_verified_${effectiveSlug}`) === 'true'; } catch { return false; }
+          })();
+          if (!isDemoSlug && !previouslyVerified) {
+            setCurrentTenant(null);
+            setIsTenantNotFound(true);
+          }
+          setIsCheckingTenant(false);
         }
       } catch (err) {
         console.warn('Bootstrap fetch fallback: working smoothly with persistent localStorage', err);
+        setIsCheckingTenant(false);
       }
     };
 
@@ -688,12 +795,15 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     return () => {
       isCancelled = true;
     };
-  }, [effectiveSlug]);
+  }, [effectiveSlug, routeKind]);
 
   // ========================================================
   // 2. REAL-TIME ENGINE: Server-Sent Events (SSE) Listener (Tenant-Filtered)
   // ========================================================
   useEffect(() => {
+    if (routeKind !== 'tenant' || isTenantNotFound || isCheckingTenant) {
+      return;
+    }
     let eventSource: EventSource | null = null;
     let reconnectTimeout: any = null;
 
@@ -1023,10 +1133,13 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       clearInterval(pollInterval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [effectiveSlug, playChime, activeRoute, currentLoggedInWaiter, currentTableContext, isAdminAuthenticated]);
+  }, [effectiveSlug, routeKind, isTenantNotFound, isCheckingTenant, playChime, activeRoute, currentLoggedInWaiter, currentTableContext, isAdminAuthenticated]);
 
   // Live Site Presence Heartbeat (allows /superadmin to see active visitors & staff across serverless)
   useEffect(() => {
+    if (routeKind === 'not_found' || isTenantNotFound) return;
+    if (routeKind === 'tenant' && isCheckingTenant) return;
+
     let sessionId = '';
     try {
       sessionId = sessionStorage.getItem('savoria_presence_session_id') || '';
@@ -1042,9 +1155,9 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
       const resolvedTenantSlug =
-        currentPath === '/' || currentPath === '/buy'
+        routeKind === 'landing' || routeKind === 'buy'
           ? 'landing'
-          : currentPath.startsWith('/superadmin')
+          : routeKind === 'superadmin'
           ? 'superadmin'
           : effectiveSlug;
       const resolvedRole = currentPath.startsWith('/superadmin')
@@ -1081,7 +1194,7 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     sendPresence();
     const timer = setInterval(sendPresence, 45000);
     return () => clearInterval(timer);
-  }, [currentPath, effectiveSlug, currentLoggedInWaiter, isAdminAuthenticated, isMenuOnlyMode, currentTableContext, settings.name]);
+  }, [currentPath, routeKind, isTenantNotFound, isCheckingTenant, effectiveSlug, currentLoggedInWaiter, isAdminAuthenticated, isMenuOnlyMode, currentTableContext, settings.name]);
 
   // Dispatch Admin Push Notification
   const sendPushNotification = async (notifData: Omit<PushNotification, 'id' | 'timestamp'>): Promise<boolean> => {
@@ -1124,12 +1237,11 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const setRoute = (route: AppRoute) => {
+    if (routeKind !== 'tenant' || isTenantNotFound) return;
     setActiveRoute(route);
     try {
-      const prefix = tenantSlug ? `/${tenantSlug}` : '';
-      const url = prefix
-        ? (route === 'mijoz' ? prefix : `${prefix}/${route}`)
-        : (route === 'mijoz' ? '/' : `/${route}`);
+      const prefix = tenantSlug ? `/${tenantSlug}` : '/demo';
+      const url = route === 'mijoz' ? prefix : `${prefix}/${route}`;
       window.history.pushState({}, '', url);
       setCurrentPath(url);
     } catch {}
@@ -1747,6 +1859,8 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
         tenantSlug,
         isDemoMode,
         isReadOnlyMode,
+        isTenantNotFound,
+        isCheckingTenant,
         navigateTo,
         resetDemoData,
         currentPath,
