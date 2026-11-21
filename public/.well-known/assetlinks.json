@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "uz.savoria_restaurant.twa",
+      "sha256_cert_fingerprints": [
+        "B4:E0:A7:B4:C3:67:09:68:24:8C:47:03:E0:E5:D7:4B:4B:91:1B:9F:CA:4D:07:5E:D1:C6:91:08:69:BC:C3:29"
+      ]
+    }
+  }
+]
