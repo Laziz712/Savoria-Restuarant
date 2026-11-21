@@ -11,37 +11,13 @@
   "theme_color": "#d4af37",
   "categories": ["food", "business", "lifestyle"],
   "icons": [
-    {
-      "src": "/icon-512.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-512.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
-    }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    {
-      "name": "Menyu & Buyurtma",
-      "short_name": "Menyu",
-      "url": "/?mode=menu",
-      "icons": [{ "src": "/icon-512.svg", "sizes": "192x192" }]
-    },
-    {
-      "name": "Kassa POS",
-      "short_name": "Kassa",
-      "url": "/kassa",
-      "icons": [{ "src": "/icon-512.svg", "sizes": "192x192" }]
-    },
-    {
-      "name": "Ofitsiant Rejimi",
-      "short_name": "Ofitsiant",
-      "url": "/ofitsiant",
-      "icons": [{ "src": "/icon-512.svg", "sizes": "192x192" }]
-    }
+    { "name": "Menyu & Buyurtma", "short_name": "Menyu", "url": "/?mode=menu", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Kassa POS", "short_name": "Kassa", "url": "/kassa", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Ofitsiant Rejimi", "short_name": "Ofitsiant", "url": "/ofitsiant", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
   ]
 }
